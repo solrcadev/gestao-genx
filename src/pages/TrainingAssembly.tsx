@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -117,7 +116,6 @@ const TrainingAssembly = () => {
     });
   };
 
-  // Step 2: Handle exercise selection
   const addExerciseToTraining = (exercise) => {
     setSelectedExercises(prev => [...prev, { 
       ...exercise, 
