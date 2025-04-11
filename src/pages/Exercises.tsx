@@ -13,6 +13,16 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { fetchExercises, deleteExercise } from '@/services/exerciseService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  DialogContent, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog';
+import {
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle
+} from '@/components/ui/drawer';
 
 // Categories for exercises
 const CATEGORIES = [
@@ -176,26 +186,26 @@ const ExercisesPage = () => {
       
       {/* Mobile: Drawer for exercise form */}
       <Drawer open={isDrawerOpen && isMobileView} onOpenChange={setIsDrawerOpen}>
-        <Drawer.Content className="p-4 pt-8 max-h-dvh">
+        <DrawerContent className="p-4 pt-8 max-h-dvh">
           <ExerciseForm 
             exercise={editingExercise}
             onClose={handleFormClose}
             onSuccess={handleFormSubmitSuccess}
             categories={CATEGORIES}
           />
-        </Drawer.Content>
+        </DrawerContent>
       </Drawer>
 
       {/* Desktop: Dialog for exercise form */}
       <Dialog open={isDialogOpen && !isMobileView} onOpenChange={setIsDialogOpen}>
-        <Dialog.Content className="max-w-2xl overflow-y-auto max-h-[90vh]">
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
           <ExerciseForm 
             exercise={editingExercise}
             onClose={handleFormClose}
             onSuccess={handleFormSubmitSuccess}
             categories={CATEGORIES}
           />
-        </Dialog.Content>
+        </DialogContent>
       </Dialog>
       
       {/* Floating action button */}
