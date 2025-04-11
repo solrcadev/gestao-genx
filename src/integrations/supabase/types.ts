@@ -696,27 +696,33 @@ export type Database = {
       }
       treinos_exercicios: {
         Row: {
+          concluido: boolean | null
           created_at: string | null
           exercicio_id: string | null
           id: string
           observacao: string | null
           ordem: number
+          tempo_real: number | null
           treino_id: string | null
         }
         Insert: {
+          concluido?: boolean | null
           created_at?: string | null
           exercicio_id?: string | null
           id?: string
           observacao?: string | null
           ordem: number
+          tempo_real?: number | null
           treino_id?: string | null
         }
         Update: {
+          concluido?: boolean | null
           created_at?: string | null
           exercicio_id?: string | null
           id?: string
           observacao?: string | null
           ordem?: number
+          tempo_real?: number | null
           treino_id?: string | null
         }
         Relationships: [
@@ -732,6 +738,48 @@ export type Database = {
             columns: ["treino_id"]
             isOneToOne: false
             referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treinos_presencas: {
+        Row: {
+          atleta_id: string
+          created_at: string
+          id: string
+          justificativa: string | null
+          presente: boolean
+          treino_do_dia_id: string
+        }
+        Insert: {
+          atleta_id: string
+          created_at?: string
+          id?: string
+          justificativa?: string | null
+          presente?: boolean
+          treino_do_dia_id: string
+        }
+        Update: {
+          atleta_id?: string
+          created_at?: string
+          id?: string
+          justificativa?: string | null
+          presente?: boolean
+          treino_do_dia_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treinos_presencas_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_presencas_treino_do_dia_id_fkey"
+            columns: ["treino_do_dia_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_do_dia"
             referencedColumns: ["id"]
           },
         ]

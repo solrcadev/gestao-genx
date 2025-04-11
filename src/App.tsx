@@ -10,7 +10,8 @@ import Performance from "./pages/Performance";
 import More from "./pages/More";
 import NotFound from "./pages/NotFound";
 import Exercises from "./pages/Exercises";
-import TrainingAssembly from "./pages/TrainingAssembly"; // Add import
+import TrainingAssembly from "./pages/TrainingAssembly";
+import TreinoDoDia from "./pages/TreinoDosDia";
 import BottomNavbar from "./components/BottomNavbar";
 
 const queryClient = new QueryClient();
@@ -26,9 +27,10 @@ const App = () => (
             <Route path="/" element={<Athletes />} />
             <Route path="/treinos" element={<Trainings />} />
             <Route path="/exercicios" element={<Exercises />} />
-            <Route path="/montar-treino" element={<TrainingAssembly />} /> {/* Add new route */}
+            <Route path="/montar-treino" element={<TrainingAssembly />} />
             <Route path="/desempenho" element={<Performance />} />
             <Route path="/mais" element={<More />} />
+            <Route path="/treino-do-dia/:id" element={<TreinoDoDia />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <BottomNavbar />
