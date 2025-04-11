@@ -6,10 +6,10 @@ export const getAthletes = async (team?: Team) => {
   let query = supabase.from('athletes').select('*');
   
   if (team) {
-    query = query.eq('team', team);
+    query = query.eq('time', team);
   }
   
-  const { data, error } = await query.order('name');
+  const { data, error } = await query.order('nome');
   
   if (error) {
     console.error('Error fetching athletes:', error);

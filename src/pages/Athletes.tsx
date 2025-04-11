@@ -23,7 +23,7 @@ const Athletes = () => {
   const [filteredAthletes, setFilteredAthletes] = useState<Athlete[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterTeam, setFilterTeam] = useState<Team | "">("");
+  const [filterTeam, setFilterTeam] = useState<Team | "all">("all");
   const [formOpen, setFormOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | undefined>(undefined);
@@ -64,7 +64,7 @@ const Athletes = () => {
       );
     }
     
-    if (filterTeam) {
+    if (filterTeam && filterTeam !== "all") {
       filtered = filtered.filter((athlete) => athlete.team === filterTeam);
     }
     
@@ -127,7 +127,7 @@ const Athletes = () => {
   
   const clearFilters = () => {
     setSearchQuery("");
-    setFilterTeam("");
+    setFilterTeam("all");
   };
 
   return (
@@ -166,13 +166,13 @@ const Athletes = () => {
             <SelectValue placeholder="Todos times" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos times</SelectItem>
+            <SelectItem value="all">Todos times</SelectItem>
             <SelectItem value="Masculino">Masculino</SelectItem>
             <SelectItem value="Feminino">Feminino</SelectItem>
           </SelectContent>
         </Select>
         
-        {(searchQuery || filterTeam) && (
+        {(searchQuery || filterTeam !== "all") && (
           <Button variant="ghost" size="icon" onClick={clearFilters}>
             <X className="h-4 w-4" />
           </Button>
@@ -186,11 +186,11 @@ const Athletes = () => {
           <Users className="mx-auto h-12 w-12 text-muted-foreground" />
           <h2 className="mt-4 text-xl font-semibold">Nenhum atleta encontrado</h2>
           <p className="mt-2 text-muted-foreground">
-            {searchQuery || filterTeam
+            {searchQuery || filterTeam !== "all"
               ? "Nenhum resultado para sua busca. Tente outros filtros."
               : "Adicione seu primeiro atleta clicando no botão +"}
           </p>
-          {(searchQuery || filterTeam) && (
+          {(searchQuery || filterTeam !== "all") && (
             <Button
               variant="outline"
               onClick={clearFilters}

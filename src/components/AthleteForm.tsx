@@ -36,11 +36,11 @@ const POSITIONS: Position[] = [
 const TEAMS: Team[] = ["Masculino", "Feminino"];
 
 const defaultAthlete: Partial<Athlete> = {
-  name: '',
-  age: 0,
-  height: 0,
-  position: 'Outro',
-  team: 'Masculino',
+  nome: '',
+  idade: 0,
+  altura: 0,
+  posicao: 'Outro',
+  time: 'Masculino',
   foto_url: null,
 };
 
@@ -92,7 +92,7 @@ const AthleteForm = ({ athlete, open, onClose, onSave }: AthleteFormProps) => {
       
       toast({
         title: athlete ? "Atleta atualizado" : "Atleta adicionado",
-        description: `${formData.name} foi ${athlete ? "atualizado" : "adicionado"} com sucesso.`,
+        description: `${formData.nome} foi ${athlete ? "atualizado" : "adicionado"} com sucesso.`,
       });
       
       onClose();
@@ -132,7 +132,7 @@ const AthleteForm = ({ athlete, open, onClose, onSave }: AthleteFormProps) => {
               <Avatar className="w-24 h-24 border-2 border-primary">
                 <AvatarImage src={photoPreview || ''} alt="Foto de perfil" />
                 <AvatarFallback className="text-xl font-semibold">
-                  {getInitials(formData.name)}
+                  {getInitials(formData.nome)}
                 </AvatarFallback>
               </Avatar>
               
@@ -153,35 +153,35 @@ const AthleteForm = ({ athlete, open, onClose, onSave }: AthleteFormProps) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
+            <Label htmlFor="nome">Nome</Label>
             <Input
-              id="name"
-              value={formData.name || ''}
-              onChange={(e) => handleChange('name', e.target.value)}
+              id="nome"
+              value={formData.nome || ''}
+              onChange={(e) => handleChange('nome', e.target.value)}
               required
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="age">Idade</Label>
+              <Label htmlFor="idade">Idade</Label>
               <Input
-                id="age"
+                id="idade"
                 type="number"
-                value={formData.age || ''}
-                onChange={(e) => handleChange('age', parseInt(e.target.value) || 0)}
+                value={formData.idade || ''}
+                onChange={(e) => handleChange('idade', parseInt(e.target.value) || 0)}
                 min={0}
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="height">Altura (cm)</Label>
+              <Label htmlFor="altura">Altura (cm)</Label>
               <Input
-                id="height"
+                id="altura"
                 type="number"
-                value={formData.height || ''}
-                onChange={(e) => handleChange('height', parseInt(e.target.value) || 0)}
+                value={formData.altura || ''}
+                onChange={(e) => handleChange('altura', parseInt(e.target.value) || 0)}
                 min={0}
                 required
               />
@@ -189,10 +189,10 @@ const AthleteForm = ({ athlete, open, onClose, onSave }: AthleteFormProps) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="position">Posição</Label>
+            <Label htmlFor="posicao">Posição</Label>
             <Select 
-              value={formData.position || 'Outro'} 
-              onValueChange={(value) => handleChange('position', value)}
+              value={formData.posicao || 'Outro'} 
+              onValueChange={(value) => handleChange('posicao', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a posição" />
@@ -208,10 +208,10 @@ const AthleteForm = ({ athlete, open, onClose, onSave }: AthleteFormProps) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="team">Time</Label>
+            <Label htmlFor="time">Time</Label>
             <Select 
-              value={formData.team || 'Masculino'} 
-              onValueChange={(value) => handleChange('team', value as Team)}
+              value={formData.time || 'Masculino'} 
+              onValueChange={(value) => handleChange('time', value as Team)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o time" />
