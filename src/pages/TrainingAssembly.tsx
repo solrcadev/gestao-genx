@@ -108,7 +108,7 @@ const TrainingAssembly = () => {
 
   // Step 1: Create training info
   const onSubmitTrainingInfo = (values: z.infer<typeof formSchema>) => {
-    // Fix: Ensure that all required fields from TrainingInput are included and not optional
+    // Ensure that all required fields from TrainingInput are included
     createTrainingMutation.mutate({
       nome: values.nome,
       local: values.local,
