@@ -108,7 +108,13 @@ const TrainingAssembly = () => {
 
   // Step 1: Create training info
   const onSubmitTrainingInfo = (values: z.infer<typeof formSchema>) => {
-    createTrainingMutation.mutate(values);
+    // Fix: Ensure that all required fields from TrainingInput are included and not optional
+    createTrainingMutation.mutate({
+      nome: values.nome,
+      local: values.local,
+      data: values.data,
+      descricao: values.descricao || ''
+    });
   };
 
   // Step 2: Handle exercise selection
@@ -268,7 +274,7 @@ const TrainingAssembly = () => {
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
-                            className="pointer-events-auto"
+                            // Fix: Remove className prop from Calendar
                           />
                         </PopoverContent>
                       </Popover>
