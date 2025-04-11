@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Filter } from 'lucide-react';
@@ -41,7 +40,7 @@ const ExercisesPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all-categories");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
@@ -89,7 +88,7 @@ const ExercisesPage = () => {
     const matchesSearch = searchQuery === "" || 
       exercise.nome.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCategory = categoryFilter === "" || 
+    const matchesCategory = categoryFilter === "all-categories" || 
       exercise.categoria === categoryFilter;
     
     return matchesSearch && matchesCategory;
@@ -149,7 +148,7 @@ const ExercisesPage = () => {
             <SelectValue placeholder="Todas categorias" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas categorias</SelectItem>
+            <SelectItem value="all-categories">Todas categorias</SelectItem>
             {CATEGORIES.map(category => (
               <SelectItem key={category} value={category}>{category}</SelectItem>
             ))}
