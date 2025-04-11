@@ -1,10 +1,15 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import Athletes from "./pages/Athletes";
+import Trainings from "./pages/Trainings";
+import Performance from "./pages/Performance";
+import More from "./pages/More";
 import NotFound from "./pages/NotFound";
+import BottomNavbar from "./components/BottomNavbar";
 
 const queryClient = new QueryClient();
 
@@ -14,11 +19,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <div className="bg-background min-h-screen">
+          <Routes>
+            <Route path="/" element={<Athletes />} />
+            <Route path="/treinos" element={<Trainings />} />
+            <Route path="/desempenho" element={<Performance />} />
+            <Route path="/mais" element={<More />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <BottomNavbar />
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
