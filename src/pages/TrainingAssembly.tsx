@@ -274,7 +274,6 @@ const TrainingAssembly = () => {
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
-                            // Fix: Remove className prop from Calendar
                           />
                         </PopoverContent>
                       </Popover>
