@@ -18,6 +18,8 @@ interface AthleteCardProps {
 
 const AthleteCard = ({ athlete, onEdit, onDelete }: AthleteCardProps) => {
   const getInitials = (name: string) => {
+    if (!name) return ''; // Add null check to prevent split on undefined
+    
     return name
       .split(' ')
       .map(n => n[0])
@@ -36,19 +38,19 @@ const AthleteCard = ({ athlete, onEdit, onDelete }: AthleteCardProps) => {
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <Avatar className="w-16 h-16 border-2 border-muted">
-              <AvatarImage src={athlete.foto_url || ''} alt={athlete.name} />
+              <AvatarImage src={athlete.foto_url || ''} alt={athlete.nome} />
               <AvatarFallback className="text-lg font-semibold">
-                {getInitials(athlete.name)}
+                {getInitials(athlete.nome)}
               </AvatarFallback>
             </Avatar>
             
             <div>
-              <h3 className="font-bold text-lg">{athlete.name}</h3>
+              <h3 className="font-bold text-lg">{athlete.nome}</h3>
               <div className="text-xs text-muted-foreground">
-                {athlete.position} • {athlete.age} anos • {athlete.height}cm
+                {athlete.posicao} • {athlete.idade} anos • {athlete.altura}cm
               </div>
-              <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getTeamColor(athlete.team)}`}>
-                {athlete.team}
+              <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getTeamColor(athlete.time)}`}>
+                {athlete.time}
               </div>
             </div>
           </div>

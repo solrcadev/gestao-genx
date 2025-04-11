@@ -60,12 +60,12 @@ const Athletes = () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((athlete) =>
-        athlete.name.toLowerCase().includes(query)
+        athlete.nome.toLowerCase().includes(query)
       );
     }
     
     if (filterTeam && filterTeam !== "all") {
-      filtered = filtered.filter((athlete) => athlete.team === filterTeam);
+      filtered = filtered.filter((athlete) => athlete.time === filterTeam);
     }
     
     setFilteredAthletes(filtered);
@@ -111,7 +111,7 @@ const Athletes = () => {
       setAthletes((prev) => prev.filter((a) => a.id !== selectedAthlete.id));
       toast({
         title: "Atleta excluído",
-        description: `${selectedAthlete.name} foi excluído com sucesso.`,
+        description: `${selectedAthlete.nome} foi excluído com sucesso.`,
       });
     } catch (error) {
       console.error("Error deleting athlete:", error);
@@ -233,7 +233,7 @@ const Athletes = () => {
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
         title="Excluir atleta"
-        description={`Tem certeza que deseja excluir ${selectedAthlete?.name}? Esta ação não pode ser desfeita.`}
+        description={`Tem certeza que deseja excluir ${selectedAthlete?.nome}? Esta ação não pode ser desfeita.`}
         confirmText="Excluir"
       />
     </div>
