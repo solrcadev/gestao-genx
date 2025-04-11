@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
-import { createExercise, updateExercise } from '@/services/exerciseService';
+import { createExercise, updateExercise, Exercise, ExerciseInput } from '@/services/exerciseService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -38,18 +38,6 @@ const exerciseSchema = z.object({
   descricao: z.string().min(10, { message: 'Descrição deve ter pelo menos 10 caracteres' }),
   video_url: z.string().url({ message: 'URL inválida' }).optional().or(z.literal('')),
 });
-
-interface Exercise {
-  id: string;
-  nome: string;
-  categoria: string;
-  tempo_estimado: number;
-  numero_jogadores: number;
-  objetivo: string;
-  descricao: string;
-  video_url?: string;
-  imagem_url?: string;
-}
 
 interface ExerciseFormProps {
   exercise?: Exercise | null;
@@ -186,6 +174,7 @@ const ExerciseForm = ({ exercise, onClose, onSuccess, categories }: ExerciseForm
       // Upload image if there is a new one
       const imageUrl = await uploadImage();
       
+      // Create a complete object with all required fields to satisfy TypeScript
       const exerciseData = {
         ...values,
         imagem_url: imageUrl,
@@ -194,10 +183,26 @@ const ExerciseForm = ({ exercise, onClose, onSuccess, categories }: ExerciseForm
       if (isEditMode && exercise) {
         await updateMutation.mutateAsync({
           id: exercise.id,
-          ...exerciseData,
+          nome: exerciseData.nome,
+          categoria: exerciseData.categoria,
+          tempo_estimado: exerciseData.tempo_estimado,
+          numero_jogadores: exerciseData.numero_jogadores,
+          objetivo: exerciseData.objetivo,
+          descricao: exerciseData.descricao,
+          video_url: exerciseData.video_url,
+          imagem_url: exerciseData.imagem_url,
         });
       } else {
-        await createMutation.mutateAsync(exerciseData);
+        await createMutation.mutateAsync({
+          nome: exerciseData.nome,
+          categoria: exerciseData.categoria,
+          tempo_estimado: exerciseData.tempo_estimado,
+          numero_jogadores: exerciseData.numero_jogadores,
+          objetivo: exerciseData.objetivo,
+          descricao: exerciseData.descricao,
+          video_url: exerciseData.video_url,
+          imagem_url: exerciseData.imagem_url,
+        });
       }
     } catch (error) {
       console.error('Form submission error:', error);

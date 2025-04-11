@@ -1,7 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 
-interface Exercise {
+export interface Exercise {
   id: string;
   nome: string;
   categoria: string;
@@ -13,7 +13,7 @@ interface Exercise {
   imagem_url?: string;
 }
 
-interface ExerciseInput {
+export interface ExerciseInput {
   nome: string;
   categoria: string;
   tempo_estimado: number;
