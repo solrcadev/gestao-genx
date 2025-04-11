@@ -9,6 +9,7 @@ import Trainings from "./pages/Trainings";
 import Performance from "./pages/Performance";
 import More from "./pages/More";
 import NotFound from "./pages/NotFound";
+import Exercises from "./pages/Exercises"; // Add import
 import BottomNavbar from "./components/BottomNavbar";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Athletes />} />
             <Route path="/treinos" element={<Trainings />} />
+            <Route path="/exercicios" element={<Exercises />} /> {/* Add new route */}
             <Route path="/desempenho" element={<Performance />} />
             <Route path="/mais" element={<More />} />
             <Route path="*" element={<NotFound />} />

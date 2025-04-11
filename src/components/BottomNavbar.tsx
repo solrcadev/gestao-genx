@@ -1,50 +1,38 @@
 
-import { Users, Calendar, BarChart2, Menu } from "lucide-react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Users, Calendar, Activity, Dumbbell, MoreHorizontal } from "lucide-react";
 
 const BottomNavbar = () => {
   const location = useLocation();
-  const currentPath = location.pathname;
-  
-  const navItems = [
-    {
-      label: "Atletas",
-      icon: <Users className="bottom-nav-icon" />,
-      path: "/",
-      active: currentPath === "/"
-    },
-    {
-      label: "Treinos",
-      icon: <Calendar className="bottom-nav-icon" />,
-      path: "/treinos",
-      active: currentPath === "/treinos"
-    },
-    {
-      label: "Desempenho",
-      icon: <BarChart2 className="bottom-nav-icon" />,
-      path: "/desempenho",
-      active: currentPath === "/desempenho"
-    },
-    {
-      label: "Mais",
-      icon: <Menu className="bottom-nav-icon" />,
-      path: "/mais",
-      active: currentPath === "/mais"
-    }
-  ];
-  
+  const pathname = location.pathname;
+
+  const isActive = (path: string) => {
+    return pathname === path ? "active" : "";
+  };
+
   return (
     <nav className="bottom-nav">
-      {navItems.map((item) => (
-        <Link 
-          key={item.path} 
-          to={item.path} 
-          className={`bottom-nav-item ${item.active ? "active" : ""}`}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </Link>
-      ))}
+      <Link to="/" className={`bottom-nav-item ${isActive("/")}`}>
+        <Users className="bottom-nav-icon" />
+        <span>Atletas</span>
+      </Link>
+      <Link to="/treinos" className={`bottom-nav-item ${isActive("/treinos")}`}>
+        <Calendar className="bottom-nav-icon" />
+        <span>Treinos</span>
+      </Link>
+      <Link to="/exercicios" className={`bottom-nav-item ${isActive("/exercicios")}`}>
+        <Dumbbell className="bottom-nav-icon" />
+        <span>Exercícios</span>
+      </Link>
+      <Link to="/desempenho" className={`bottom-nav-item ${isActive("/desempenho")}`}>
+        <Activity className="bottom-nav-icon" />
+        <span>Desempenho</span>
+      </Link>
+      <Link to="/mais" className={`bottom-nav-item ${isActive("/mais")}`}>
+        <MoreHorizontal className="bottom-nav-icon" />
+        <span>Mais</span>
+      </Link>
     </nav>
   );
 };
