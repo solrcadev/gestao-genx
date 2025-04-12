@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, Users, Clock, MapPin, MoreHorizontal, Edit, Trash2, Play } from 'lucide-react';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { Calendar, MapPin, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Training, fetchTrainings, deleteTraining } from '@/services/trainingService';
-import { fetchTreinosDosDia } from '@/services/treinosDoDiaService';
+import { Calendar as CalendarIcon } from "@/components/ui/calendar"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
-import { SelectTreinoParaDia } from '@/components/treino-do-dia/SelectTreinoParaDia';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,307 +42,524 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/alert-dialog"
+import { cn } from "@/lib/utils";
+import { fetchTrainings, createTraining, updateTraining, deleteTraining } from '@/services/trainingService';
+import { Team } from '@/types';
 
-interface TrainingsProps {
-  className?: string;
-  size?: "sm" | "md" | "lg";
-}
+const formSchema = z.object({
+  nome: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
+  local: z.string().min(2, { message: 'Informe o local do treino' }),
+  data: z.date({ required_error: 'Selecione uma data para o treino' }),
+  descricao: z.string().optional(),
+  time: z.enum(["Masculino", "Feminino"], { required_error: 'Selecione o time do treino' })
+});
 
-const Trainings = ({ className, size = "md" }: TrainingsProps) => {
-  const [trainingToDelete, setTrainingToDelete] = useState<string | null>(null);
+const Trainings = () => {
+  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedTraining, setSelectedTraining] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
+  // React Hook Form setup
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nome: '',
+      local: '',
+      data: new Date(),
+      descricao: '',
+      time: "Masculino"
+    },
+  });
+
   // Fetch trainings
-  const {
-    data: trainings = [],
-    isLoading: isLoadingTrainings,
-    isError: isErrorTrainings,
-    error: errorTrainings,
-  } = useQuery({
+  const { data: trainings = [], isLoading, error } = useQuery({
     queryKey: ['trainings'],
     queryFn: fetchTrainings,
   });
 
-  // Fetch treinos do dia
-  const {
-    data: treinosDoDia = [],
-    isLoading: isLoadingTreinosDoDia,
-  } = useQuery({
-    queryKey: ['treinos-do-dia'],
-    queryFn: fetchTreinosDosDia,
-  });
-  
-  // Delete training mutation
-  const deleteMutation = useMutation({
-    mutationFn: deleteTraining,
+  // Create training mutation
+  const createTrainingMutation = useMutation({
+    mutationFn: createTraining,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainings'] });
-      toast({
-        title: 'Treino excluído',
-        description: 'O treino foi removido com sucesso.',
+      toast({ 
+        title: 'Treino criado com sucesso!',
+        description: 'O treino foi adicionado à lista.',
       });
-      setTrainingToDelete(null);
+      setOpen(false);
+      form.reset();
     },
-    onError: (error) => {
-      console.error('Error deleting training:', error);
+    onError: (error: Error) => {
+      console.error('Error creating training:', error);
       toast({
-        title: 'Erro ao excluir',
-        description: 'Não foi possível excluir o treino. Tente novamente.',
+        title: 'Erro ao criar treino',
+        description: error.message || 'Não foi possível criar o treino. Tente novamente.',
         variant: 'destructive',
       });
-    },
+    }
   });
 
-  // Handle training deletion
-  const handleDeleteTraining = () => {
-    if (trainingToDelete) {
-      deleteMutation.mutate(trainingToDelete);
+  // Update training mutation
+  const updateTrainingMutation = useMutation({
+    mutationFn: (data) => updateTraining(selectedTraining?.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainings'] });
+      toast({ 
+        title: 'Treino atualizado com sucesso!',
+        description: 'As informações do treino foram atualizadas.',
+      });
+      setEditOpen(false);
+      form.reset();
+      setIsEditMode(false);
+    },
+    onError: (error: Error) => {
+      console.error('Error updating training:', error);
+      toast({
+        title: 'Erro ao atualizar treino',
+        description: error.message || 'Não foi possível atualizar o treino. Tente novamente.',
+        variant: 'destructive',
+      });
     }
+  });
+
+  // Delete training mutation
+  const deleteTrainingMutation = useMutation({
+    mutationFn: () => deleteTraining(selectedTraining?.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainings'] });
+      toast({ 
+        title: 'Treino excluído com sucesso!',
+        description: 'O treino foi removido da lista.',
+      });
+      setDeleteOpen(false);
+      form.reset();
+      setIsEditMode(false);
+    },
+    onError: (error: Error) => {
+      console.error('Error deleting training:', error);
+      toast({
+        title: 'Erro ao excluir treino',
+        description: error.message || 'Não foi possível excluir o treino. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Handlers
+  const handleCreateTraining = (values: z.infer<typeof formSchema>) => {
+    createTrainingMutation.mutate(values);
   };
 
-  // Group trainings by date (month/year)
-  const groupedTrainings = trainings.reduce((acc, training) => {
-    const date = new Date(training.data);
-    const monthYear = format(date, 'MMMM yyyy', { locale: ptBR });
-    
-    if (!acc[monthYear]) {
-      acc[monthYear] = [];
-    }
-    
-    acc[monthYear].push(training);
-    return acc;
-  }, {} as Record<string, Training[]>);
+  const handleEditTraining = (training) => {
+    setSelectedTraining(training);
+    setEditOpen(true);
+    setIsEditMode(true);
+    form.setValue('nome', training.nome);
+    form.setValue('local', training.local);
+    form.setValue('data', new Date(training.data));
+    form.setValue('descricao', training.descricao || '');
+    form.setValue('time', training.time);
+  };
 
-  // Get active trainings for today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayString = today.toISOString().split('T')[0];
-  const activeTrainings = treinosDoDia.filter(
-    t => t.data === todayString && !t.aplicado
-  );
+  const handleUpdateTraining = (values: z.infer<typeof formSchema>) => {
+    updateTrainingMutation.mutate(values);
+  };
 
-  if (isLoadingTrainings) {
-    return (
-      <div className="mobile-container flex flex-col items-center justify-center min-h-[70vh]">
-        <LoadingSpinner size="lg" />
-        <p className="text-muted-foreground mt-4">Carregando treinos...</p>
-      </div>
-    );
-  }
+  const handleDeleteTraining = (training) => {
+    setSelectedTraining(training);
+    setDeleteOpen(true);
+  };
 
-  if (isErrorTrainings) {
-    return (
-      <div className="mobile-container py-8">
-        <div className="p-4 bg-destructive/10 text-destructive rounded-lg mb-4">
-          <p>Erro ao carregar treinos.</p>
-          <p className="text-sm">{(errorTrainings as Error)?.message}</p>
-        </div>
-        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['trainings'] })}>
-          Tentar novamente
-        </Button>
-      </div>
-    );
-  }
+  const confirmDeleteTraining = () => {
+    deleteTrainingMutation.mutate();
+  };
+
+  const handleOpenTreinoDoDia = (trainingId: string) => {
+    navigate(`/treino-do-dia/${trainingId}`);
+  };
 
   return (
     <div className="mobile-container pb-20">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Treinos</h1>
-        <Link to="/montar-treino">
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Treino
-          </Button>
-        </Link>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Treino
+        </Button>
       </div>
 
-      <Tabs defaultValue="all">
-        <TabsList className="w-full mb-4">
-          <TabsTrigger value="all" className="flex-1">
-            Todos
-          </TabsTrigger>
-          <TabsTrigger value="today" className="flex-1 relative">
-            Treino do Dia
-            {activeTrainings.length > 0 && (
-              <Badge className="ml-1 bg-primary absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">
-                {activeTrainings.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="animate-fade-in">
-          {/* All trainings view */}
-          {trainings.length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-medium mb-1">Nenhum treino encontrado</h2>
-              <p className="text-muted-foreground mb-4">
-                Comece criando seu primeiro treino.
-              </p>
-              <Link to="/montar-treino">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Treino
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {Object.keys(groupedTrainings).map((monthYear) => (
-                <div key={monthYear}>
-                  <h2 className="font-semibold text-lg mb-3 capitalize">{monthYear}</h2>
-                  <div className="space-y-3">
-                    {groupedTrainings[monthYear].map((training) => (
-                      <Card key={training.id} className="overflow-hidden">
-                        <CardHeader className="p-4 pb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle className="text-lg mb-1">{training.nome}</CardTitle>
-                              <CardDescription>
-                                {format(new Date(training.data), 'EEEE, dd/MM/yyyy', { locale: ptBR })}
-                              </CardDescription>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  <span>Editar</span>
-                                </DropdownMenuItem>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => {
-                                      e.preventDefault();
-                                      setTrainingToDelete(training.id);
-                                    }}>
-                                      <Trash2 className="h-4 w-4 mr-2 text-destructive" />
-                                      <span className="text-destructive">Excluir</span>
-                                    </DropdownMenuItem>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Excluir treino</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Tem certeza que deseja excluir o treino "{training.nome}"? Esta ação não pode ser desfeita.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel onClick={() => setTrainingToDelete(null)}>Cancelar</AlertDialogCancel>
-                                      <AlertDialogAction 
-                                        onClick={handleDeleteTraining}
-                                        className="bg-destructive hover:bg-destructive/90"
-                                      >
-                                        {deleteMutation.isPending && trainingToDelete === training.id ? (
-                                          <LoadingSpinner className="mr-2" />
-                                        ) : (
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                        )}
-                                        Excluir
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                            {training.local && (
-                              <div className="flex items-center">
-                                <MapPin className="h-3 w-3 mr-2" />
-                                <span>{training.local}</span>
-                              </div>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <LoadingSpinner />
+          <p className="text-muted-foreground mt-4">Carregando treinos...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <p className="text-destructive">Erro ao carregar treinos</p>
+          <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['trainings'] })} variant="outline" className="mt-2">
+            Tentar novamente
+          </Button>
+        </div>
+      ) : trainings.length > 0 ? (
+        <Table>
+          <TableCaption>Lista de treinos cadastrados.</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Local</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Time</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {trainings.map((training) => (
+              <TableRow key={training.id}>
+                <TableCell>{training.nome}</TableCell>
+                <TableCell>{training.local}</TableCell>
+                <TableCell>{format(new Date(training.data), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{training.time}</Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenTreinoDoDia(training.id)}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Treino do Dia
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleEditTraining(training)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Editar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteTraining(training)} className="text-destructive hover:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20">
+          <p className="text-muted-foreground">Nenhum treino cadastrado</p>
+        </div>
+      )}
+
+      {/* Create Training Modal */}
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Novo Treino</AlertDialogTitle>
+            <AlertDialogDescription>
+              Preencha as informações do treino para criar um novo registro.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCreateTraining)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Treino</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Treino Técnico Feminino" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="local"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Local</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Ginásio Principal" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data do Treino</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
                             )}
-                            {training.descricao && (
-                              <p className="mt-2 text-sm">{training.descricao}</p>
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
                             )}
-                          </div>
-                        </CardContent>
-                        <CardFooter className="p-2 bg-muted/20 flex justify-end">
-                          {/* Add button to set as treino do dia */}
-                          <SelectTreinoParaDia
-                            treinoId={training.id}
-                            treinoNome={training.nome}
-                          />
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="today" className="animate-fade-in">
-          {/* Today's training view */}
-          {isLoadingTreinosDoDia ? (
-            <div className="py-8 flex flex-col items-center justify-center">
-              <LoadingSpinner />
-              <p className="mt-4 text-muted-foreground">Carregando treinos do dia...</p>
-            </div>
-          ) : activeTrainings.length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-medium mb-1">Nenhum treino para hoje</h2>
-              <p className="text-muted-foreground mb-4">
-                Selecione um treino e defina-o como Treino do Dia.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {activeTrainings.map((treinoDoDia) => {
-                const trainingInfo = trainings.find(t => t.id === treinoDoDia.treino_id);
-                if (!trainingInfo) return null;
-                
-                return (
-                  <Card key={treinoDoDia.id} className="overflow-hidden border-primary/60">
-                    <CardHeader className="p-4 pb-2">
-                      <Badge className="w-fit mb-2">Treino do Dia</Badge>
-                      <CardTitle className="text-lg mb-1">{trainingInfo.nome}</CardTitle>
-                      <CardDescription>
-                        {format(new Date(treinoDoDia.data), 'EEEE, dd/MM/yyyy', { locale: ptBR })}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                        {trainingInfo.local && (
-                          <div className="flex items-center">
-                            <MapPin className="h-3 w-3 mr-2" />
-                            <span>{trainingInfo.local}</span>
-                          </div>
-                        )}
-                        {trainingInfo.descricao && (
-                          <p className="mt-2 text-sm">{trainingInfo.descricao}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-2 bg-muted/20">
-                      <Link to={`/treino-do-dia/${treinoDoDia.id}`} className="w-full">
-                        <Button variant="default" className="w-full">
-                          <Play className="h-4 w-4 mr-2" />
-                          Iniciar Treino
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="descricao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição (opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Detalhes ou objetivos deste treino..." 
+                        className="min-h-[100px]" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={field.value === "Masculino" ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => field.onChange("Masculino")}
+                        >
+                          Masculino
                         </Button>
-                      </Link>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                        <Button
+                          type="button"
+                          variant={field.value === "Feminino" ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => field.onChange("Feminino")}
+                        >
+                          Feminino
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => {
+                  setOpen(false);
+                  form.reset();
+                }}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction disabled={createTrainingMutation.isPending}>
+                  {createTrainingMutation.isPending && (
+                    <LoadingSpinner />
+                  )}
+                  Criar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </form>
+          </Form>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Training Modal */}
+      <AlertDialog open={editOpen} onOpenChange={setEditOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Editar Treino</AlertDialogTitle>
+            <AlertDialogDescription>
+              Atualize as informações do treino selecionado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleUpdateTraining)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Treino</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Treino Técnico Feminino" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="local"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Local</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Ginásio Principal" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data do Treino</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="descricao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição (opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Detalhes ou objetivos deste treino..." 
+                        className="min-h-[100px]" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={field.value === "Masculino" ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => field.onChange("Masculino")}
+                        >
+                          Masculino
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={field.value === "Feminino" ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => field.onChange("Feminino")}
+                        >
+                          Feminino
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => {
+                  setEditOpen(false);
+                  form.reset();
+                  setIsEditMode(false);
+                }}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction disabled={updateTrainingMutation.isPending}>
+                  {updateTrainingMutation.isPending && (
+                    <LoadingSpinner />
+                  )}
+                  Atualizar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </form>
+          </Form>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Training Alert */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Treino</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir este treino? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteOpen(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteTraining} disabled={deleteTrainingMutation.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteTrainingMutation.isPending && (
+                <LoadingSpinner />
+              )}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

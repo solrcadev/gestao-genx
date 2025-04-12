@@ -1,141 +1,152 @@
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Play } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { setTreinoParaDia } from '@/services/treinosDoDiaService';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import React, { useState, useEffect } from "react";
+import { fetchTreinos } from "@/services/trainingService";
+import { setTreinoParaDia } from "@/services/treinosDoDiaService";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar, MapPin } from "lucide-react";
+import { Button } from "../ui/button";
+import LoadingSpinner from "../LoadingSpinner";
+import { toast } from "../ui/use-toast";
+import { useMediaQuery } from "@/hooks/use-mobile";
 
 interface SelectTreinoParaDiaProps {
-  treinoId: string;
-  treinoNome: string;
-  className?: string;
-  size?: "sm" | "md" | "lg";
+  onSelectTreino: () => void;
 }
 
-export function SelectTreinoParaDia({ 
-  treinoId, 
-  treinoNome,
-  className,
-  size = "md"
-}: SelectTreinoParaDiaProps) {
-  const [date, setDate] = useState<Date>(new Date());
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  
-  const setTreinoMutation = useMutation({
-    mutationFn: ({ treinoId, date }: { treinoId: string; date: Date }) => 
-      setTreinoParaDia(treinoId, date),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['treinos-do-dia'] });
+const SelectTreinoParaDia = ({ onSelectTreino }: SelectTreinoParaDiaProps) => {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [treinos, setTreinos] = useState([]);
+  const [selectedTreinoId, setSelectedTreinoId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSettingTreino, setIsSettingTreino] = useState(false);
+  const isMobile = useMediaQuery(768);
+
+  useEffect(() => {
+    loadTreinos();
+  }, []);
+
+  const loadTreinos = async () => {
+    setIsLoading(true);
+    try {
+      const treinosData = await fetchTreinos();
+      setTreinos(treinosData);
+    } catch (error) {
       toast({
-        title: 'Treino definido para o dia',
-        description: `O treino "${treinoNome}" foi definido para ${format(date, 'PPP', { locale: ptBR })}.`
+        title: "Erro ao carregar treinos",
+        description: "Não foi possível carregar a lista de treinos. Tente novamente.",
+        variant: "destructive",
       });
-      setIsDialogOpen(false);
-      navigate(`/treino-do-dia/${data.id}`);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro',
-        description: error.message,
-        variant: 'destructive'
-      });
+    } finally {
+      setIsLoading(false);
     }
-  });
-  
-  const handleSubmit = () => {
-    setTreinoMutation.mutate({ treinoId, date });
   };
-  
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+  };
+
+  const handleTreinoSelect = (treinoId: string) => {
+    setSelectedTreinoId(treinoId);
+  };
+
+  const handleSetTreinoParaDia = async () => {
+    if (!selectedTreinoId || !selectedDate) {
+      toast({
+        title: "Atenção",
+        description: "Selecione um treino e uma data para continuar.",
+        variant: "warning",
+      });
+      return;
+    }
+
+    setIsSettingTreino(true);
+    try {
+      await setTreinoParaDia(selectedTreinoId, selectedDate);
+      toast({
+        title: "Treino definido!",
+        description: "O treino foi definido para o dia selecionado com sucesso.",
+      });
+      onSelectTreino();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao definir treino",
+        description: error.message || "Não foi possível definir o treino para o dia. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingTreino(false);
+    }
+  };
+
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button variant="default" size={size} className={cn("w-full", className)}>
-          <Play className="h-4 w-4 mr-2" />
-          Aplicar Treino
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Aplicar Treino do Dia</DialogTitle>
-          <DialogDescription>
-            Selecione a data para aplicar o treino <strong>{treinoNome}</strong>
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="flex flex-col items-start gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP", { locale: ptBR }) : <span>Selecione a data</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(date) => date && setDate(date)}
-                  initialFocus
-                  disabled={(date) => {
-                    // Can't select dates in the past
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return date < today;
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+    <div className="flex flex-col space-y-4">
+      {/* Date Picker */}
+      <div>
+        <h3 className="text-lg font-semibold mb-2">
+          Selecione a data do treino
+        </h3>
+        <div className="rounded-md border">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            initialFocus
+          />
         </div>
-        
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => setIsDialogOpen(false)}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={setTreinoMutation.isPending || !date}
-          >
-            {setTreinoMutation.isPending ? (
-              <LoadingSpinner className="mr-2" />
-            ) : null}
-            Confirmar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {selectedDate && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Data selecionada:{" "}
+            {format(selectedDate, "PPP", { locale: ptBR })}
+          </p>
+        )}
+      </div>
+
+      {/* Training Selection */}
+      <div>
+        <h3 className="text-lg font-semibold mb-2">
+          Selecione o treino para o dia
+        </h3>
+        {isLoading ? (
+          <div className="flex justify-center">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {treinos.map((treino) => (
+              <Button
+                key={treino.id}
+                variant={selectedTreinoId === treino.id ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => handleTreinoSelect(treino.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{treino.nome}</span>
+                  <span className="text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 mr-1 inline-block" />
+                    {treino.local}
+                  </span>
+                </div>
+              </Button>
+            ))}
+            {treinos.length === 0 && (
+              <p className="text-muted-foreground">
+                Nenhum treino encontrado.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Set Training Button */}
+      <Button
+        onClick={handleSetTreinoParaDia}
+        disabled={isSettingTreino || !selectedTreinoId || !selectedDate}
+      >
+        {isSettingTreino && <LoadingSpinner className="mr-2" />}
+        Definir Treino para o Dia
+      </Button>
+    </div>
   );
-}
+};
+
+export default SelectTreinoParaDia;

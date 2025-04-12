@@ -581,7 +581,7 @@ export type Database = {
       treinos: {
         Row: {
           created_at: string | null
-          created_by: string
+          created_by: string | null
           data: string
           descricao: string | null
           horario: string | null
@@ -592,7 +592,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          created_by: string
+          created_by?: string | null
           data: string
           descricao?: string | null
           horario?: string | null
@@ -603,7 +603,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           data?: string
           descricao?: string | null
           horario?: string | null
