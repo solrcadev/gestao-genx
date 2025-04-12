@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,13 +26,13 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Treinos",
-      icon: <Dumbbell className="h-5 w-5" />,
+      icon: <Calendar className="h-5 w-5" />,
       path: "/treinos",
       color: "bg-green-500/10 text-green-500",
     },
     {
       title: "Exercícios",
-      icon: <Calendar className="h-5 w-5" />,
+      icon: <Dumbbell className="h-5 w-5" />,
       path: "/exercicios",
       color: "bg-orange-500/10 text-orange-500",
     },
@@ -88,7 +89,7 @@ const Dashboard: React.FC = () => {
           <Button 
             className="justify-start" 
             variant="outline"
-            onClick={() => navigate("/treinos")}
+            onClick={() => navigate("/treino-do-dia")}
           >
             <Calendar className="h-4 w-4 mr-2" />
             Treino do dia
@@ -111,4 +112,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

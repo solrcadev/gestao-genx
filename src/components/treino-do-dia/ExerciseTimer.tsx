@@ -1,183 +1,187 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { Play, Pause, SkipForward, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useEffect, useCallback } from "react";
+import { concluirExercicio } from "@/services/treinosDoDiaService";
+import { Button } from "../ui/button";
+import { toast } from "../ui/use-toast";
+import { Clock, Play, Pause, Check, X, BarChart3 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
+import { RealTimeEvaluation } from "./evaluation/RealTimeEvaluation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
-export interface ExerciseTimerProps {
+interface ExerciseTimerProps {
+  exerciseData: any;
+  treinoDoDiaId: string;
+  onFinish: () => void;
+  onCancel: () => void;
   estimatedTime: number;
-  onFinish: (elapsedMinutes: number) => void;
-  treinoDoDiaId?: string; 
-  exerciseData?: any;
-  onCancel?: () => void;
 }
 
-export function ExerciseTimer({ 
-  estimatedTime, 
-  onFinish,
-  treinoDoDiaId,
+export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   exerciseData,
-  onCancel
-}: ExerciseTimerProps) {
+  treinoDoDiaId,
+  onFinish,
+  onCancel,
+  estimatedTime = 10,
+}) => {
   const [isRunning, setIsRunning] = useState(true);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [minElapsed, setMinElapsed] = useState(0);
-  const startTimeRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+  const [activeTab, setActiveTab] = useState<"timer" | "evaluation">("timer");
+  const [evaluationData, setEvaluationData] = useState({});
 
-  // Initialize timer
-  useEffect(() => {
-    startTimeRef.current = Date.now();
-    tick();
-    
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
-  
-  // Calculate timer when isRunning changes
-  useEffect(() => {
-    if (isRunning) {
-      startTimeRef.current = Date.now() - elapsedTime;
-      tick();
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-  }, [isRunning]);
-
-  // Update minutes elapsed
-  useEffect(() => {
-    const minutes = Math.floor(elapsedTime / 60000);
-    if (minutes !== minElapsed) {
-      setMinElapsed(minutes);
-    }
-  }, [elapsedTime]);
-
-  const tick = () => {
-    if (startTimeRef.current === null) return;
-    
-    const now = Date.now();
-    const elapsed = now - startTimeRef.current;
-    
-    setElapsedTime(elapsed);
-    
-    animationFrameRef.current = requestAnimationFrame(tick);
+  // Time display formatting
+  const formatTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
+  // Timer management
+  useEffect(() => {
+    let intervalId: number;
+
+    if (isRunning) {
+      intervalId = window.setInterval(() => {
+        setElapsedTime((prevTime) => prevTime + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isRunning]);
+
+  // Toggle timer
   const toggleTimer = () => {
     setIsRunning(!isRunning);
   };
 
-  const finishExercise = async () => {
-    const finalMinutes = Math.max(1, Math.ceil(elapsedTime / 60000));
-    
-    if (treinoDoDiaId && exerciseData?.id) {
-      try {
-        // Update exercise as completed with actual time
-        const { error } = await supabase
-          .from('treinos_exercicios')
-          .update({ 
-            concluido: true,
-            tempo_real: finalMinutes
-          })
-          .eq('id', exerciseData.id);
-          
-        if (error) {
-          throw new Error('Erro ao atualizar exercício: ' + error.message);
-        }
-      } catch (error) {
-        console.error('Error updating exercise:', error);
-        toast({
-          title: 'Erro ao finalizar exercício',
-          description: 'Não foi possível marcar o exercício como concluído.',
-          variant: 'destructive',
-        });
-      }
+  // Finish exercise handler
+  const handleFinishExercise = async () => {
+    try {
+      await concluirExercicio({
+        treinoDoDiaId,
+        exercicioId: exerciseData.id,
+        tempoReal: elapsedTime,
+      });
+
+      toast({
+        title: "Exercício concluído",
+        description: `Tempo registrado: ${formatTime(elapsedTime)}`,
+      });
+
+      onFinish();
+    } catch (error) {
+      console.error("Error concluding exercise:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível concluir o exercício.",
+        variant: "destructive",
+      });
     }
-    
-    onFinish(finalMinutes);
   };
 
-  // Format time as MM:SS
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  // Handle evaluation data update
+  const handleEvaluationUpdate = (data) => {
+    setEvaluationData(data);
   };
 
-  // Calculate percentage of estimated time
-  const getTimePercentage = () => {
-    const percentage = (elapsedTime / (estimatedTime * 60 * 1000)) * 100;
-    return Math.min(percentage, 100);
-  };
-
-  // Get status classname
-  const getStatusClass = () => {
-    const percentage = getTimePercentage();
-    if (percentage < 80) return "text-green-600";
-    if (percentage < 100) return "text-amber-500";
-    return "text-red-500";
-  };
+  // Calculate progress percentage for the timer bar
+  const progressPercentage = Math.min((elapsedTime / (estimatedTime * 60)) * 100, 100);
 
   return (
-    <div className="bg-muted/20 rounded-lg p-4 animate-fade-in">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-medium">Cronômetro</h3>
-        <Badge variant="outline" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Meta: {estimatedTime} min
-        </Badge>
-      </div>
+    <div className="flex flex-col h-full">
+      <Tabs value={activeTab} onValueChange={(tab) => setActiveTab(tab as "timer" | "evaluation")} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="timer">
+            <Clock className="h-4 w-4 mr-2" /> Cronômetro
+          </TabsTrigger>
+          <TabsTrigger value="evaluation">
+            <BarChart3 className="h-4 w-4 mr-2" /> Avaliação
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="timer" className="mt-4">
+          <div className="space-y-4">
+            {/* Exercise name and timer */}
+            <div className="bg-muted/30 p-6 text-center rounded-lg">
+              <h3 className="font-medium mb-1 text-lg">
+                {exerciseData.exercicio?.nome || "Exercício"}
+              </h3>
+              <div className="text-4xl font-bold tabular-nums">
+                {formatTime(elapsedTime)}
+              </div>
+              <div className="mt-3 bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>Início</span>
+                <span>
+                  {estimatedTime} min ({formatTime(estimatedTime * 60)})
+                </span>
+              </div>
+            </div>
 
-      <div className="flex flex-col items-center justify-center py-2 mb-4">
-        <div className={cn("text-3xl font-bold mb-2", getStatusClass())}>
-          {formatTime(elapsedTime)}
-        </div>
-        <Progress value={getTimePercentage()} className="w-full h-1.5" />
-      </div>
+            {/* Timer controls */}
+            <div className="flex justify-center gap-2">
+              <Button onClick={toggleTimer} size="lg" variant="secondary">
+                {isRunning ? <Pause /> : <Play />}
+                <span className="ml-2">{isRunning ? "Pausar" : "Continuar"}</span>
+              </Button>
+              <Button
+                onClick={() => setShowConfirmFinish(true)}
+                size="lg"
+                variant="default"
+              >
+                <Check className="mr-2" />
+                Finalizar
+              </Button>
+            </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={toggleTimer}
-        >
-          {isRunning ? (
-            <>
-              <Pause className="h-4 w-4 mr-2" />
-              Pausar
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4 mr-2" />
-              Continuar
-            </>
-          )}
-        </Button>
-        <Button
-          className="flex-1"
-          onClick={finishExercise}
-        >
-          <SkipForward className="h-4 w-4 mr-2" />
-          Finalizar
-        </Button>
-        {onCancel && (
-          <Button
-            variant="ghost"
-            onClick={onCancel}
-            className="flex-1"
-          >
-            Cancelar
-          </Button>
-        )}
-      </div>
+            {/* Cancel button */}
+            <div className="mt-8 text-center">
+              <Button variant="ghost" onClick={onCancel} className="text-muted-foreground">
+                <X className="mr-2 h-4 w-4" /> Cancelar
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="evaluation" className="mt-4">
+          <RealTimeEvaluation
+            exercise={exerciseData}
+            treinoDoDiaId={treinoDoDiaId}
+            onComplete={handleEvaluationUpdate}
+            onBack={() => setActiveTab("timer")}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Confirmation dialog */}
+      <Dialog open={showConfirmFinish} onOpenChange={setShowConfirmFinish}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar exercício?</DialogTitle>
+          </DialogHeader>
+          <p>
+            Tempo registrado: <span className="font-medium">{formatTime(elapsedTime)}</span>
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleFinishExercise}>Confirmar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};

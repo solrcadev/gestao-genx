@@ -3,10 +3,10 @@ import React, { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle, Search, Filter, User } from "lucide-react";
+import { CheckCircle, XCircle, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { fetchPresencasAtletas } from "@/services/treinosDoDiaService";
+import { fetchPresencasAtletas, salvarAvaliacaoExercicio } from "@/services/treinosDoDiaService";
 import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -21,7 +21,7 @@ interface RealTimeEvaluationProps {
 // Fundamentos predefinidos (poderia vir do banco de dados)
 const DEFAULT_FUNDAMENTOS = ["Saque", "Recepção", "Levantamento", "Ataque", "Bloqueio", "Defesa"];
 
-const RealTimeEvaluation = ({ 
+export const RealTimeEvaluation = ({ 
   exercise, 
   treinoDoDiaId,
   initialData = {},
@@ -43,6 +43,26 @@ const RealTimeEvaluation = ({
   const { data: athletesWithAttendance = [], isLoading: isLoadingAthletes } = useQuery({
     queryKey: ["athletes-attendance", treinoDoDiaId],
     queryFn: () => fetchPresencasAtletas(treinoDoDiaId),
+  });
+
+  // Mutation for saving evaluations
+  const saveEvaluationMutation = useMutation({
+    mutationFn: salvarAvaliacaoExercicio,
+    onSuccess: () => {
+      toast({
+        title: "Avaliação salva",
+        description: "A avaliação foi registrada com sucesso!",
+        duration: 1500
+      });
+    },
+    onError: (error) => {
+      console.error("Error saving evaluation:", error);
+      toast({
+        title: "Erro ao salvar avaliação",
+        description: "Não foi possível salvar a avaliação.",
+        variant: "destructive"
+      });
+    }
   });
 
   // Initialize data structure for each athlete if coming from initialData
@@ -81,6 +101,16 @@ const RealTimeEvaluation = ({
         }
       };
       
+      // Auto-save to the database in real-time
+      saveEvaluationMutation.mutate({
+        treinoDoDiaId,
+        exercicioId: exercise.id,
+        atletaId,
+        fundamento: activeFundamento,
+        acertos: updatedData[atletaId][activeFundamento].acertos,
+        erros: updatedData[atletaId][activeFundamento].erros
+      });
+      
       return updatedData;
     });
   };
@@ -89,18 +119,30 @@ const RealTimeEvaluation = ({
     setEvaluationData(prev => {
       const athleteData = prev[atletaId] || {};
       
-      return {
+      const updatedData = {
         ...prev,
         [atletaId]: {
           ...athleteData,
           [activeFundamento]: { acertos: 0, erros: 0 }
         }
       };
+      
+      // Reset in database
+      saveEvaluationMutation.mutate({
+        treinoDoDiaId,
+        exercicioId: exercise.id,
+        atletaId,
+        fundamento: activeFundamento,
+        acertos: 0,
+        erros: 0
+      });
+      
+      return updatedData;
     });
   };
 
   const handleComplete = () => {
-    // Process and deliver the final evaluation data
+    // Deliver the final evaluation data to parent component
     onComplete(evaluationData);
   };
 
@@ -304,9 +346,9 @@ const RealTimeEvaluation = ({
 
       <Button 
         className="mt-4"
-        onClick={handleComplete}
+        onClick={onBack}
       >
-        Revisar Avaliação
+        Voltar ao cronômetro
       </Button>
     </div>
   );

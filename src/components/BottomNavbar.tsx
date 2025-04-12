@@ -1,6 +1,7 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Users, Calendar, Activity, MoreHorizontal, Home, Grid2x2, ClipboardCheck } from "lucide-react";
+import { Users, Calendar, Activity, Home, Grid2x2, ClipboardCheck } from "lucide-react";
 
 const BottomNavbar = () => {
   const location = useLocation();
