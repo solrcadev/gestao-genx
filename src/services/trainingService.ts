@@ -1,6 +1,17 @@
+
 import { supabase } from '@/lib/supabase';
+import { Training } from '@/types';
 
 export interface TrainingInput {
+  nome: string;
+  local: string;
+  data: Date;
+  descricao?: string;
+  time: "Masculino" | "Feminino";
+}
+
+export interface TrainingUpdateInput {
+  id: string;
   nome: string;
   local: string;
   data: Date;
@@ -79,7 +90,7 @@ export const addExercisesToTraining = async ({ trainingId, exercises }) => {
   }
 };
 
-export const fetchTrainings = async () => {
+export const fetchTrainings = async (): Promise<Training[]> => {
   try {
     const { data, error } = await supabase
       .from('treinos')
@@ -122,16 +133,18 @@ export const getTrainingById = async (id: string) => {
   }
 };
 
-export const updateTraining = async (id: string, trainingData: Partial<TrainingInput>) => {
+export const updateTraining = async (trainingData: TrainingUpdateInput) => {
   try {
+    const { id, ...updateData } = trainingData;
+    
     const { data, error } = await supabase
       .from('treinos')
       .update({
-        nome: trainingData.nome,
-        local: trainingData.local,
-        data: trainingData.data,
-        descricao: trainingData.descricao,
-        time: trainingData.time
+        nome: updateData.nome,
+        local: updateData.local,
+        data: updateData.data,
+        descricao: updateData.descricao,
+        time: updateData.time
       })
       .eq('id', id)
       .select()
@@ -148,7 +161,7 @@ export const updateTraining = async (id: string, trainingData: Partial<TrainingI
   }
 };
 
-export const deleteTraining = async (id: string) => {
+export const deleteTraining = async (id: string): Promise<boolean> => {
   try {
     // First delete related exercises
     const { error: exercisesError } = await supabase

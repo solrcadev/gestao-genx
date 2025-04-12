@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from "react";
 import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
 import { Clipboard, Play, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { toast } from "../ui/use-toast";
-import ExerciseTimer from "./ExerciseTimer";
-import ExerciseEvaluationTabs from "./ExerciseEvaluationTabs";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { ExerciseTimer } from "./ExerciseTimer";
+import { ExerciseEvaluationTabs } from "./ExerciseEvaluationTabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ExerciseListProps {
   treinoDoDiaId: string;
@@ -18,7 +17,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   const [exercicios, setExercicios] = useState([]);
   const [activeExercise, setActiveExercise] = useState(null);
   const [isTimerActive, setIsTimerActive] = useState(false);
-  const isMobile = useMediaQuery(768);
+  const isMobile = useIsMobile(768);
 
   useEffect(() => {
     loadExercicios();

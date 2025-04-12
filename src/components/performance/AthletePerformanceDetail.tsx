@@ -1,203 +1,135 @@
 
 import React, { useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Radar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  Radar,
-  Legend,
-  Tooltip,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Bar,
-  LabelList,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
+  PolarRadiusAxis,
 } from "recharts";
-import { useMediaQuery } from "@/hooks/use-mobile";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AthletePerformance, Athlete } from "@/types";
+import { 
+  BarChart2, 
+  Calendar as CalendarIcon,
+  CircleCheck, 
+  CircleX,
+  ArrowUpRight
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { AthletePerformance } from "@/types";
 
-interface AthletePerformanceDetailProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  athlete: AthletePerformance;
+export interface AthletePerformanceDetailProps {
+  performance: AthletePerformance;
 }
 
-const AthletePerformanceDetail = ({
-  open,
-  onOpenChange,
-  athlete,
-}: AthletePerformanceDetailProps) => {
-  const isMobile = useMediaQuery(768);
+const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps) => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Get fundamental data
-  const fundamentals = Object.keys(athlete?.avaliacoes?.porFundamento || {}).map(
-    (key) => {
-      const data = athlete.avaliacoes.porFundamento[key];
-      return {
-        name: key,
-        acertos: data.acertos,
-        erros: data.erros,
-        taxa: data.taxa * 100, // Convert to percentage
-      };
-    }
+  // Prepare data for the radar chart
+  const radarData = Object.entries(performance.avaliacoes.porFundamento).map(
+    ([fundamento, dados]) => ({
+      fundamento,
+      taxa: Number((dados.taxa * 100).toFixed(0)),
+    })
   );
 
-  // Prepare timeline data
-  const timelineData = athlete?.ultimasAvaliacoes?.map((avaliacao) => {
-    const date = new Date(avaliacao.data);
-    return {
-      name: `${date.getDate()}/${date.getMonth() + 1}`,
-      acertos: avaliacao.acertos,
-      erros: avaliacao.erros,
-      fundamento: avaliacao.fundamento,
-    };
-  });
-
-  // Colors for charts
-  const colors = {
-    acertos: "#4ade80", // green
-    erros: "#f87171", // red
-    primary: "#6366f1", // indigo
-    secondary: "#8b5cf6", // violet
-  };
-
-  // Build radar chart data
-  const radarData = fundamentals.map((item) => ({
-    subject: item.name,
-    acertos: item.acertos,
-    erros: item.erros,
-  }));
-
-  // Build pie chart data for attendance
-  const attendanceData = [
+  // Prepare data for the pie chart
+  const pieData = [
     {
       name: "Presente",
-      value: athlete?.presenca?.presente,
+      value: performance.presenca.presente,
+      color: "#22c55e",
     },
     {
       name: "Ausente",
-      value: athlete?.presenca?.total - athlete?.presenca?.presente,
+      value: performance.presenca.total - performance.presenca.presente,
+      color: "#ef4444",
     },
   ];
 
-  // Custom tooltip for charts
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background border border-border p-3 rounded-md shadow-md">
-          <p className="font-medium">{`${label}`}</p>
-          {payload.map((entry: any, index: number) => {
-            // Check if the value exists and if it has toFixed method
-            const valueDisplay = typeof entry.value === 'number' ? 
-              entry.value.toFixed(1) : 
-              (entry.value || '0');
-              
-            return (
-              <p
-                key={`item-${index}`}
-                style={{ color: entry.color }}
-                className="text-sm"
-              >
-                {`${entry.name}: ${valueDisplay}`}
-              </p>
-            );
-          })}
-        </div>
-      );
-    }
-
-    return null;
-  };
+  // Last evaluations for bar chart
+  const lastEvaluations = performance.ultimasAvaliacoes
+    .slice(0, 5)
+    .map((avaliacao) => ({
+      name: avaliacao.fundamento,
+      acertos: avaliacao.acertos,
+      erros: avaliacao.erros,
+      data: format(new Date(avaliacao.data), "dd/MM", { locale: ptBR }),
+      treino: avaliacao.treino,
+    }));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader className="mb-5 space-y-3">
-          <SheetTitle className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10 border">
-              <AvatarImage src={athlete?.atleta.foto_url || undefined} />
-              <AvatarFallback>
-                {athlete?.atleta.nome
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span>{athlete?.atleta.nome}</span>
-                <Badge variant="outline" className="ml-1 text-xs">
-                  {athlete?.atleta.time}
-                </Badge>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {athlete?.atleta.posicao}
-              </div>
-            </div>
-          </SheetTitle>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col p-3 border rounded-md text-center">
-              <span className="text-xs text-muted-foreground">Presença</span>
-              <span className="text-xl font-semibold">
-                {athlete?.presenca?.percentual || 0}%
-              </span>
-            </div>
-            <div className="flex flex-col p-3 border rounded-md text-center">
-              <span className="text-xs text-muted-foreground">Média</span>
-              <span className="text-xl font-semibold">
-                {athlete?.avaliacoes?.mediaNota?.toFixed(1) || "N/A"}
-              </span>
-            </div>
-            <div className="flex flex-col p-3 border rounded-md text-center">
-              <span className="text-xs text-muted-foreground">Treinos</span>
-              <span className="text-xl font-semibold">
-                {athlete?.avaliacoes?.total || 0}
-              </span>
-            </div>
+    <div className="px-4 py-6 space-y-6">
+      <Tabs
+        defaultValue="overview"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-3 w-full mb-4">
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="technical">Desempenho Técnico</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">Presença</p>
+                <div className="mt-1 flex items-center justify-center gap-1">
+                  <CircleCheck className="h-4 w-4 text-green-500" />
+                  <p className="text-2xl font-bold">
+                    {performance.presenca.percentual}%
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {performance.presenca.presente} de {performance.presenca.total} treinos
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">Nota Média</p>
+                <p className="text-2xl font-bold mt-1">
+                  {performance.avaliacoes.mediaNota.toFixed(1)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {performance.avaliacoes.total} avaliações
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </SheetHeader>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-4"
-        >
-          <TabsList className="grid grid-cols-3 h-auto">
-            <TabsTrigger value="overview" className="py-2">
-              Visão Geral
-            </TabsTrigger>
-            <TabsTrigger value="details" className="py-2">
-              Fundamentos
-            </TabsTrigger>
-            <TabsTrigger value="history" className="py-2">
-              Histórico
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Radar Chart */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <h3 className="text-sm font-medium">Performance por Fundamento</h3>
-              <div className="h-60">
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="text-sm font-medium mb-3 flex items-center justify-between">
+                <span>Eficiência por Fundamento</span>
+                <Badge variant="outline" className="font-normal">
+                  % de acerto
+                </Badge>
+              </h3>
+              <div className="h-[200px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart
                     cx="50%"
@@ -205,228 +137,158 @@ const AthletePerformanceDetail = ({
                     outerRadius="80%"
                     data={radarData}
                   >
-                    <PolarGrid strokeDasharray="3 3" />
-                    <PolarAngleAxis dataKey="subject" />
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="fundamento" />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} />
                     <Radar
-                      name="Acertos"
-                      dataKey="acertos"
-                      stroke={colors.acertos}
-                      fill={colors.acertos}
-                      fillOpacity={0.5}
+                      name="Taxa de Acerto"
+                      dataKey="taxa"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                      fillOpacity={0.6}
                     />
-                    <Radar
-                      name="Erros"
-                      dataKey="erros"
-                      stroke={colors.erros}
-                      fill={colors.erros}
-                      fillOpacity={0.3}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
+                    <Tooltip formatter={(value) => [`${value}%`, 'Taxa de Acerto']} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* Attendance Pie Chart */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <h3 className="text-sm font-medium">Presença em Treinos</h3>
-              <div className="h-60">
+        <TabsContent value="technical" className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="text-sm font-medium mb-3">Eficiência Técnica</h3>
+              <div className="h-[200px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={attendanceData}
+                      data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      nameKey="name"
-                      labelLine={false}
-                      label={({
-                        cx,
-                        cy,
-                        midAngle,
-                        innerRadius,
-                        outerRadius,
-                        percent,
-                      }: any) => {
-                        const radius =
-                          innerRadius + (outerRadius - innerRadius) * 0.5;
-                        const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-                        const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
-
-                        return (
-                          <text
-                            x={x}
-                            y={y}
-                            fill="white"
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                          >
-                            {`${(percent * 100).toFixed(0)}%`}
-                          </text>
-                        );
-                      }}
                     >
-                      <Cell key="cell-0" fill={colors.primary} />
-                      <Cell key="cell-1" fill={colors.erros} />
+                      {pieData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                        />
+                      ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          </TabsContent>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="details" className="space-y-6">
-            {/* Bar Chart for Fundamentals */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <h3 className="text-sm font-medium">Taxa de Acertos por Fundamento</h3>
-              <div className="h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={fundamentals}
-                    margin={{
-                      top: 20,
-                      right: 10,
-                      left: 0,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" />
-                    <YAxis unit="%" domain={[0, 100]} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="taxa" fill={colors.primary} name="Taxa de Acerto">
-                      <LabelList dataKey="taxa" position="top" formatter={(value: number) => `${value.toFixed(0)}%`} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Table of Fundamentals Details */}
-            <div className="rounded-lg border overflow-hidden">
-              <table className="min-w-full divide-y divide-border">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Fundamento
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Acertos
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Erros
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Taxa
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-card divide-y divide-border">
-                  {fundamentals.map((item, i) => (
-                    <tr key={i}>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                        {item.name}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-green-500">
-                        {item.acertos}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-red-500">
-                        {item.erros}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                        {item.taxa.toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-6">
-            {/* Line Chart for Timeline */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <h3 className="text-sm font-medium">Evolução nos Últimos Treinos</h3>
-              <div className="h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={timelineData}
-                    margin={{
-                      top: 5,
-                      right: 10,
-                      left: 5,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="acertos"
-                      stroke={colors.acertos}
-                      activeDot={{ r: 8 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="erros"
-                      stroke={colors.erros}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Recent Evaluations */}
-            <div className="rounded-lg border overflow-hidden">
-              <div className="bg-muted/50 px-4 py-3">
-                <h3 className="text-sm font-medium">Últimas Avaliações</h3>
-              </div>
-              <div className="divide-y divide-border max-h-80 overflow-y-auto">
-                {athlete?.ultimasAvaliacoes?.map((avaliacao, i) => {
-                  const date = new Date(avaliacao.data);
-                  return (
-                    <div key={i} className="px-4 py-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{avaliacao.fundamento}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {`${date.toLocaleDateString()} - ${avaliacao.treino}`}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-green-500">
-                            {avaliacao.acertos} acertos
-                          </span>
-                          <span className="text-sm text-red-500">
-                            {avaliacao.erros} erros
-                          </span>
-                        </div>
+          {Object.entries(performance.avaliacoes.porFundamento).length > 0 ? (
+            <div className="space-y-3">
+              {Object.entries(performance.avaliacoes.porFundamento).map(
+                ([fundamento, dados]) => (
+                  <Card key={fundamento}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center mb-1">
+                        <h4 className="text-sm font-medium">{fundamento}</h4>
+                        <Badge
+                          variant={dados.taxa > 0.6 ? "default" : "outline"}
+                          className={
+                            dados.taxa > 0.6 ? "bg-green-500" : "text-amber-500"
+                          }
+                        >
+                          {(dados.taxa * 100).toFixed(0)}% eficiência
+                        </Badge>
                       </div>
-                    </div>
-                  );
-                })}
-
-                {(!athlete?.ultimasAvaliacoes ||
-                  athlete?.ultimasAvaliacoes.length === 0) && (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Nenhuma avaliação registrada
-                  </div>
-                )}
-              </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <p>
+                          Acertos: <span className="font-medium text-green-600">{dados.acertos}</span>
+                        </p>
+                        <p>
+                          Erros: <span className="font-medium text-red-600">{dados.erros}</span>
+                        </p>
+                        <p>
+                          Total: <span className="font-medium">{dados.total}</span>
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              )}
             </div>
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+          ) : (
+            <p className="text-center py-6 text-muted-foreground">
+              Não há dados de fundamentos disponíveis
+            </p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="text-sm font-medium mb-3">Últimas Avaliações</h3>
+              {lastEvaluations.length > 0 ? (
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={lastEvaluations}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis 
+                        dataKey="data"
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} tickLine={false} />
+                      <Tooltip
+                        formatter={(value, name, props) => [
+                          value,
+                          name === "acertos" ? "Acertos" : "Erros",
+                        ]}
+                        labelFormatter={(label, data) => {
+                          const item = data[0]?.payload;
+                          return `${label} - ${item?.treino} (${item?.name})`;
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="acertos" name="Acertos" fill="#10b981" />
+                      <Bar dataKey="erros" name="Erros" fill="#ef4444" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-center py-6 text-muted-foreground">
+                  Não há histórico de avaliações
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium">Histórico de Presenças</h3>
+                <Badge variant="outline">
+                  {performance.presenca.percentual}% presença
+                </Badge>
+              </div>
+
+              {/* We would need more data for a detailed presence history */}
+              <p className="text-center py-4 text-muted-foreground">
+                Presença em {performance.presenca.presente} de {performance.presenca.total} treinos
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

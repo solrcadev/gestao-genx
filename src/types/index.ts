@@ -51,7 +51,7 @@ export interface AthletePerformance {
   }>;
 }
 
-// Add a new Training interface to address issues
+// Training interface to address issues
 export interface Training {
   id: string;
   nome: string;

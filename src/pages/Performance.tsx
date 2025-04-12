@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart2, Search, Filter, X, ChevronRight } from 'lucide-react';
+import { BarChart2, Search, X, } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AthletePerformanceCard from '@/components/performance/AthletePerformanceCard';
 import AthletePerformanceDetail from '@/components/performance/AthletePerformanceDetail';
-import { getAthletesPerformance, getAthletePerformance } from '@/services/performanceService';
+import { getAthletesPerformance } from '@/services/performanceService';
 import { TeamType, AthletePerformance } from '@/types';
 
 const Performance = () => {

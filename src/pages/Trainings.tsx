@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, MapPin, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon } from "@/components/ui/calendar"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
   Form,
   FormControl,
@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
 import { fetchTrainings, createTraining, updateTraining, deleteTraining } from '@/services/trainingService';
-import { Team } from '@/types';
+import { Team, Training } from '@/types';
 
 const formSchema = z.object({
   nome: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
@@ -59,7 +59,7 @@ const Trainings = () => {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedTraining, setSelectedTraining] = useState(null);
+  const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -107,7 +107,14 @@ const Trainings = () => {
 
   // Update training mutation
   const updateTrainingMutation = useMutation({
-    mutationFn: (data) => updateTraining(selectedTraining?.id, data),
+    mutationFn: (data: { id: string; data: z.infer<typeof formSchema> }) => updateTraining({
+      id: data.id,
+      nome: data.data.nome,
+      local: data.data.local,
+      data: data.data.data,
+      descricao: data.data.descricao,
+      time: data.data.time
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainings'] });
       toast({ 
@@ -130,7 +137,7 @@ const Trainings = () => {
 
   // Delete training mutation
   const deleteTrainingMutation = useMutation({
-    mutationFn: () => deleteTraining(selectedTraining?.id),
+    mutationFn: (id: string) => deleteTraining(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainings'] });
       toast({ 
@@ -156,7 +163,7 @@ const Trainings = () => {
     createTrainingMutation.mutate(values);
   };
 
-  const handleEditTraining = (training) => {
+  const handleEditTraining = (training: Training) => {
     setSelectedTraining(training);
     setEditOpen(true);
     setIsEditMode(true);
@@ -168,16 +175,18 @@ const Trainings = () => {
   };
 
   const handleUpdateTraining = (values: z.infer<typeof formSchema>) => {
-    updateTrainingMutation.mutate(values);
+    if (!selectedTraining) return;
+    updateTrainingMutation.mutate({ id: selectedTraining.id, data: values });
   };
 
-  const handleDeleteTraining = (training) => {
+  const handleDeleteTraining = (training: Training) => {
     setSelectedTraining(training);
     setDeleteOpen(true);
   };
 
   const confirmDeleteTraining = () => {
-    deleteTrainingMutation.mutate();
+    if (!selectedTraining) return;
+    deleteTrainingMutation.mutate(selectedTraining.id);
   };
 
   const handleOpenTreinoDoDia = (trainingId: string) => {
@@ -311,12 +320,12 @@ const Trainings = () => {
                             ) : (
                               <span>Selecione uma data</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <Calendar className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
+                        <CalendarComponent
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
@@ -455,12 +464,12 @@ const Trainings = () => {
                             ) : (
                               <span>Selecione uma data</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <Calendar className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
+                        <CalendarComponent
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
