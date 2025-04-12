@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { fetchTreinos } from "@/services/trainingService";
+import { fetchTrainings } from "@/services/trainingService";
 import { setTreinoParaDia } from "@/services/treinosDoDiaService";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -8,7 +8,7 @@ import { Calendar as CalendarIcon, MapPin } from "lucide-react";
 import { Button } from "../ui/button";
 import LoadingSpinner from "../LoadingSpinner";
 import { toast } from "../ui/use-toast";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -22,7 +22,7 @@ const SelectTreinoParaDia = ({ onSelectTreino }: SelectTreinoParaDiaProps) => {
   const [selectedTreinoId, setSelectedTreinoId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingTreino, setIsSettingTreino] = useState(false);
-  const isMobile = useMediaQuery(768);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadTreinos();
@@ -31,7 +31,7 @@ const SelectTreinoParaDia = ({ onSelectTreino }: SelectTreinoParaDiaProps) => {
   const loadTreinos = async () => {
     setIsLoading(true);
     try {
-      const treinosData = await fetchTreinos();
+      const treinosData = await fetchTrainings();
       setTreinos(treinosData);
     } catch (error) {
       toast({

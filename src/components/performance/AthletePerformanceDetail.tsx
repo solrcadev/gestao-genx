@@ -1,254 +1,432 @@
 
+import React, { useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Check, X } from "lucide-react";
-import { AthletePerformance } from "@/types";
-import { 
-  PieChart, 
-  Pie, 
-  Legend, 
-  ResponsiveContainer, 
-  Cell, 
-  Tooltip, 
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+import {
+  ResponsiveContainer,
   RadarChart,
-  Radar,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis,
+  Radar,
+  Legend,
+  Tooltip,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Bar,
+  LabelList,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
+import { useMediaQuery } from "@/hooks/use-mobile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AthletePerformance, Athlete } from "@/types";
+import { Badge } from "@/components/ui/badge";
 
 interface AthletePerformanceDetailProps {
-  performance: AthletePerformance;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  athlete: AthletePerformance;
 }
 
-const COLORS = [
-  "#8B5CF6", // Roxo
-  "#3B82F6", // Azul
-  "#10B981", // Verde
-  "#F59E0B", // Âmbar
-  "#EF4444", // Vermelho
-  "#EC4899", // Rosa
-  "#8B5CF6", // Roxo (repetido para completar)
-];
+const AthletePerformanceDetail = ({
+  open,
+  onOpenChange,
+  athlete,
+}: AthletePerformanceDetailProps) => {
+  const isMobile = useMediaQuery(768);
+  const [activeTab, setActiveTab] = useState("overview");
 
-// Função para formatar data
-const formatDate = (dateString: string) => {
-  try {
-    return format(new Date(dateString), "dd/MM/yy", { locale: ptBR });
-  } catch {
-    return dateString;
-  }
-};
+  // Get fundamental data
+  const fundamentals = Object.keys(athlete?.avaliacoes?.porFundamento || {}).map(
+    (key) => {
+      const data = athlete.avaliacoes.porFundamento[key];
+      return {
+        name: key,
+        acertos: data.acertos,
+        erros: data.erros,
+        taxa: data.taxa * 100, // Convert to percentage
+      };
+    }
+  );
 
-const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps) => {
-  const { presenca, avaliacoes, ultimasAvaliacoes } = performance;
-  
-  // Preparar dados para o gráfico de pizza de presença
-  const presenceData = [
-    { name: "Presente", value: presenca.presente },
-    { name: "Ausente", value: presenca.total - presenca.presente }
-  ];
-  
-  // Preparar dados para o gráfico de radar por fundamento
-  const radarData = Object.entries(avaliacoes.porFundamento).map(([name, stats]) => ({
-    fundamento: name,
-    acertos: stats.acertos,
-    erros: stats.erros,
-    taxa: stats.taxa
-  }));
-  
-  // Preparar dados para o gráfico de barras por fundamento
-  const barData = Object.entries(avaliacoes.porFundamento).map(([name, stats]) => ({
-    fundamento: name,
-    acertos: stats.acertos,
-    erros: stats.erros
-  }));
-  
-  // Configuração para gráficos
-  const chartConfig = {
-    presente: { color: "#10B981" }, // Verde
-    ausente: { color: "#EF4444" }, // Vermelho
-    acertos: { color: "#3B82F6" }, // Azul
-    erros: { color: "#F59E0B" }, // Âmbar
-    taxa: { color: "#8B5CF6" }, // Roxo
+  // Prepare timeline data
+  const timelineData = athlete?.ultimasAvaliacoes?.map((avaliacao) => {
+    const date = new Date(avaliacao.data);
+    return {
+      name: `${date.getDate()}/${date.getMonth() + 1}`,
+      acertos: avaliacao.acertos,
+      erros: avaliacao.erros,
+      fundamento: avaliacao.fundamento,
+    };
+  });
+
+  // Colors for charts
+  const colors = {
+    acertos: "#4ade80", // green
+    erros: "#f87171", // red
+    primary: "#6366f1", // indigo
+    secondary: "#8b5cf6", // violet
   };
-  
+
+  // Build radar chart data
+  const radarData = fundamentals.map((item) => ({
+    subject: item.name,
+    acertos: item.acertos,
+    erros: item.erros,
+  }));
+
+  // Build pie chart data for attendance
+  const attendanceData = [
+    {
+      name: "Presente",
+      value: athlete?.presenca?.presente,
+    },
+    {
+      name: "Ausente",
+      value: athlete?.presenca?.total - athlete?.presenca?.presente,
+    },
+  ];
+
+  // Custom tooltip for charts
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border border-border p-3 rounded-md shadow-md">
+          <p className="font-medium">{`${label}`}</p>
+          {payload.map((entry: any, index: number) => {
+            // Check if the value exists and if it has toFixed method
+            const valueDisplay = typeof entry.value === 'number' ? 
+              entry.value.toFixed(1) : 
+              (entry.value || '0');
+              
+            return (
+              <p
+                key={`item-${index}`}
+                style={{ color: entry.color }}
+                className="text-sm"
+              >
+                {`${entry.name}: ${valueDisplay}`}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
-    <div className="px-4">
-      <Tabs defaultValue="graficos" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="graficos">Gráficos</TabsTrigger>
-          <TabsTrigger value="fundamentos">Fundamentos</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
-        </TabsList>
-        
-        <ScrollArea className="h-[50vh]">
-          {/* Tab de Gráficos */}
-          <TabsContent value="graficos" className="space-y-6">
-            {/* Gráfico de Pizza - Presença */}
-            <div>
-              <h3 className="font-medium mb-2 text-sm">Taxa de Presença</h3>
-              <div className="h-[200px] bg-muted/20 rounded-lg p-4">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader className="mb-5 space-y-3">
+          <SheetTitle className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10 border">
+              <AvatarImage src={athlete?.atleta.foto_url || undefined} />
+              <AvatarFallback>
+                {athlete?.atleta.nome
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .substring(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span>{athlete?.atleta.nome}</span>
+                <Badge variant="outline" className="ml-1 text-xs">
+                  {athlete?.atleta.time}
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {athlete?.atleta.posicao}
+              </div>
+            </div>
+          </SheetTitle>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col p-3 border rounded-md text-center">
+              <span className="text-xs text-muted-foreground">Presença</span>
+              <span className="text-xl font-semibold">
+                {athlete?.presenca?.percentual || 0}%
+              </span>
+            </div>
+            <div className="flex flex-col p-3 border rounded-md text-center">
+              <span className="text-xs text-muted-foreground">Média</span>
+              <span className="text-xl font-semibold">
+                {athlete?.avaliacoes?.mediaNota?.toFixed(1) || "N/A"}
+              </span>
+            </div>
+            <div className="flex flex-col p-3 border rounded-md text-center">
+              <span className="text-xs text-muted-foreground">Treinos</span>
+              <span className="text-xl font-semibold">
+                {athlete?.avaliacoes?.total || 0}
+              </span>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-4"
+        >
+          <TabsList className="grid grid-cols-3 h-auto">
+            <TabsTrigger value="overview" className="py-2">
+              Visão Geral
+            </TabsTrigger>
+            <TabsTrigger value="details" className="py-2">
+              Fundamentos
+            </TabsTrigger>
+            <TabsTrigger value="history" className="py-2">
+              Histórico
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* Radar Chart */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <h3 className="text-sm font-medium">Performance por Fundamento</h3>
+              <div className="h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="80%"
+                    data={radarData}
+                  >
+                    <PolarGrid strokeDasharray="3 3" />
+                    <PolarAngleAxis dataKey="subject" />
+                    <Radar
+                      name="Acertos"
+                      dataKey="acertos"
+                      stroke={colors.acertos}
+                      fill={colors.acertos}
+                      fillOpacity={0.5}
+                    />
+                    <Radar
+                      name="Erros"
+                      dataKey="erros"
+                      stroke={colors.erros}
+                      fill={colors.erros}
+                      fillOpacity={0.3}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Attendance Pie Chart */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <h3 className="text-sm font-medium">Presença em Treinos</h3>
+              <div className="h-60">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={presenceData}
+                      data={attendanceData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
+                      innerRadius={60}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
                       nameKey="name"
-                      label={({ name, percent }) => `${name}: ${(Number(percent) * 100).toFixed(0)}%`}
+                      labelLine={false}
+                      label={({
+                        cx,
+                        cy,
+                        midAngle,
+                        innerRadius,
+                        outerRadius,
+                        percent,
+                      }: any) => {
+                        const radius =
+                          innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+                        const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+
+                        return (
+                          <text
+                            x={x}
+                            y={y}
+                            fill="white"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                          >
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        );
+                      }}
                     >
-                      {presenceData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.name === "Presente" ? chartConfig.presente.color : chartConfig.ausente.color} 
-                        />
-                      ))}
+                      <Cell key="cell-0" fill={colors.primary} />
+                      <Cell key="cell-1" fill={colors.erros} />
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} treinos`, ""]} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
-            
-            {/* Gráfico de Radar - Desempenho por Fundamento */}
-            {radarData.length > 0 && (
-              <div>
-                <h3 className="font-medium mb-2 text-sm">Desempenho por Fundamento</h3>
-                <div className="h-[300px] bg-muted/20 rounded-lg p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart outerRadius={90} data={radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="fundamento" />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                      <Radar
-                        name="Taxa de Acerto (%)"
-                        dataKey="taxa"
-                        stroke={chartConfig.taxa.color}
-                        fill={chartConfig.taxa.color}
-                        fillOpacity={0.6}
-                      />
-                      <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, "Taxa de Acerto"]} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-            
-            {/* Gráfico de Barras - Acertos e Erros por Fundamento */}
-            {barData.length > 0 && (
-              <div>
-                <h3 className="font-medium mb-2 text-sm">Acertos e Erros por Fundamento</h3>
-                <div className="h-[300px] bg-muted/20 rounded-lg p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={barData}
-                      margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="fundamento" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="acertos" name="Acertos" fill={chartConfig.acertos.color} />
-                      <Bar dataKey="erros" name="Erros" fill={chartConfig.erros.color} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
           </TabsContent>
-          
-          {/* Tab de Fundamentos */}
-          <TabsContent value="fundamentos">
-            <div className="space-y-4">
-              {Object.entries(avaliacoes.porFundamento).length > 0 ? (
-                Object.entries(avaliacoes.porFundamento).map(([fundamento, stats]) => (
-                  <div key={fundamento} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-medium">{fundamento}</h3>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Taxa: </span>
-                        <span className="font-semibold">{stats.taxa.toFixed(1).replace(".", ",")}%</span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2 border rounded p-2 bg-blue-500/10">
-                        <Check className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <span className="text-xs text-muted-foreground">Acertos</span>
-                          <p className="font-semibold">{stats.acertos}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 border rounded p-2 bg-amber-500/10">
-                        <X className="h-4 w-4 text-amber-500" />
-                        <div>
-                          <span className="text-xs text-muted-foreground">Erros</span>
-                          <p className="font-semibold">{stats.erros}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground">Nenhuma avaliação por fundamento registrada</p>
-                </div>
-              )}
+
+          <TabsContent value="details" className="space-y-6">
+            {/* Bar Chart for Fundamentals */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <h3 className="text-sm font-medium">Taxa de Acertos por Fundamento</h3>
+              <div className="h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={fundamentals}
+                    margin={{
+                      top: 20,
+                      right: 10,
+                      left: 0,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis unit="%" domain={[0, 100]} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="taxa" fill={colors.primary} name="Taxa de Acerto">
+                      <LabelList dataKey="taxa" position="top" formatter={(value: number) => `${value.toFixed(0)}%`} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Table of Fundamentals Details */}
+            <div className="rounded-lg border overflow-hidden">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Fundamento
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Acertos
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Erros
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Taxa
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-card divide-y divide-border">
+                  {fundamentals.map((item, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                        {item.name}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-green-500">
+                        {item.acertos}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-red-500">
+                        {item.erros}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                        {item.taxa.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </TabsContent>
-          
-          {/* Tab de Histórico */}
-          <TabsContent value="historico">
-            <div className="space-y-2">
-              {ultimasAvaliacoes.length > 0 ? (
-                ultimasAvaliacoes.map((aval, index) => (
-                  <div key={index} className="border rounded-lg p-3 flex">
-                    <div className="mr-3 flex flex-col items-center">
-                      <div className="bg-primary/10 rounded-full w-10 h-10 flex items-center justify-center">
-                        {formatDate(aval.data)}
-                      </div>
-                      <div className="flex-1 w-0.5 bg-border mt-2"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{aval.treino}</p>
-                      <p className="text-sm">{aval.fundamento}</p>
-                      <div className="flex gap-3 mt-1">
-                        <div className="flex items-center gap-1 text-blue-500 text-sm">
-                          <Check className="h-3 w-3" />
-                          {aval.acertos}
+
+          <TabsContent value="history" className="space-y-6">
+            {/* Line Chart for Timeline */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <h3 className="text-sm font-medium">Evolução nos Últimos Treinos</h3>
+              <div className="h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={timelineData}
+                    margin={{
+                      top: 5,
+                      right: 10,
+                      left: 5,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="acertos"
+                      stroke={colors.acertos}
+                      activeDot={{ r: 8 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="erros"
+                      stroke={colors.erros}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Recent Evaluations */}
+            <div className="rounded-lg border overflow-hidden">
+              <div className="bg-muted/50 px-4 py-3">
+                <h3 className="text-sm font-medium">Últimas Avaliações</h3>
+              </div>
+              <div className="divide-y divide-border max-h-80 overflow-y-auto">
+                {athlete?.ultimasAvaliacoes?.map((avaliacao, i) => {
+                  const date = new Date(avaliacao.data);
+                  return (
+                    <div key={i} className="px-4 py-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{avaliacao.fundamento}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {`${date.toLocaleDateString()} - ${avaliacao.treino}`}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-1 text-amber-500 text-sm">
-                          <X className="h-3 w-3" />
-                          {aval.erros}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-green-500">
+                            {avaliacao.acertos} acertos
+                          </span>
+                          <span className="text-sm text-red-500">
+                            {avaliacao.erros} erros
+                          </span>
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+
+                {(!athlete?.ultimasAvaliacoes ||
+                  athlete?.ultimasAvaliacoes.length === 0) && (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Nenhuma avaliação registrada
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground">Nenhum histórico de avaliação encontrado</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </TabsContent>
-        </ScrollArea>
-      </Tabs>
-    </div>
+        </Tabs>
+      </SheetContent>
+    </Sheet>
   );
 };
 

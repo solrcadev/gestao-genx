@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { fetchPresencasAtletas, registrarPresencasEmLote } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
@@ -7,7 +8,7 @@ import { Button } from "../ui/button";
 import { toast } from "../ui/use-toast";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
   const [loading, setLoading] = useState(true);
@@ -15,7 +16,7 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
   const [athletes, setAthletes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [presences, setPresences] = useState([]);
-  const isMobile = useMediaQuery(768);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const loadAthletes = async () => {

@@ -51,6 +51,62 @@ export const fetchTreinosDosDia = async (): Promise<TreinoDoDia[]> => {
   return data || [];
 };
 
+// Get treino do dia by date
+export const getTreinoDoDia = async (date: Date): Promise<TreinoDoDia | null> => {
+  const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  const { data, error } = await supabase
+    .from('treinos_do_dia')
+    .select(`
+      *,
+      treino:treino_id (
+        id,
+        nome,
+        local,
+        data,
+        descricao,
+        time
+      )
+    `)
+    .eq('data', formattedDate)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No rows returned, which is fine
+      return null;
+    }
+    console.error('Error fetching treino do dia:', error);
+    throw new Error(error.message);
+  }
+
+  return data;
+};
+
+// Create treino do dia
+export const createTreinoDoDia = async (treinoId: string, date: Date): Promise<TreinoDoDia> => {
+  const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  const { data, error } = await supabase
+    .from('treinos_do_dia')
+    .insert([
+      {
+        treino_id: treinoId,
+        data: formattedDate,
+        aplicado: false
+      }
+    ])
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error creating treino do dia:', error);
+    throw new Error(error.message);
+  }
+  
+  return data;
+};
+
 // Fetch a specific treino do dia with its training details
 export const fetchTreinoDoDia = async (id: string) => {
   const { data, error } = await supabase
