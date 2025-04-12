@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,14 +26,20 @@ import * as z from 'zod';
 import { fetchExercises } from '@/services/exerciseService';
 import { createTraining, addExercisesToTraining } from '@/services/trainingService';
 
+interface TrainingAssemblyProps {
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}
+
 const formSchema = z.object({
   nome: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
   local: z.string().min(2, { message: 'Informe o local do treino' }),
   data: z.date({ required_error: 'Selecione uma data para o treino' }),
   descricao: z.string().optional(),
+  time: z.enum(["Masculino", "Feminino"], { required_error: 'Selecione o time do treino' })
 });
 
-const TrainingAssembly = () => {
+const TrainingAssembly = ({ className, size = "md" }: TrainingAssemblyProps) => {
   const [step, setStep] = useState(1);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +55,7 @@ const TrainingAssembly = () => {
       nome: '',
       local: '',
       descricao: '',
+      time: "Masculino"
     },
   });
   
@@ -70,11 +76,11 @@ const TrainingAssembly = () => {
       });
       setStep(2);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error creating training:', error);
       toast({
         title: 'Erro ao criar treino',
-        description: 'Não foi possível criar o treino. Tente novamente.',
+        description: error.message || 'Não foi possível criar o treino. Tente novamente.',
         variant: 'destructive',
       });
     }
@@ -113,7 +119,8 @@ const TrainingAssembly = () => {
       nome: values.nome,
       local: values.local,
       data: values.data,
-      descricao: values.descricao || ''
+      descricao: values.descricao || '',
+      time: values.time
     });
   };
 
@@ -293,6 +300,37 @@ const TrainingAssembly = () => {
                           className="min-h-[100px]" 
                           {...field} 
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Time</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={field.value === "Masculino" ? "default" : "outline"}
+                            className="flex-1"
+                            onClick={() => field.onChange("Masculino")}
+                          >
+                            Masculino
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={field.value === "Feminino" ? "default" : "outline"}
+                            className="flex-1"
+                            onClick={() => field.onChange("Feminino")}
+                          >
+                            Feminino
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -557,7 +595,7 @@ const TrainingAssembly = () => {
   };
 
   return (
-    <div className="mobile-container pb-16">
+    <div className={`mobile-container pb-16 ${className}`}>
       <h1 className="text-2xl font-bold mb-6">Montagem de Treino</h1>
       {renderStep()}
     </div>

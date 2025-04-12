@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -47,8 +46,14 @@ import { AthleteAttendance } from "@/components/treino-do-dia/AthleteAttendance"
 import { ExerciseEvaluation } from "@/components/treino-do-dia/ExerciseEvaluation";
 import { ExerciseTimer } from "@/components/treino-do-dia/ExerciseTimer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ExerciseEvaluationTabs } from "@/components/treino-do-dia/ExerciseEvaluationTabs";
 
-const TreinoDoDia = () => {
+interface TreinoDoDiaProps {
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}
+
+const TreinoDoDia = ({ className, size = "md" }: TreinoDoDiaProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -175,7 +180,7 @@ const TreinoDoDia = () => {
   if (isLoading) {
     return (
       <div className="mobile-container flex flex-col items-center justify-center h-[70vh]">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner />
         <p className="text-muted-foreground mt-4">Carregando treino...</p>
       </div>
     );
@@ -294,7 +299,7 @@ const TreinoDoDia = () => {
               disabled={concluirTreinoMutation.isPending}
             >
               {concluirTreinoMutation.isPending ? (
-                <LoadingSpinner className="mr-2" />
+                <LoadingSpinner className="mr-2" showText={false} />
               ) : (
                 <Check className="h-4 w-4 mr-2" />
               )}
@@ -311,13 +316,13 @@ const TreinoDoDia = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => document.querySelector('[data-state="open"] button').click()}>
+              <Button variant="outline" type="button">
                 Cancelar
               </Button>
-              <Button onClick={() => {
-                handleFinishTraining();
-                document.querySelector('[data-state="open"] button').click();
-              }}>
+              <Button 
+                type="button"
+                onClick={handleFinishTraining}
+              >
                 Confirmar
               </Button>
             </div>
@@ -333,6 +338,9 @@ const TreinoDoDia = () => {
           </TabsTrigger>
           <TabsTrigger value="athletes" className="flex-1">
             Atletas
+          </TabsTrigger>
+          <TabsTrigger value="evaluation" className="flex-1">
+            Avaliar
           </TabsTrigger>
         </TabsList>
 
@@ -394,24 +402,16 @@ const TreinoDoDia = () => {
                       </Badge>
                     )}
 
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline">
-                          <BarChart3 className="h-4 w-4 mr-1" />
-                          Avaliar
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Avaliar Exercício</DialogTitle>
-                        </DialogHeader>
-                        <ExerciseEvaluation
-                          exerciseId={exercise.id}
-                          treinoDoDiaId={id}
-                          exerciseName={exercise.exercicio.nome}
-                        />
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setActiveTab("evaluation");
+                      }}
+                    >
+                      <BarChart3 className="h-4 w-4 mr-1" />
+                      Avaliar
+                    </Button>
                   </div>
                 </div>
 
@@ -442,6 +442,10 @@ const TreinoDoDia = () => {
             treinoDoDiaId={id} 
             showHeader={false}
           />
+        </TabsContent>
+
+        <TabsContent value="evaluation" className="animate-fade-in">
+          <ExerciseEvaluationTabs treinoDoDiaId={id} />
         </TabsContent>
       </Tabs>
     </div>

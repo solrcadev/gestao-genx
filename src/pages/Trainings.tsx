@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -39,7 +38,12 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
-const Trainings = () => {
+interface TrainingsProps {
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}
+
+const Trainings = ({ className, size = "md" }: TrainingsProps) => {
   const [trainingToDelete, setTrainingToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();

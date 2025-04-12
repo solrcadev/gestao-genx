@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -29,31 +28,50 @@ import { getAthletes } from "@/services/athleteService";
 import { 
   fetchPresencas, 
   registrarPresenca, 
-  registrarPresencasEmLote 
+  registrarPresencasEmLote,
+  fetchTreinoDoDia
 } from "@/services/treinosDoDiaService";
 import { Team } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface AthleteAttendanceProps {
   treinoDoDiaId: string;
   onComplete?: () => void;
   showHeader?: boolean;
+  className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
 export function AthleteAttendance({ 
   treinoDoDiaId, 
   onComplete,
-  showHeader = true 
+  showHeader = true,
+  className,
+  size = "md"
 }: AthleteAttendanceProps) {
-  const [selectedTeam, setSelectedTeam] = useState<Team>("Masculino");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAbsent, setExpandedAbsent] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch athletes
+  // Fetch treino do dia para obter o time
+  const { data: treinoDoDia, isLoading: isLoadingTreino } = useQuery({
+    queryKey: ["treino-do-dia", treinoDoDiaId],
+    queryFn: () => fetchTreinoDoDia(treinoDoDiaId),
+  });
+
+  // Debug log
+  React.useEffect(() => {
+    if (treinoDoDia?.treino?.time) {
+      console.log('Time do treino:', treinoDoDia.treino.time);
+    }
+  }, [treinoDoDia]);
+
+  // Fetch athletes do time correto
   const { data: athletes = [], isLoading: isLoadingAthletes } = useQuery({
-    queryKey: ["athletes", selectedTeam],
-    queryFn: () => getAthletes(selectedTeam),
+    queryKey: ["athletes", treinoDoDia?.treino?.time],
+    queryFn: () => getAthletes(treinoDoDia?.treino?.time || "Masculino"),
+    enabled: !!treinoDoDia?.treino?.time
   });
   
   // Fetch presences
@@ -171,8 +189,52 @@ export function AthleteAttendance({
     localPresences[athlete.id]?.presente === false
   );
   
+  // Função para desmarcar todos os atletas
+  const handleUnmarkAll = async () => {
+    // Criar um novo objeto para as presenças com todos os atletas marcados como ausente
+    const newPresences = {};
+    athletes.forEach(athlete => {
+      newPresences[athlete.id] = {
+        presente: false,
+        justificativa: "",
+        id: localPresences[athlete.id]?.id
+      };
+    });
+    
+    // Atualizar o estado local
+    setLocalPresences(newPresences);
+    
+    // Notificar o usuário
+    toast({
+      title: "Sucesso",
+      description: "Todos os atletas foram desmarcados. Clique em 'Salvar Presenças' para confirmar."
+    });
+  };
+  
+  // Função para selecionar todos os atletas
+  const handleSelectAll = async () => {
+    // Criar um novo objeto para as presenças com todos os atletas marcados como presente
+    const newPresences = {};
+    athletes.forEach(athlete => {
+      newPresences[athlete.id] = {
+        presente: true,
+        justificativa: "",
+        id: localPresences[athlete.id]?.id
+      };
+    });
+    
+    // Atualizar o estado local
+    setLocalPresences(newPresences);
+    
+    // Notificar o usuário
+    toast({
+      title: "Sucesso",
+      description: "Todos os atletas foram selecionados. Clique em 'Salvar Presenças' para confirmar."
+    });
+  };
+  
   // Loading states
-  if (isLoadingAthletes || isLoadingPresences) {
+  if (isLoadingTreino || isLoadingAthletes) {
     return (
       <div className="py-8 flex flex-col items-center justify-center">
         <LoadingSpinner />
@@ -181,38 +243,47 @@ export function AthleteAttendance({
     );
   }
 
+  if (!treinoDoDia?.treino?.time) {
+    return (
+      <div className="py-8 flex flex-col items-center justify-center">
+        <p className="text-muted-foreground">Selecione um treino válido com time definido.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", className)}>
       {showHeader && (
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-medium">Registro de Presenças</h2>
-          <Badge>
-            {presentAthletes.length}/{filteredAthletes.length} presentes
-          </Badge>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Registro de Presença</h2>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">
+              Time: {treinoDoDia.treino.time}
+            </Badge>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAll}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Selecionar Todos
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUnmarkAll}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Desmarcar Todos
+              </Button>
+            </div>
+          </div>
         </div>
       )}
       
       {/* Filter controls */}
       <div className="space-y-3">
-        <div className="flex gap-4">
-          <Button
-            variant={selectedTeam === "Masculino" ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => setSelectedTeam("Masculino")}
-          >
-            Masculino
-          </Button>
-          <Button
-            variant={selectedTeam === "Feminino" ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => setSelectedTeam("Feminino")}
-          >
-            Feminino
-          </Button>
-        </div>
-        
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -336,7 +407,7 @@ export function AthleteAttendance({
           className="w-full"
         >
           {updatePresencesBatchMutation.isPending ? (
-            <LoadingSpinner className="mr-2" />
+            <LoadingSpinner className="mr-2" showText={false} />
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -29,9 +28,16 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 interface SelectTreinoParaDiaProps {
   treinoId: string;
   treinoNome: string;
+  className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
-export function SelectTreinoParaDia({ treinoId, treinoNome }: SelectTreinoParaDiaProps) {
+export function SelectTreinoParaDia({ 
+  treinoId, 
+  treinoNome,
+  className,
+  size = "md"
+}: SelectTreinoParaDiaProps) {
   const [date, setDate] = useState<Date>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -66,7 +72,7 @@ export function SelectTreinoParaDia({ treinoId, treinoNome }: SelectTreinoParaDi
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="w-full">
+        <Button variant="default" size={size} className={cn("w-full", className)}>
           <Play className="h-4 w-4 mr-2" />
           Aplicar Treino
         </Button>

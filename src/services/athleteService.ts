@@ -1,22 +1,24 @@
-
 import { supabase } from '@/lib/supabase';
 import { Athlete, Team } from '@/types';
 
-export const getAthletes = async (team?: Team) => {
-  let query = supabase.from('athletes').select('*');
-  
+export const getAthletes = async (team?: "Masculino" | "Feminino"): Promise<Athlete[]> => {
+  let query = supabase
+    .from('athletes')
+    .select('*')
+    .order('nome', { ascending: true });
+    
   if (team) {
     query = query.eq('time', team);
   }
-  
-  const { data, error } = await query.order('nome');
-  
+
+  const { data, error } = await query;
+
   if (error) {
     console.error('Error fetching athletes:', error);
-    throw error;
+    throw new Error(error.message);
   }
-  
-  return data as Athlete[];
+
+  return data || [];
 };
 
 export const getAthleteById = async (id: string) => {
@@ -80,20 +82,43 @@ export const deleteAthlete = async (id: string) => {
 };
 
 export const uploadAthletePhoto = async (file: File) => {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-  const filePath = `athlete-photos/${fileName}`;
-  
-  const { error: uploadError } = await supabase.storage
-    .from('athlete-photos')
-    .upload(filePath, file);
-  
-  if (uploadError) {
-    console.error('Error uploading photo:', uploadError);
-    throw uploadError;
+  try {
+    // Gerar um nome de arquivo único baseado em timestamp e valor aleatório
+    const fileExt = file.name.split('.').pop();
+    const timestamp = new Date().getTime();
+    const fileName = `athlete_${timestamp}_${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
+    const filePath = `athletes/${fileName}`;
+    
+    // Verificar tamanho do arquivo (limitado a 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      throw new Error('O arquivo deve ter no máximo 2MB');
+    }
+    
+    // Upload do arquivo para o bucket 'avatars'
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error('Error uploading photo:', uploadError);
+      throw uploadError;
+    }
+    
+    // Obter a URL pública
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+    
+    if (!data || !data.publicUrl) {
+      throw new Error('Não foi possível obter a URL pública da imagem');
+    }
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    throw error;
   }
-  
-  const { data } = supabase.storage.from('athlete-photos').getPublicUrl(filePath);
-  
-  return data.publicUrl;
 };

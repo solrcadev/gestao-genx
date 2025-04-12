@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +34,8 @@ interface ExerciseEvaluationProps {
   exerciseId: string;
   treinoDoDiaId: string;
   exerciseName: string;
+  className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
 const FUNDAMENTOS = [
@@ -49,7 +50,9 @@ const FUNDAMENTOS = [
 export function ExerciseEvaluation({
   exerciseId,
   treinoDoDiaId,
-  exerciseName
+  exerciseName,
+  className,
+  size = "md"
 }: ExerciseEvaluationProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);

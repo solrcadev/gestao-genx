@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 
 export interface Training {
@@ -9,7 +8,7 @@ export interface Training {
   descricao?: string;
   created_at?: string;
   status?: string;
-  created_by?: string;
+  created_by?: string | null;
 }
 
 export interface TrainingExercise {
@@ -25,6 +24,7 @@ export interface TrainingInput {
   local: string;
   data: Date;
   descricao?: string;
+  time: "Masculino" | "Feminino";
 }
 
 // Fetch trainings
@@ -79,10 +79,6 @@ export const fetchTrainingWithExercises = async (trainingId: string) => {
 
 // Create a new training
 export const createTraining = async (trainingData: TrainingInput): Promise<Training> => {
-  // For demo purposes, we're hardcoding a user ID
-  // In a real app, this would come from authentication
-  const mockUserId = '00000000-0000-0000-0000-000000000000';
-  
   const { data, error } = await supabase
     .from('treinos')
     .insert([{
@@ -90,7 +86,8 @@ export const createTraining = async (trainingData: TrainingInput): Promise<Train
       local: trainingData.local,
       data: trainingData.data,
       descricao: trainingData.descricao || null,
-      created_by: mockUserId // Add mock user ID to satisfy not-null constraint
+      created_by: null,
+      time: trainingData.time
     }])
     .select()
     .single();

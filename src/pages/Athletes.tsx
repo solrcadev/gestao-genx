@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Athlete, Team } from "@/types";
@@ -7,9 +6,12 @@ import AthleteCard from "@/components/AthleteCard";
 import AthleteForm from "@/components/AthleteForm";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Plus, Search, X, Users } from "lucide-react";
+import { Plus, Search, X, Users, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Transition, TransitionList } from "@/components/ui/transition";
+import { CardSkeleton } from "@/components/ui/skeleton";
+import { useBreakpoint } from "@/lib/responsive";
 import {
   Select,
   SelectContent,
@@ -27,7 +29,9 @@ const Athletes = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | undefined>(undefined);
+  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
+  const breakpoint = useBreakpoint();
 
   useEffect(() => {
     loadAthletes();
@@ -86,35 +90,21 @@ const Athletes = () => {
     setConfirmOpen(true);
   };
 
-  const handleSaveAthlete = async (athleteData: Partial<Athlete>) => {
-    try {
-      if (selectedAthlete?.id) {
-        const updatedAthlete = await updateAthlete(selectedAthlete.id, athleteData);
-        setAthletes((prev) =>
-          prev.map((a) => (a.id === updatedAthlete.id ? updatedAthlete : a))
-        );
-      } else {
-        const newAthlete = await createAthlete(athleteData as Omit<Athlete, "id" | "created_at">);
-        setAthletes((prev) => [...prev, newAthlete]);
-      }
-    } catch (error) {
-      console.error("Error saving athlete:", error);
-      throw error;
-    }
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedAthlete) return;
     
     try {
       await deleteAthlete(selectedAthlete.id);
-      setAthletes((prev) => prev.filter((a) => a.id !== selectedAthlete.id));
+      
+      setAthletes((prev) => 
+        prev.filter((athlete) => athlete.id !== selectedAthlete.id)
+      );
+      
       toast({
         title: "Atleta excluído",
-        description: `${selectedAthlete.nome} foi excluído com sucesso.`,
+        description: "O atleta foi excluído com sucesso."
       });
     } catch (error) {
-      console.error("Error deleting athlete:", error);
       toast({
         title: "Erro ao excluir",
         description: "Não foi possível excluir o atleta.",
@@ -124,98 +114,156 @@ const Athletes = () => {
       setConfirmOpen(false);
     }
   };
-  
+
+  const handleSaveAthlete = async (data: Omit<Athlete, "id">) => {
+    try {
+      if (selectedAthlete) {
+        // Update
+        const updatedAthlete = await updateAthlete(selectedAthlete.id, data);
+        setAthletes((prev) =>
+          prev.map((athlete) =>
+            athlete.id === selectedAthlete.id ? updatedAthlete : athlete
+          )
+        );
+        
+        toast({
+          title: "Atleta atualizado",
+          description: "Os dados do atleta foram atualizados com sucesso."
+        });
+      } else {
+        // Create
+        const newAthlete = await createAthlete(data);
+        setAthletes((prev) => [...prev, newAthlete]);
+        
+        toast({
+          title: "Atleta adicionado",
+          description: "O novo atleta foi adicionado com sucesso."
+        });
+      }
+      
+      setFormOpen(false);
+    } catch (error) {
+      console.error("Error saving athlete:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar os dados do atleta.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const clearFilters = () => {
     setSearchQuery("");
     setFilterTeam("all");
+    setShowFilters(false);
+  };
+
+  // Loading skeletons
+  const renderSkeletons = () => {
+    const count = breakpoint === 'xs' || breakpoint === 'sm' ? 3 : 6;
+    return Array(count).fill(0).map((_, i) => (
+      <CardSkeleton key={i} />
+    ));
   };
 
   return (
-    <div className="mobile-container">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Users className="mr-2 h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Atletas</h1>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {filteredAthletes.length} atletas
-        </div>
+    <div className="container-md animate-fade-in">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="title-responsive">Atletas</h1>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => setShowFilters(!showFilters)}
+          className="transition-all"
+        >
+          <Filter className={`h-5 w-5 ${showFilters ? 'text-primary' : 'text-muted-foreground'}`} />
+        </Button>
       </div>
-      
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar atleta..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-2.5 text-muted-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        
-        <Select value={filterTeam} onValueChange={(value: any) => setFilterTeam(value)}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Todos times" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos times</SelectItem>
-            <SelectItem value="Masculino">Masculino</SelectItem>
-            <SelectItem value="Feminino">Feminino</SelectItem>
-          </SelectContent>
-        </Select>
-        
-        {(searchQuery || filterTeam !== "all") && (
-          <Button variant="ghost" size="icon" onClick={clearFilters}>
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      
-      {isLoading ? (
-        <LoadingSpinner />
-      ) : filteredAthletes.length === 0 ? (
-        <div className="text-center py-12">
-          <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h2 className="mt-4 text-xl font-semibold">Nenhum atleta encontrado</h2>
-          <p className="mt-2 text-muted-foreground">
-            {searchQuery || filterTeam !== "all"
-              ? "Nenhum resultado para sua busca. Tente outros filtros."
-              : "Adicione seu primeiro atleta clicando no botão +"}
-          </p>
+
+      <Transition type={showFilters ? "slide" : "none"}>
+        <div className={`space-y-4 mb-6 ${showFilters ? '' : 'hidden'}`}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9 pr-9"
+              placeholder="Buscar atleta..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <X 
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer" 
+                onClick={() => setSearchQuery("")}
+              />
+            )}
+          </div>
+          
+          <Select value={filterTeam} onValueChange={(value: Team | "all") => setFilterTeam(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filtrar por time" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os times</SelectItem>
+              <SelectItem value="Masculino">Masculino</SelectItem>
+              <SelectItem value="Feminino">Feminino</SelectItem>
+            </SelectContent>
+          </Select>
+          
           {(searchQuery || filterTeam !== "all") && (
             <Button
               variant="outline"
               onClick={clearFilters}
-              className="mt-4"
+              className="w-full"
             >
+              <X className="mr-2 h-4 w-4" />
               Limpar filtros
             </Button>
           )}
         </div>
+      </Transition>
+
+      {isLoading ? (
+        <div className="space-y-4 pb-20">
+          {renderSkeletons()}
+        </div>
+      ) : filteredAthletes.length === 0 ? (
+        <Transition type="scale">
+          <div className="text-center py-12">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h2 className="mt-4 text-xl font-semibold">Nenhum atleta encontrado</h2>
+            <p className="mt-2 text-muted-foreground">
+              {searchQuery || filterTeam !== "all"
+                ? "Nenhum resultado para sua busca. Tente outros filtros."
+                : "Adicione seu primeiro atleta clicando no botão +"}
+            </p>
+            {(searchQuery || filterTeam !== "all") && (
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="mt-4"
+              >
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        </Transition>
       ) : (
-        <div className="grid gap-4 pb-20">
-          {filteredAthletes.map((athlete) => (
+        <TransitionList className="grid gap-4 pb-20" type="slide">
+          {filteredAthletes.map((athlete, index) => (
             <AthleteCard
               key={athlete.id}
               athlete={athlete}
               onEdit={handleEditAthlete}
               onDelete={handleDeleteClick}
+              index={index}
             />
           ))}
-        </div>
+        </TransitionList>
       )}
       
       <button
         onClick={handleAddAthlete}
-        className="floating-action-button"
+        className="floating-action-button touch-feedback animate-scale-in"
         aria-label="Adicionar atleta"
       >
         <Plus className="h-6 w-6" />
