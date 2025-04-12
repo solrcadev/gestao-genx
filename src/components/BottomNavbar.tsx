@@ -1,6 +1,7 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Users, Calendar, Activity, MoreHorizontal, Home } from "lucide-react";
+import { Users, Calendar, Activity, MoreHorizontal, Home, Grid2x2 } from "lucide-react";
 
 const BottomNavbar = () => {
   const location = useLocation();
@@ -24,13 +25,13 @@ const BottomNavbar = () => {
         <Calendar className="bottom-nav-icon" />
         <span>Treinos</span>
       </Link>
+      <Link to="/exercicios" className={`bottom-nav-item ${isActive("/exercicios")}`}>
+        <Grid2x2 className="bottom-nav-icon" />
+        <span>Exercícios</span>
+      </Link>
       <Link to="/desempenho" className={`bottom-nav-item ${isActive("/desempenho")}`}>
         <Activity className="bottom-nav-icon" />
         <span>Desempenho</span>
-      </Link>
-      <Link to="/mais" className={`bottom-nav-item ${isActive("/mais")}`}>
-        <MoreHorizontal className="bottom-nav-icon" />
-        <span>Mais</span>
       </Link>
     </nav>
   );

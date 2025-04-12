@@ -138,7 +138,6 @@ const TreinoDosDia = () => {
               
               <Button
                 size="sm"
-                variant="outline"
                 onClick={handleOpenEvaluation}
                 className="flex items-center gap-1"
               >
