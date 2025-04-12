@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { format, addDays, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, ArrowLeft, ArrowRight, Plus, CheckCircle2 } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, ArrowRight, Plus, CheckCircle2, BarChart3 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -15,12 +15,14 @@ import { toast } from "@/components/ui/use-toast";
 import AthleteAttendance from "@/components/treino-do-dia/AthleteAttendance";
 import ExerciseList from "@/components/treino-do-dia/ExerciseList";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { EvaluationDialog } from "@/components/treino-do-dia/EvaluationDialog";
 
 const TreinoDosDia = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [treinoDoDia, setTreinoDoDia] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -69,6 +71,10 @@ const TreinoDosDia = () => {
 
   const handleTreinoCreated = () => {
     loadTreinoDoDia();
+  };
+  
+  const handleOpenEvaluation = () => {
+    setIsEvaluationOpen(true);
   };
 
   return (
@@ -129,11 +135,28 @@ const TreinoDosDia = () => {
                   {treinoDoDia.treino.local}
                 </p>
               </div>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleOpenEvaluation}
+                className="flex items-center gap-1"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Avaliar</span>
+              </Button>
             </div>
           </div>
 
           <AthleteAttendance treinoDoDiaId={treinoDoDia.id} onSaved={loadTreinoDoDia} />
           <ExerciseList treinoDoDiaId={treinoDoDia.id} />
+          
+          {/* Evaluation Dialog */}
+          <EvaluationDialog 
+            open={isEvaluationOpen} 
+            onOpenChange={setIsEvaluationOpen} 
+            treinoDoDiaId={treinoDoDia.id} 
+          />
         </div>
       ) : (
         <div className="text-center py-10">

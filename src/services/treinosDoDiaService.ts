@@ -543,6 +543,28 @@ const saveEvaluationToLocalStorage = (evaluation: {
   }
 };
 
+export const salvarAvaliacoesEmLote = async (avaliacoes: Array<{
+  treinoDoDiaId: string;
+  exercicioId: string;
+  atletaId: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+}>): Promise<void> => {
+  try {
+    // Process each evaluation
+    for (const avaliacao of avaliacoes) {
+      const { treinoDoDiaId, exercicioId, atletaId, fundamento, acertos, erros } = avaliacao;
+      await salvarAvaliacaoExercicio({ treinoDoDiaId, exercicioId, atletaId, fundamento, acertos, erros });
+    }
+    
+    return Promise.resolve();
+  } catch (error) {
+    console.error('Error saving batch evaluations:', error);
+    throw error;
+  }
+};
+
 // Fetch current active treino do dia (mantida para compatibilidade)
 export const fetchTreinoAtual = async (id: string) => {
   // Primeiro, obtem o treino do dia

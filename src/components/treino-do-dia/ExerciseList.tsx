@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
-import { Clipboard, Play, Clock, CheckCircle2 } from "lucide-react";
+import { Clipboard, Play, Clock, CheckCircle2, BarChart3 } from "lucide-react";
 import { Button } from "../ui/button";
 import { toast } from "../ui/use-toast";
 import { ExerciseTimer } from "./ExerciseTimer";
 import { ExerciseEvaluationTabs } from "./ExerciseEvaluationTabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { EvaluationDialog } from "./EvaluationDialog";
 
 interface ExerciseListProps {
   treinoDoDiaId: string;
@@ -18,6 +19,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   const [exercicios, setExercicios] = useState([]);
   const [activeExercise, setActiveExercise] = useState(null);
   const [isTimerActive, setIsTimerActive] = useState(false);
+  const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -55,6 +57,10 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
     setIsTimerActive(false);
     setActiveExercise(null);
   };
+  
+  const openEvaluation = () => {
+    setIsEvaluationOpen(true);
+  };
 
   if (loading) {
     return (
@@ -78,20 +84,36 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   if (isTimerActive && activeExercise) {
     return (
       <ExerciseTimer
-        estimatedTime={activeExercise.tempo || 5}
-        onFinish={() => handleCompleteExercise()}
         exerciseData={activeExercise}
         treinoDoDiaId={treinoDoDiaId}
+        onFinish={handleCompleteExercise}
         onCancel={handleCancelExercise}
       />
     );
   }
+  
+  // Check if there are completed exercises
+  const hasCompletedExercises = exercicios.some(ex => ex.concluido);
 
   return (
     <div className="space-y-4">
-      <h2 className="font-semibold text-lg flex items-center">
-        <Clipboard className="h-5 w-5 mr-2" /> Exercícios
-      </h2>
+      <div className="flex justify-between items-center">
+        <h2 className="font-semibold text-lg flex items-center">
+          <Clipboard className="h-5 w-5 mr-2" /> Exercícios
+        </h2>
+        
+        {hasCompletedExercises && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={openEvaluation}
+            className="flex items-center gap-1"
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>Avaliar</span>
+          </Button>
+        )}
+      </div>
 
       {exercicios.map((exercicio, index) => (
         <div
@@ -149,6 +171,12 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
           )}
         </div>
       ))}
+      
+      <EvaluationDialog 
+        open={isEvaluationOpen} 
+        onOpenChange={setIsEvaluationOpen} 
+        treinoDoDiaId={treinoDoDiaId} 
+      />
     </div>
   );
 };
