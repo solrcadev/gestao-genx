@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FilePdf } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { exportTrainingToPdf } from '@/services/pdfExportService';
 import { getTrainingById } from '@/services/trainingService';
@@ -78,7 +78,7 @@ export const ExportTrainingButton: React.FC<ExportTrainingButtonProps> = ({
       onClick={handleExportPdf}
       className={`flex items-center gap-1 ${className}`}
     >
-      <FilePdf className="h-4 w-4" />
+      <FileText className="h-4 w-4" />
       <span>Exportar PDF</span>
     </Button>
   );

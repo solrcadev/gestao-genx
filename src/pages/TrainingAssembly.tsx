@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, ArrowDown, ArrowUp, Trash2, Plus, ChevronRight, Save, FilePdf } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, ArrowDown, ArrowUp, Trash2, Plus, ChevronRight, Save, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
