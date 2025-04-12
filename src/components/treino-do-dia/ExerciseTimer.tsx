@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
 
-interface ExerciseTimerProps {
+export interface ExerciseTimerProps {
   estimatedTime: number;
   onFinish: (elapsedMinutes: number) => void;
+  treinoDoDiaId?: string; 
+  exerciseData?: any;
+  onCancel?: () => void;
 }
 
-export function ExerciseTimer({ estimatedTime, onFinish }: ExerciseTimerProps) {
+export function ExerciseTimer({ 
+  estimatedTime, 
+  onFinish,
+  treinoDoDiaId,
+  exerciseData,
+  onCancel
+}: ExerciseTimerProps) {
   const [isRunning, setIsRunning] = useState(true);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [minElapsed, setMinElapsed] = useState(0);
@@ -63,8 +74,33 @@ export function ExerciseTimer({ estimatedTime, onFinish }: ExerciseTimerProps) {
     setIsRunning(!isRunning);
   };
 
-  const finishExercise = () => {
+  const finishExercise = async () => {
     const finalMinutes = Math.max(1, Math.ceil(elapsedTime / 60000));
+    
+    if (treinoDoDiaId && exerciseData?.id) {
+      try {
+        // Update exercise as completed with actual time
+        const { error } = await supabase
+          .from('treinos_exercicios')
+          .update({ 
+            concluido: true,
+            tempo_real: finalMinutes
+          })
+          .eq('id', exerciseData.id);
+          
+        if (error) {
+          throw new Error('Erro ao atualizar exercício: ' + error.message);
+        }
+      } catch (error) {
+        console.error('Error updating exercise:', error);
+        toast({
+          title: 'Erro ao finalizar exercício',
+          description: 'Não foi possível marcar o exercício como concluído.',
+          variant: 'destructive',
+        });
+      }
+    }
+    
     onFinish(finalMinutes);
   };
 
@@ -132,6 +168,15 @@ export function ExerciseTimer({ estimatedTime, onFinish }: ExerciseTimerProps) {
           <SkipForward className="h-4 w-4 mr-2" />
           Finalizar
         </Button>
+        {onCancel && (
+          <Button
+            variant="ghost"
+            onClick={onCancel}
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        )}
       </div>
     </div>
   );

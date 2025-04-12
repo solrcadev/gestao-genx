@@ -6,13 +6,17 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { FileBarChart, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-interface ExerciseEvaluationTabsProps {
+export interface ExerciseEvaluationTabsProps {
   treinoDoDiaId: string;
+  exerciseId?: string;
+  exerciseName?: string;
   className?: string;
 }
 
 export function ExerciseEvaluationTabs({
   treinoDoDiaId,
+  exerciseId,
+  exerciseName,
   className,
 }: ExerciseEvaluationTabsProps) {
   const [activeTab, setActiveTab] = useState<string>("");
@@ -65,18 +69,35 @@ export function ExerciseEvaluationTabs({
   // Set active tab when exercises are loaded
   React.useEffect(() => {
     if (exercicios.length > 0 && !activeTab) {
-      // Verifica se exercicio_id existe no primeiro elemento
-      if (exercicios[0] && exercicios[0].exercicio_id) {
+      // If exerciseId is provided, use it as active tab
+      if (exerciseId) {
+        setActiveTab(exerciseId);
+      }
+      // Otherwise, use the first exercise in the list
+      else if (exercicios[0] && exercicios[0].exercicio_id) {
         setActiveTab(exercicios[0].exercicio_id);
       }
     }
-  }, [exercicios, activeTab]);
+  }, [exercicios, activeTab, exerciseId]);
 
   if (isLoadingExercicios) {
     return (
       <div className="flex flex-col items-center justify-center py-10">
         <LoadingSpinner />
         <p className="mt-4 text-muted-foreground">Carregando exercícios...</p>
+      </div>
+    );
+  }
+
+  // If we have a direct exerciseId passed, display just that exercise
+  if (exerciseId && exerciseName) {
+    return (
+      <div className={className}>
+        <RapidExerciseEvaluation
+          treinoDoDiaId={treinoDoDiaId}
+          exerciseId={exerciseId}
+          exerciseName={exerciseName}
+        />
       </div>
     );
   }
@@ -126,4 +147,4 @@ export function ExerciseEvaluationTabs({
       ))}
     </Tabs>
   );
-} 
+}

@@ -51,7 +51,7 @@ const formSchema = z.object({
   nome: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
   local: z.string().min(2, { message: 'Informe o local do treino' }),
   data: z.date({ required_error: 'Selecione uma data para o treino' }),
-  descricao: z.string().optional(),
+  descricao: z.string().default(''),
   time: z.enum(["Masculino", "Feminino"], { required_error: 'Selecione o time do treino' })
 });
 
@@ -160,7 +160,13 @@ const Trainings = () => {
 
   // Handlers
   const handleCreateTraining = (values: z.infer<typeof formSchema>) => {
-    createTrainingMutation.mutate(values);
+    createTrainingMutation.mutate({
+      nome: values.nome,
+      local: values.local,
+      data: values.data,
+      descricao: values.descricao || '',
+      time: values.time
+    });
   };
 
   const handleEditTraining = (training: Training) => {
@@ -176,7 +182,16 @@ const Trainings = () => {
 
   const handleUpdateTraining = (values: z.infer<typeof formSchema>) => {
     if (!selectedTraining) return;
-    updateTrainingMutation.mutate({ id: selectedTraining.id, data: values });
+    updateTrainingMutation.mutate({
+      id: selectedTraining.id,
+      data: {
+        nome: values.nome,
+        local: values.local,
+        data: values.data,
+        descricao: values.descricao || '',
+        time: values.time
+      }
+    });
   };
 
   const handleDeleteTraining = (training: Training) => {

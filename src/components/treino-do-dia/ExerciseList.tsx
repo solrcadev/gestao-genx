@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
@@ -17,7 +18,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   const [exercicios, setExercicios] = useState([]);
   const [activeExercise, setActiveExercise] = useState(null);
   const [isTimerActive, setIsTimerActive] = useState(false);
-  const isMobile = useIsMobile(768);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadExercicios();
@@ -77,9 +78,10 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   if (isTimerActive && activeExercise) {
     return (
       <ExerciseTimer
-        exercise={activeExercise}
+        estimatedTime={activeExercise.tempo || 5}
+        onFinish={() => handleCompleteExercise()}
+        exerciseData={activeExercise}
         treinoDoDiaId={treinoDoDiaId}
-        onComplete={handleCompleteExercise}
         onCancel={handleCancelExercise}
       />
     );
@@ -140,8 +142,8 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
             <div className="border-t p-4">
               <ExerciseEvaluationTabs
                 treinoDoDiaId={treinoDoDiaId}
-                exercicioId={exercicio.id}
-                exerciseData={exercicio}
+                exerciseId={exercicio.exercicio_id}
+                exerciseName={exercicio.exercicio?.nome || "Exercício"}
               />
             </div>
           )}

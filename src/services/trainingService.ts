@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Training } from '@/types';
 
@@ -6,7 +5,7 @@ export interface TrainingInput {
   nome: string;
   local: string;
   data: Date;
-  descricao?: string;
+  descricao: string;
   time: "Masculino" | "Feminino";
 }
 
