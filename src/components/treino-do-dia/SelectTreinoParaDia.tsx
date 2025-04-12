@@ -1,13 +1,16 @@
+
 import React, { useState, useEffect } from "react";
 import { fetchTreinos } from "@/services/trainingService";
 import { setTreinoParaDia } from "@/services/treinosDoDiaService";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar as CalendarIcon, MapPin } from "lucide-react";
 import { Button } from "../ui/button";
 import LoadingSpinner from "../LoadingSpinner";
 import { toast } from "../ui/use-toast";
 import { useMediaQuery } from "@/hooks/use-mobile";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface SelectTreinoParaDiaProps {
   onSelectTreino: () => void;
@@ -54,7 +57,7 @@ const SelectTreinoParaDia = ({ onSelectTreino }: SelectTreinoParaDiaProps) => {
       toast({
         title: "Atenção",
         description: "Selecione um treino e uma data para continuar.",
-        variant: "warning",
+        variant: "default", // Changed from "warning" to "default" as "warning" is not a supported variant
       });
       return;
     }
@@ -86,12 +89,25 @@ const SelectTreinoParaDia = ({ onSelectTreino }: SelectTreinoParaDiaProps) => {
           Selecione a data do treino
         </h3>
         <div className="rounded-md border">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={handleDateSelect}
-            initialFocus
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className="w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         {selectedDate && (
           <p className="text-sm text-muted-foreground mt-2">

@@ -108,7 +108,7 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
                       fill="#8884d8"
                       dataKey="value"
                       nameKey="name"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name}: ${(Number(percent) * 100).toFixed(0)}%`}
                     >
                       {presenceData.map((entry, index) => (
                         <Cell 
@@ -140,7 +140,7 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
                         fill={chartConfig.taxa.color}
                         fillOpacity={0.6}
                       />
-                      <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, "Taxa de Acerto"]} />
+                      <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, "Taxa de Acerto"]} />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>

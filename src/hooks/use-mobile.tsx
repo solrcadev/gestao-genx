@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
@@ -16,4 +17,29 @@ export function useIsMobile() {
   }, [])
 
   return !!isMobile
+}
+
+// Add useMediaQuery as an alias for useIsMobile or as a more flexible version
+export function useMediaQuery(breakpoint: number | string) {
+  const [matches, setMatches] = React.useState<boolean>(false)
+  
+  React.useEffect(() => {
+    let query: string
+    if (typeof breakpoint === 'number') {
+      query = `(max-width: ${breakpoint - 1}px)`
+    } else {
+      query = breakpoint
+    }
+    
+    const mql = window.matchMedia(query)
+    const onChange = () => {
+      setMatches(mql.matches)
+    }
+    
+    onChange() // Set initial value
+    mql.addEventListener("change", onChange)
+    return () => mql.removeEventListener("change", onChange)
+  }, [breakpoint])
+  
+  return matches
 }

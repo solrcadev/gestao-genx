@@ -50,3 +50,16 @@ export interface AthletePerformance {
     erros: number;
   }>;
 }
+
+// Add a new Training interface to address issues
+export interface Training {
+  id: string;
+  nome: string;
+  data: string | Date;
+  local: string;
+  descricao?: string;
+  time: TeamType;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
+}

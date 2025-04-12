@@ -15,7 +15,7 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
   const [athletes, setAthletes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [presences, setPresences] = useState([]);
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useMediaQuery(768);
 
   useEffect(() => {
     const loadAthletes = async () => {

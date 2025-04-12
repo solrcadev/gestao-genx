@@ -1,24 +1,5 @@
 import { supabase } from '@/lib/supabase';
 
-export interface Training {
-  id: string;
-  nome: string;
-  local: string;
-  data: string | Date;
-  descricao?: string;
-  created_at?: string;
-  status?: string;
-  created_by?: string | null;
-}
-
-export interface TrainingExercise {
-  id: string;
-  treino_id: string;
-  exercicio_id: string;
-  ordem: number;
-  observacao?: string;
-}
-
 export interface TrainingInput {
   nome: string;
   local: string;
@@ -27,150 +8,171 @@ export interface TrainingInput {
   time: "Masculino" | "Feminino";
 }
 
-// Fetch trainings
-export const fetchTrainings = async (): Promise<Training[]> => {
-  const { data, error } = await supabase
-    .from('treinos')
-    .select('*')
-    .order('data', { ascending: false });
+// Existing functions
 
-  if (error) {
-    console.error('Error fetching trainings:', error);
-    throw new Error(error.message);
+export const fetchTreinos = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw new Error('Erro ao buscar treinos: ' + error.message);
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching treinos:', error);
+    throw error;
   }
-
-  return data || [];
 };
 
-// Fetch a specific training with its exercises
-export const fetchTrainingWithExercises = async (trainingId: string) => {
-  // Fetch training details
-  const { data: training, error: trainingError } = await supabase
-    .from('treinos')
-    .select('*')
-    .eq('id', trainingId)
-    .single();
+export const createTraining = async (trainingData: TrainingInput) => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos')
+      .insert([
+        {
+          nome: trainingData.nome,
+          local: trainingData.local,
+          data: trainingData.data,
+          descricao: trainingData.descricao || '',
+          time: trainingData.time
+        }
+      ])
+      .select()
+      .single();
 
-  if (trainingError) {
-    console.error(`Error fetching training with ID ${trainingId}:`, trainingError);
-    throw new Error(trainingError.message);
-  }
+    if (error) {
+      throw new Error('Erro ao criar treino: ' + error.message);
+    }
 
-  // Fetch exercises for this training
-  const { data: trainingExercises, error: exercisesError } = await supabase
-    .from('treinos_exercicios')
-    .select(`
-      *,
-      exercicio:exercicio_id (*)
-    `)
-    .eq('treino_id', trainingId)
-    .order('ordem', { ascending: true });
-
-  if (exercisesError) {
-    console.error(`Error fetching exercises for training ${trainingId}:`, exercisesError);
-    throw new Error(exercisesError.message);
-  }
-
-  return {
-    ...training,
-    exercises: trainingExercises || [],
-  };
-};
-
-// Create a new training
-export const createTraining = async (trainingData: TrainingInput): Promise<Training> => {
-  const { data, error } = await supabase
-    .from('treinos')
-    .insert([{
-      nome: trainingData.nome,
-      local: trainingData.local,
-      data: trainingData.data,
-      descricao: trainingData.descricao || null,
-      created_by: null,
-      time: trainingData.time
-    }])
-    .select()
-    .single();
-
-  if (error) {
+    return data;
+  } catch (error) {
     console.error('Error creating training:', error);
-    throw new Error(error.message);
+    throw error;
   }
-
-  return data;
 };
 
-// Add exercises to a training
-export const addExercisesToTraining = async ({ 
-  trainingId, 
-  exercises 
-}: { 
-  trainingId: string, 
-  exercises: { exercicio_id: string; ordem: number; observacao?: string }[] 
-}) => {
-  // Format exercises for insertion
-  const exercisesToInsert = exercises.map(exercise => ({
-    treino_id: trainingId,
-    exercicio_id: exercise.exercicio_id,
-    ordem: exercise.ordem,
-    observacao: exercise.observacao
-  }));
+export const addExercisesToTraining = async ({ trainingId, exercises }) => {
+  try {
+    const { error } = await supabase
+      .from('treinos_exercicios')
+      .insert(
+        exercises.map(ex => ({
+          treino_id: trainingId,
+          exercicio_id: ex.exercicio_id,
+          ordem: ex.ordem,
+          observacao: ex.observacao
+        }))
+      );
 
-  const { data, error } = await supabase
-    .from('treinos_exercicios')
-    .insert(exercisesToInsert);
+    if (error) {
+      throw new Error('Erro ao adicionar exercícios: ' + error.message);
+    }
 
-  if (error) {
+    return true;
+  } catch (error) {
     console.error('Error adding exercises to training:', error);
-    throw new Error(error.message);
+    throw error;
   }
-
-  return true;
 };
 
-// Update a training
-export const updateTraining = async (training: Training): Promise<Training> => {
-  const { data, error } = await supabase
-    .from('treinos')
-    .update({
-      nome: training.nome,
-      local: training.local,
-      data: training.data,
-      descricao: training.descricao || null
-    })
-    .eq('id', training.id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error(`Error updating training with ID ${training.id}:`, error);
-    throw new Error(error.message);
+export const fetchTrainings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos')
+      .select('*')
+      .order('data', { ascending: false });
+      
+    if (error) {
+      throw new Error('Erro ao buscar treinos: ' + error.message);
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching trainings:', error);
+    throw error;
   }
-
-  return data;
 };
 
-// Delete a training
-export const deleteTraining = async (id: string): Promise<void> => {
-  // First delete related exercises
-  const { error: exercisesError } = await supabase
-    .from('treinos_exercicios')
-    .delete()
-    .eq('treino_id', id);
-
-  if (exercisesError) {
-    console.error(`Error deleting exercises for training with ID ${id}:`, exercisesError);
-    throw new Error(exercisesError.message);
+export const getTrainingById = async (id: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos')
+      .select(`
+        *,
+        treinos_exercicios(
+          *,
+          exercicio:exercicio_id(*)
+        )
+      `)
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      throw new Error('Erro ao buscar treino: ' + error.message);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching training:', error);
+    throw error;
   }
+};
 
-  // Then delete the training
-  const { error } = await supabase
-    .from('treinos')
-    .delete()
-    .eq('id', id);
+export const updateTraining = async (id: string, trainingData: Partial<TrainingInput>) => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos')
+      .update({
+        nome: trainingData.nome,
+        local: trainingData.local,
+        data: trainingData.data,
+        descricao: trainingData.descricao,
+        time: trainingData.time
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) {
-    console.error(`Error deleting training with ID ${id}:`, error);
-    throw new Error(error.message);
+    if (error) {
+      throw new Error('Erro ao atualizar treino: ' + error.message);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error updating training:', error);
+    throw error;
+  }
+};
+
+export const deleteTraining = async (id: string) => {
+  try {
+    // First delete related exercises
+    const { error: exercisesError } = await supabase
+      .from('treinos_exercicios')
+      .delete()
+      .eq('treino_id', id);
+      
+    if (exercisesError) {
+      throw new Error('Erro ao excluir exercícios do treino: ' + exercisesError.message);
+    }
+    
+    // Then delete the training
+    const { error } = await supabase
+      .from('treinos')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      throw new Error('Erro ao excluir treino: ' + error.message);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting training:', error);
+    throw error;
   }
 };
