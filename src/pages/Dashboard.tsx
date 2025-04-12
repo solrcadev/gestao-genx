@@ -48,7 +48,7 @@ const Dashboard: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Olá, {user?.email?.split('@')[0] || 'Técnico'}</h1>
-          <p className="text-muted-foreground">Bem-vindo ao Volley Track Pro</p>
+          <p className="text-muted-foreground">Bem-vindo ao GEN X - Painel de Gestão</p>
         </div>
         <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
           <LogOut className="h-5 w-5" />

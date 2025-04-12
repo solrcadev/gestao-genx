@@ -85,7 +85,7 @@ const LoginPage: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-background px-4">
       <div className="w-full max-w-md space-y-8 p-6 bg-card rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Volley Track Pro</h1>
+          <h1 className="text-2xl font-bold tracking-tight">GEN X - Painel de Gestão</h1>
           <p className="text-sm text-muted-foreground mt-2">
             Faça login para acessar o painel de gerenciamento
           </p>
