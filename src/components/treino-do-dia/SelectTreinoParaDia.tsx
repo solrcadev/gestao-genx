@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { fetchTrainings } from "@/services/trainingService";
 import { setTreinoParaDia } from "@/services/treinosDoDiaService";
@@ -105,6 +104,12 @@ const SelectTreinoParaDia = ({ onSelectTreino }: SelectTreinoParaDiaProps) => {
                 selected={selectedDate}
                 onSelect={handleDateSelect}
                 initialFocus
+                disabled={(date) => {
+                  // Bloquear apenas datas anteriores a 30 dias atrás
+                  const thirtyDaysAgo = new Date();
+                  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                  return date < thirtyDaysAgo;
+                }}
               />
             </PopoverContent>
           </Popover>

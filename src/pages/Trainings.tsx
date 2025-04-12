@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, MapPin, Plus, Edit, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
@@ -42,9 +42,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
 import { fetchTrainings, createTraining, updateTraining, deleteTraining } from '@/services/trainingService';
+import { definirTreinoDoDia } from '@/services/treinosDoDiaService';
 import { Team, Training } from '@/types';
 
 const formSchema = z.object({
@@ -64,6 +66,8 @@ const Trainings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isConfirmingTreinoDoDia, setIsConfirmingTreinoDoDia] = useState(false);
+  const [selectedTreinoForDia, setSelectedTreinoForDia] = useState(null);
 
   // React Hook Form setup
   const form = useForm<z.infer<typeof formSchema>>({
@@ -158,6 +162,29 @@ const Trainings = () => {
     }
   });
 
+  // Mutation para definir o treino do dia
+  const definirTreinoDoDiaMutation = useMutation({
+    mutationFn: (treinoId: string) => definirTreinoDoDia(treinoId),
+    onSuccess: (data) => {
+      toast({
+        title: 'Treino do dia definido!',
+        description: 'Este treino foi definido como o treino do dia atual.',
+      });
+      setIsConfirmingTreinoDoDia(false);
+      // Navegar para a página do treino do dia
+      navigate('/treino-do-dia');
+    },
+    onError: (error: Error) => {
+      console.error('Erro ao definir treino do dia:', error);
+      toast({
+        title: 'Erro ao definir treino do dia',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsConfirmingTreinoDoDia(false);
+    }
+  });
+
   // Handlers
   const handleCreateTraining = (values: z.infer<typeof formSchema>) => {
     createTrainingMutation.mutate({
@@ -204,18 +231,34 @@ const Trainings = () => {
     deleteTrainingMutation.mutate(selectedTraining.id);
   };
 
-  const handleOpenTreinoDoDia = (trainingId: string) => {
-    navigate(`/treino-do-dia/${trainingId}`);
+  const handleDefinirTreinoDoDia = (training) => {
+    setSelectedTreinoForDia(training);
+    setIsConfirmingTreinoDoDia(true);
+  };
+
+  const confirmDefinirTreinoDoDia = () => {
+    if (!selectedTreinoForDia) return;
+    definirTreinoDoDiaMutation.mutate(selectedTreinoForDia.id);
+  };
+
+  const handleOpenTreinoDoDia = () => {
+    navigate('/treino-do-dia');
   };
 
   return (
     <div className="mobile-container pb-20">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Treinos</h1>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Treino
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleOpenTreinoDoDia}>
+            <ClipboardCheck className="mr-2 h-4 w-4" />
+            Ver Treino do Dia
+          </Button>
+          <Button onClick={() => navigate('/montagem-treino')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Treino
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -252,7 +295,7 @@ const Trainings = () => {
                   <Badge variant="secondary">{training.time}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => handleOpenTreinoDoDia(training.id)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleDefinirTreinoDoDia(training)}>
                     <Calendar className="mr-2 h-4 w-4" />
                     Treino do Dia
                   </Button>
@@ -580,6 +623,27 @@ const Trainings = () => {
                 <LoadingSpinner />
               )}
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Treino do Dia Alert */}
+      <AlertDialog open={isConfirmingTreinoDoDia} onOpenChange={setIsConfirmingTreinoDoDia}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Definir Treino do Dia</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja definir este treino como o treino do dia? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsConfirmingTreinoDoDia(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDefinirTreinoDoDia} disabled={definirTreinoDoDiaMutation.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {definirTreinoDoDiaMutation.isPending && (
+                <LoadingSpinner />
+              )}
+              Definir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

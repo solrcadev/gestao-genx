@@ -4,7 +4,7 @@ import { Training } from '@/types';
 export interface TrainingInput {
   nome: string;
   local: string;
-  data: Date;
+  data: Date | string;
   descricao: string;
   time: "Masculino" | "Feminino";
 }
@@ -13,7 +13,7 @@ export interface TrainingUpdateInput {
   id: string;
   nome: string;
   local: string;
-  data: Date;
+  data: Date | string;
   descricao?: string;
   time: "Masculino" | "Feminino";
 }
@@ -40,27 +40,65 @@ export const fetchTreinos = async () => {
 
 export const createTraining = async (trainingData: TrainingInput) => {
   try {
-    const { data, error } = await supabase
-      .from('treinos')
-      .insert([
-        {
-          nome: trainingData.nome,
-          local: trainingData.local,
-          data: trainingData.data,
-          descricao: trainingData.descricao || '',
-          time: trainingData.time
-        }
-      ])
-      .select()
-      .single();
+    console.log("Criando treino com dados:", trainingData);
+    
+    // Verificar sessão do usuário
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error("Erro: Usuário não está autenticado");
+      throw new Error('Você precisa estar autenticado para criar um treino.');
+    }
+    
+    console.log("Usuário autenticado:", sessionData.session.user.email);
+    
+    // Garantir que a data está no formato correto para o Supabase (YYYY-MM-DD)
+    let formattedDate = trainingData.data;
+    if (trainingData.data instanceof Date) {
+      formattedDate = trainingData.data.toISOString().split('T')[0];
+    }
+    
+    console.log("Data formatada para inserção:", formattedDate);
+    
+    // Objeto que será inserido no Supabase
+    const trainingObject = {
+      nome: trainingData.nome,
+      local: trainingData.local,
+      data: formattedDate,
+      descricao: trainingData.descricao || '',
+      time: trainingData.time
+    };
+    
+    console.log("Objeto final para inserção:", trainingObject);
+    
+    let data;
+    let error;
+    
+    try {
+      // Chamada ao Supabase
+      console.log("Iniciando chamada ao Supabase...");
+      const result = await supabase
+        .from('treinos')
+        .insert([trainingObject])
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+      console.log("Chamada ao Supabase concluída:", { data, error });
+    } catch (supabaseError) {
+      console.error("Erro ao executar chamada ao Supabase:", supabaseError);
+      throw new Error('Erro na chamada ao Supabase: ' + (supabaseError as Error).message);
+    }
 
     if (error) {
+      console.error("Erro do Supabase ao criar treino:", error);
       throw new Error('Erro ao criar treino: ' + error.message);
     }
 
+    console.log("Treino criado com sucesso:", data);
     return data;
   } catch (error) {
-    console.error('Error creating training:', error);
+    console.error('Erro detalhado ao criar treino:', error);
     throw error;
   }
 };

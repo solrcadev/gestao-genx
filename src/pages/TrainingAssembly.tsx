@@ -58,6 +58,14 @@ const TrainingAssembly = ({ className, size = "md" }: TrainingAssemblyProps) => 
       descricao: '',
       time: "Masculino"
     },
+    mode: 'onChange', // Validar em tempo real
+  });
+  
+  // Log de estado do formulário para depuração
+  console.log("Estado do formulário:", {
+    isDirty: form.formState.isDirty,
+    isValid: form.formState.isValid,
+    errors: form.formState.errors
   });
   
   // Fetch exercises
@@ -115,14 +123,50 @@ const TrainingAssembly = ({ className, size = "md" }: TrainingAssemblyProps) => 
 
   // Step 1: Create training info
   const onSubmitTrainingInfo = (values: z.infer<typeof formSchema>) => {
-    // Ensure that all required fields from TrainingInput are included
-    createTrainingMutation.mutate({
-      nome: values.nome,
-      local: values.local,
-      data: values.data,
-      descricao: values.descricao || '',
-      time: values.time
-    });
+    // Log para debug
+    console.log("Função onSubmitTrainingInfo chamada");
+    console.log("Submetendo formulário com valores:", values);
+    
+    // Verificar se todos os campos necessários estão presentes
+    if (!values.nome || !values.local || !values.data || !values.time) {
+      console.error("Campos obrigatórios ausentes:", { 
+        nome: !!values.nome, 
+        local: !!values.local, 
+        data: !!values.data, 
+        time: !!values.time 
+      });
+      
+      toast({
+        title: "Preencha todos os campos",
+        description: "Todos os campos marcados são obrigatórios.",
+        variant: "destructive",
+      });
+      
+      return;
+    }
+    
+    try {
+      // Garantir que o valor da data seja tratado corretamente
+      const formattedDate = values.data ? values.data.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      
+      console.log("Data formatada:", formattedDate);
+      
+      // Simplificar completamente a chamada da mutation
+      createTrainingMutation.mutate({
+        nome: values.nome,
+        local: values.local,
+        data: formattedDate,
+        descricao: values.descricao || '',
+        time: values.time
+      });
+    } catch (error) {
+      console.error("Erro ao processar formulário:", error);
+      toast({
+        title: "Erro ao processar formulário",
+        description: "Ocorreu um erro ao processar os dados do formulário. Verifique o console para mais detalhes.",
+        variant: "destructive",
+      });
+    }
   };
 
   const addExerciseToTraining = (exercise) => {
@@ -221,7 +265,22 @@ const TrainingAssembly = ({ className, size = "md" }: TrainingAssemblyProps) => 
           <div className="animate-fade-in">
             <h2 className="text-xl font-semibold mb-4">Informações do Treino</h2>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmitTrainingInfo)} className="space-y-4">
+              <form onSubmit={(e) => {
+                e.preventDefault(); // Prevenir o comportamento padrão
+                console.log("Evento de submit do formulário acionado");
+                
+                // Obter valores do formulário
+                const values = form.getValues();
+                
+                // Verificar validade do formulário
+                form.trigger().then(isValid => {
+                  if (isValid) {
+                    onSubmitTrainingInfo(values);
+                  } else {
+                    console.log("Formulário inválido:", form.formState.errors);
+                  }
+                });
+              }} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="nome"
@@ -347,6 +406,31 @@ const TrainingAssembly = ({ className, size = "md" }: TrainingAssemblyProps) => 
                     <LoadingSpinner className="mr-2" />
                   )}
                   Continuar para Seleção de Exercícios
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+                
+                {/* Botão alternativo com onClick direto - apenas se o primeiro não funcionar */}
+                <Button 
+                  type="button" 
+                  className="w-full mt-2"
+                  onClick={() => {
+                    console.log("Botão de backup clicado");
+                    form.handleSubmit(
+                      (values) => {
+                        console.log("Formulário validado via botão de backup");
+                        onSubmitTrainingInfo(values);
+                      },
+                      (errors) => {
+                        console.error("Formulário com erros no botão de backup:", errors);
+                      }
+                    )();
+                  }}
+                  disabled={createTrainingMutation.isPending}
+                >
+                  {createTrainingMutation.isPending && (
+                    <LoadingSpinner className="mr-2" />
+                  )}
+                  Criar Treino (método alternativo)
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </form>

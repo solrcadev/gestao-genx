@@ -137,6 +137,58 @@ export const fetchTreinoDoDia = async (id: string) => {
   return data;
 };
 
+// Define ou substitui o treino do dia
+export const definirTreinoDoDia = async (treinoId: string, data: Date = new Date()): Promise<TreinoDoDia> => {
+  const formattedDate = data.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Check if there is already a treino for this date
+  const { data: existingTreino, error: checkError } = await supabase
+    .from('treinos_do_dia')
+    .select('*')
+    .eq('data', formattedDate);
+    
+  if (checkError) {
+    console.error('Error checking existing treino do dia:', checkError);
+    throw new Error(checkError.message);
+  }
+  
+  // Se já existe um treino para a data, exclui-o
+  if (existingTreino && existingTreino.length > 0) {
+    console.log('Substituindo treino existente para a data:', formattedDate);
+    
+    // Delete existing treino do dia
+    const { error: deleteError } = await supabase
+      .from('treinos_do_dia')
+      .delete()
+      .eq('data', formattedDate);
+      
+    if (deleteError) {
+      console.error('Erro ao excluir treino do dia existente:', deleteError);
+      throw new Error('Não foi possível substituir o treino existente. ' + deleteError.message);
+    }
+  }
+  
+  // Insert new treino do dia
+  const { data: newTreinoDoDia, error } = await supabase
+    .from('treinos_do_dia')
+    .insert([
+      {
+        treino_id: treinoId,
+        data: formattedDate,
+        aplicado: false
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error setting treino do dia:', error);
+    throw new Error(error.message);
+  }
+
+  return newTreinoDoDia;
+};
+
 // Set a treino for the current day
 export const setTreinoParaDia = async (treinoId: string, data: Date = new Date()): Promise<TreinoDoDia> => {
   const formattedDate = data.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -601,4 +653,74 @@ export const fetchTreinoAtual = async (id: string) => {
     exercicios: exercicios || [],
     presencas: presencas || []
   };
+};
+
+// Buscar os exercícios vinculados a um treino do dia
+export const getExerciciosTreinoDoDia = async (treinoDoDiaId: string) => {
+  try {
+    // Primeiro obtenha o treino do dia para identificar o treino_id
+    const { data: treinoDoDia, error: treinoError } = await supabase
+      .from('treinos_do_dia')
+      .select('treino_id')
+      .eq('id', treinoDoDiaId)
+      .single();
+
+    if (treinoError) {
+      console.error('Erro ao buscar treino do dia:', treinoError);
+      throw new Error(treinoError.message);
+    }
+
+    console.log('Treino ID recuperado:', treinoDoDia.treino_id);
+
+    // Primeiro, verificar a estrutura das tabelas
+    const { data: exercicioInfo, error: infoError } = await supabase
+      .from('exercicios')
+      .select('*')
+      .limit(1);
+
+    if (!infoError && exercicioInfo && exercicioInfo.length > 0) {
+      console.log('Estrutura da tabela exercicios:', Object.keys(exercicioInfo[0]));
+    }
+
+    const { data: treinosExerciciosInfo, error: treinosExError } = await supabase
+      .from('treinos_exercicios')
+      .select('*')
+      .limit(1);
+
+    if (!treinosExError && treinosExerciciosInfo && treinosExerciciosInfo.length > 0) {
+      console.log('Estrutura da tabela treinos_exercicios:', Object.keys(treinosExerciciosInfo[0]));
+    }
+
+    // Buscar os exercícios vinculados ao treino com todos os dados necessários
+    const { data: exercicios, error: exerciciosError } = await supabase
+      .from('treinos_exercicios')
+      .select(`
+        *,
+        exercicio:exercicio_id(*)
+      `)
+      .eq('treino_id', treinoDoDia.treino_id)
+      .order('ordem');
+
+    if (exerciciosError) {
+      console.error('Erro ao buscar exercícios do treino:', exerciciosError);
+      throw new Error(exerciciosError.message);
+    }
+
+    console.log('Exercícios recuperados para o treino do dia:', exercicios);
+    
+    // Verificar o primeiro exercício para entender sua estrutura
+    if (exercicios && exercicios.length > 0) {
+      console.log('Estrutura do primeiro exercício:', exercicios[0]);
+      console.log('Campos disponíveis no primeiro exercício:', Object.keys(exercicios[0]));
+      if (exercicios[0].exercicio) {
+        console.log('Campos disponíveis no exercicio associado:', Object.keys(exercicios[0].exercicio));
+        console.log('Valor de tempo_estimado:', exercicios[0].exercicio.tempo_estimado);
+      }
+    }
+    
+    return exercicios || [];
+  } catch (error) {
+    console.error('Erro ao buscar exercícios do treino do dia:', error);
+    throw error;
+  }
 };

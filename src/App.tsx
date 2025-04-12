@@ -77,6 +77,14 @@ const App = () => {
                   } 
                 />
                 <Route 
+                  path="/montagem-treino" 
+                  element={
+                    <ProtectedRoute>
+                      <TrainingAssembly />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
                   path="/desempenho" 
                   element={
                     <ProtectedRoute>
@@ -94,6 +102,14 @@ const App = () => {
                 />
                 <Route 
                   path="/treino-do-dia/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <TreinoDoDia />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/treino-do-dia" 
                   element={
                     <ProtectedRoute>
                       <TreinoDoDia />

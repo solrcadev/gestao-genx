@@ -115,6 +115,12 @@ const TreinoDosDia = () => {
               selected={date}
               onSelect={handleDateSelect}
               initialFocus
+              disabled={(date) => {
+                // Bloquear apenas datas anteriores a 30 dias atrás
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                return date < thirtyDaysAgo;
+              }}
             />
           </PopoverContent>
         </Popover>

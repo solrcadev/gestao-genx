@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { exportTrainingToPdf } from '@/services/pdfExportService';
 import { getTrainingById } from '@/services/trainingService';
-import { getTreinoDoDia } from '@/services/treinosDoDiaService';
+import { getTreinoDoDia, getExerciciosTreinoDoDia } from '@/services/treinosDoDiaService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ExportTrainingButtonProps {
@@ -39,7 +38,33 @@ export const ExportTrainingButton: React.FC<ExportTrainingButtonProps> = ({
           throw new Error("Treino do dia não encontrado");
         }
         trainingData = treinoDoDia.treino;
-        exercisesData = treinoDoDia.exercicios || [];
+        
+        // Buscar os exercícios usando a nova função
+        exercisesData = await getExerciciosTreinoDoDia(treinoDoDia.id);
+        console.log("Exercícios do treino do dia para exportação:", exercisesData);
+        
+        // Verificar se os exercícios têm os dados de tempo
+        if (exercisesData && exercisesData.length > 0) {
+          exercisesData = exercisesData.map(ex => {
+            // Verificar os campos disponíveis no objeto
+            console.log(`Processando exercício ${ex.exercicio?.nome || 'sem nome'}`, ex);
+            
+            // Garantir que tempo_estimado esteja presente
+            if (!ex.tempo_estimado) {
+              // Tentar encontrar qualquer campo que possa conter a duração
+              if (ex.exercicio?.tempo_estimado) {
+                ex.tempo_estimado = ex.exercicio.tempo_estimado;
+              } else if (ex.tempo_planejado) {
+                ex.tempo_estimado = ex.tempo_planejado;
+              } else if (ex.duracao) {
+                ex.tempo_estimado = ex.duracao;
+              } else if (ex.exercicio?.duracao) {
+                ex.tempo_estimado = ex.exercicio.duracao;
+              }
+            }
+            return ex;
+          });
+        }
       } else {
         // Get training directly
         const training = await getTrainingById(trainingId);
@@ -48,6 +73,29 @@ export const ExportTrainingButton: React.FC<ExportTrainingButtonProps> = ({
         }
         trainingData = training;
         exercisesData = training.treinos_exercicios || [];
+        
+        // Verificar se os exercícios têm os dados de tempo
+        if (exercisesData && exercisesData.length > 0) {
+          exercisesData = exercisesData.map(ex => {
+            // Verificar os campos disponíveis no objeto
+            console.log(`Processando exercício ${ex.exercicio?.nome || 'sem nome'}`, ex);
+            
+            // Garantir que tempo_estimado esteja presente
+            if (!ex.tempo_estimado) {
+              // Tentar encontrar qualquer campo que possa conter a duração
+              if (ex.exercicio?.tempo_estimado) {
+                ex.tempo_estimado = ex.exercicio.tempo_estimado;
+              } else if (ex.tempo_planejado) {
+                ex.tempo_estimado = ex.tempo_planejado;
+              } else if (ex.duracao) {
+                ex.tempo_estimado = ex.duracao;
+              } else if (ex.exercicio?.duracao) {
+                ex.tempo_estimado = ex.exercicio.duracao;
+              }
+            }
+            return ex;
+          });
+        }
       }
       
       // Export to PDF
