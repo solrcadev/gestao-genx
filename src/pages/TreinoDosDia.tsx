@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addDays, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,6 +15,7 @@ import AthleteAttendance from "@/components/treino-do-dia/AthleteAttendance";
 import ExerciseList from "@/components/treino-do-dia/ExerciseList";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EvaluationDialog } from "@/components/treino-do-dia/EvaluationDialog";
+import { ExportTrainingButton } from "@/components/treino-do-dia/ExportTrainingButton";
 
 const TreinoDosDia = () => {
   const [date, setDate] = useState<Date>(new Date());
@@ -136,14 +136,20 @@ const TreinoDosDia = () => {
                 </p>
               </div>
               
-              <Button
-                size="sm"
-                onClick={handleOpenEvaluation}
-                className="flex items-center gap-1"
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">Avaliar</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <ExportTrainingButton
+                  trainingId={treinoDoDia.treino.id}
+                  isTreinoDoDia={true}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleOpenEvaluation}
+                  className="flex items-center gap-1"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Avaliar</span>
+                </Button>
+              </div>
             </div>
           </div>
 

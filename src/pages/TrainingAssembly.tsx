@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, ArrowDown, ArrowUp, Trash2, Plus, ChevronRight, Save } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, ArrowLeft, ArrowDown, ArrowUp, Trash2, Plus, ChevronRight, Save, FilePdf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -25,6 +25,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchExercises } from '@/services/exerciseService';
 import { createTraining, addExercisesToTraining } from '@/services/trainingService';
+import { ExportTrainingButton } from '@/components/treino-do-dia/ExportTrainingButton';
 
 interface TrainingAssemblyProps {
   className?: string;
@@ -576,7 +577,14 @@ const TrainingAssembly = ({ className, size = "md" }: TrainingAssemblyProps) => 
               ))}
             </div>
 
-            <div className="sticky bottom-16 bg-background pt-4 pb-2">
+            <div className="sticky bottom-16 bg-background pt-4 pb-2 flex flex-col gap-2">
+              {trainingData?.id && (
+                <ExportTrainingButton
+                  trainingId={trainingData.id}
+                  variant="outline"
+                  className="w-full"
+                />
+              )}
               <Button 
                 onClick={submitTraining}
                 className="w-full"
