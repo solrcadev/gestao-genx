@@ -81,7 +81,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
         treinoDoDiaId={treinoDoDiaId}
         onFinish={handleCompleteExercise}
         onCancel={handleCancelExercise}
-        estimatedTime={activeExercise.tempo || 10} // Add the estimatedTime prop
+        estimatedTime={activeExercise.tempo || 10}
       />
     );
   }
