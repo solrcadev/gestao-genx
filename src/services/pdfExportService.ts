@@ -1,240 +1,184 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Training } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Training } from '@/types';
+import { api } from '@/lib/axios';
 
-export interface TrainingPdfData {
-  training: Training;
-  exercises: any[];
-  athletes?: any[];
-  userName: string;
-}
+import { AttendanceRecord, AttendanceFilters } from './attendanceService';
+import { format as formatDate, parse } from 'date-fns';
 
-export const exportTrainingToPdf = ({
-  training,
-  exercises,
-  athletes = [],
-  userName
-}: TrainingPdfData) => {
-  // Create a new PDF document in A4 size
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
+// Function to generate a PDF from a training
+export const generateTrainingPDF = async (trainingId: string) => {
+  try {
+    // Fetch training data from the API
+    const response = await api.get(`/trainings/${trainingId}`);
+    const training: Training = response.data;
 
-  // Set up colors
-  const primaryColor = '#6E59A5';
-  const secondaryColor = '#403E43';
+    // Create a new jsPDF instance
+    const doc = new jsPDF();
+
+    // Define title and headers
+    const title = 'Detalhes do Treino';
+    const headers = [
+      ['Campo', 'Valor'],
+    ];
+
+    // Prepare data for the table
+    const data = [
+      ['Nome', training.nome],
+      ['Data', format(new Date(training.data), 'dd/MM/yyyy', { locale: ptBR })],
+      ['Local', training.local],
+      ['Time', training.time],
+      ['Descrição', training.descricao || 'Nenhuma']
+    ];
+
+    // Add title to the document
+    doc.setFontSize(18);
+    doc.text(title, 105, 15, { align: 'center' });
+
+    // Add date of generation
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 105, 22, { align: 'center' });
+
+    // Configure and generate the table
+    autoTable(doc, {
+      head: headers,
+      body: data,
+      startY: 30,
+      margin: { horizontal: 15 },
+      columnStyles: { 0: { fontStyle: 'bold' } }
+    });
+
+    // Save the PDF
+    doc.save(`treino-${trainingId}.pdf`);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw error;
+  }
+};
+
+export const generateAttendancePDF = (
+  records: AttendanceRecord[],
+  filters: AttendanceFilters
+) => {
+  const doc = new jsPDF();
+  const title = 'Relatório de Presenças';
   
-  // Set font styles
-  doc.setFont('helvetica');
+  // Add title
+  doc.setFontSize(18);
+  doc.text(title, 105, 15, { align: 'center' });
   
-  // Add Title
-  doc.setFontSize(20);
-  doc.setTextColor(primaryColor);
-  doc.text(`Treino: ${training.nome}`, 20, 20);
-  
-  // Add Date and Location
-  doc.setFontSize(12);
-  doc.setTextColor(secondaryColor);
-  const formattedDate = format(new Date(training.data), 'PPP', { locale: ptBR });
-  doc.text(`Data: ${formattedDate}`, 20, 30);
-  doc.text(`Local: ${training.local}`, 20, 38);
-  
-  // Add Created By
-  doc.text(`Preparado por: ${userName}`, 20, 46);
-  
-  // Add divider
-  doc.setDrawColor(primaryColor);
-  doc.line(20, 50, 190, 50);
-  
-  // Add time information
+  // Add date
   doc.setFontSize(10);
-  doc.text(`Time: ${training.time || 'Não especificado'}`, 20, 56);
+  doc.text(
+    `Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`,
+    105, 
+    22, 
+    { align: 'center' }
+  );
   
-  // Verifica se há exercícios e loga para debug
-  console.log("Exercícios para PDF:", exercises);
+  // Add filter information
+  doc.setFontSize(11);
+  let yPos = 30;
+  doc.text('Filtros aplicados:', 14, yPos);
+  yPos += 6;
   
-  // Calculate total estimated time
-  const totalTime = exercises && exercises.length > 0 
-    ? exercises.reduce((total, ex) => {
-        // Melhorar extração do tempo estimado para capturar todos os possíveis campos
-        // Remover referência ao campo tempo que não existe
-        // Adiciona verificações para possíveis outros campos de tempo
-        const tempo = ex.tempo_estimado || 
-                     ex.tempo_planejado ||
-                     ex.duracao ||
-                     (ex.exercicio && (ex.exercicio.tempo_estimado || ex.exercicio.duracao)) || 
-                     0;
-        
-        console.log(`Exercício ${ex.exercicio?.nome || ex.nome || 'sem nome'} - Tempo: ${tempo}, Campos disponíveis:`, Object.keys(ex));
-        return total + Number(tempo);
-      }, 0) 
-    : 0;
-    
-  doc.text(`Tempo total estimado: ${totalTime} minutos`, 20, 62);
-  
-  // Athletes section if available
-  if (athletes && athletes.length > 0) {
-    doc.setFontSize(14);
-    doc.setTextColor(primaryColor);
-    doc.text('Atletas Participantes', 20, 72);
-    
-    // Create athlete table data
-    const athleteData = athletes.map(athlete => [athlete.nome, athlete.posicao || '']);
-    
-    autoTable(doc, {
-      head: [['Nome', 'Posição']],
-      body: athleteData,
-      startY: 76,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [110, 89, 165],
-        textColor: [255, 255, 255]
-      },
-      styles: {
-        fontSize: 10,
-      }
-    });
+  if (filters.athleteName) {
+    doc.text(`Atleta: ${filters.athleteName}`, 14, yPos);
+    yPos += 5;
   }
   
-  // Exercises section
-  const exerciseSectionY = athletes && athletes.length > 0 
-    ? (doc as any).lastAutoTable.finalY + 15
-    : 76;
-  
-  doc.setFontSize(14);
-  doc.setTextColor(primaryColor);
-  doc.text('Exercícios', 20, exerciseSectionY);
-  
-  // Process each exercise
-  let currentY = exerciseSectionY + 10;
-  
-  // Verificar se exercises está definido e tem elementos
-  if (!exercises || exercises.length === 0) {
-    doc.setFontSize(10);
-    doc.setTextColor(secondaryColor);
-    doc.text('Nenhum exercício cadastrado para este treino.', 25, currentY);
-    currentY += 10;
-  } else {
-    // Primeiro, adicionar uma tabela resumo com todos os exercícios
-    const exerciseTableData = exercises.map((ex, index) => {
-      // Encontrar qualquer campo que possa conter a informação de tempo
-      const tempoEstimado = ex.tempo_estimado || 
-                          ex.tempo_planejado ||
-                          ex.duracao ||
-                          (ex.exercicio && (ex.exercicio.tempo_estimado || ex.exercicio.duracao)) || 
-                          '?';
-      
-      return [
-        (index + 1).toString(),
-        ex.exercicio?.nome || ex.nome || 'Exercício',
-        ex.exercicio?.categoria || ex.categoria || 'Não especificada',
-        tempoEstimado + ' min'
-      ];
-    });
-    
-    autoTable(doc, {
-      head: [['#', 'Exercício', 'Categoria', 'Duração']],
-      body: exerciseTableData,
-      startY: currentY,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [110, 89, 165],
-        textColor: [255, 255, 255]
-      },
-      styles: {
-        fontSize: 9
-      },
-      columnStyles: {
-        0: {cellWidth: 10},
-        3: {cellWidth: 20}
-      }
-    });
-    
-    // Atualizar a posição Y após a tabela
-    currentY = (doc as any).lastAutoTable.finalY + 20;
-    
-    // Adicionar título para detalhes dos exercícios
-    doc.setFontSize(14);
-    doc.setTextColor(primaryColor);
-    doc.text('Detalhes dos Exercícios', 20, currentY);
-    currentY += 10;
-    
-    // Depois, mostrar os detalhes de cada exercício
-    exercises.forEach((exercise, index) => {
-      // Check if we need a new page
-      if (currentY > 250) {
-        doc.addPage();
-        currentY = 20;
-      }
-      
-      // Processamento mais seguro dos dados do exercício
-      const exercicioNome = exercise.exercicio?.nome || exercise.nome || 'Exercício';
-      const exercicioCategoria = exercise.exercicio?.categoria || exercise.categoria || 'Não especificada';
-      // Melhorando a captura do tempo do exercício, verificando vários campos possíveis
-      const exercicioTempo = exercise.tempo_estimado || 
-                           exercise.tempo_planejado ||
-                           exercise.duracao ||
-                           (exercise.exercicio && (exercise.exercicio.tempo_estimado || exercise.exercicio.duracao)) || 
-                           '?';
-      const exercicioObjetivo = exercise.exercicio?.objetivo || exercise.objetivo || '';
-      const exercicioObservacao = exercise.observacao || '';
-      
-      // Exercise number and name
-      doc.setFontSize(12);
-      doc.setTextColor(primaryColor);
-      doc.text(`${index + 1}. ${exercicioNome}`, 20, currentY);
-      currentY += 8;
-      
-      // Exercise details
-      doc.setFontSize(10);
-      doc.setTextColor(secondaryColor);
-      
-      // Category and time
-      doc.text(`Categoria: ${exercicioCategoria}`, 25, currentY);
-      doc.text(`Duração: ${exercicioTempo} min`, 120, currentY);
-      currentY += 6;
-      
-      // Objective if available
-      if (exercicioObjetivo) {
-        doc.text(`Objetivo: ${exercicioObjetivo}`, 25, currentY);
-        currentY += 6;
-      }
-      
-      // Observations if available
-      if (exercicioObservacao) {
-        // Word wrap for observations
-        const splitObservation = doc.splitTextToSize(`Observações: ${exercicioObservacao}`, 150);
-        doc.text(splitObservation, 25, currentY);
-        currentY += (splitObservation.length * 6);
-      }
-      
-      // Add some spacing between exercises
-      currentY += 8;
-    });
-  }
-  
-  // Add page number at the bottom
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
+  if (filters.startDate) {
     doc.text(
-      `Página ${i} de ${totalPages}`, 
-      doc.internal.pageSize.getWidth() / 2, 
-      doc.internal.pageSize.getHeight() - 10, 
-      { align: 'center' }
+      `Data inicial: ${formatDate(filters.startDate, 'dd/MM/yyyy', { locale: ptBR })}`, 
+      14, 
+      yPos
     );
+    yPos += 5;
   }
   
-  // Generate timestamp for the filename
-  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
-  const fileName = `treino_${training.nome.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+  if (filters.endDate) {
+    doc.text(
+      `Data final: ${formatDate(filters.endDate, 'dd/MM/yyyy', { locale: ptBR })}`,
+      14,
+      yPos
+    );
+    yPos += 5;
+  }
+  
+  if (filters.status && filters.status !== 'all') {
+    doc.text(
+      `Status: ${filters.status === 'present' ? 'Presentes' : 'Ausentes'}`,
+      14,
+      yPos
+    );
+    yPos += 5;
+  }
+  
+  if (filters.team && filters.team !== 'all') {
+    doc.text(`Time: ${filters.team}`, 14, yPos);
+    yPos += 5;
+  }
+  
+  yPos += 5;
+  
+  // Add table header
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  
+  // Prepare table data
+  const tableColumn = ['Atleta', 'Time', 'Data', 'Treino', 'Status', 'Justificativa'];
+  const tableData = records.map(record => [
+    record.atleta.nome,
+    record.atleta.time,
+    formatDate(parse(record.treino.data, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy'),
+    record.treino.nome,
+    record.presente ? 'Presente' : 'Ausente',
+    !record.presente && record.justificativa ? record.justificativa : '-'
+  ]);
+  
+  // Generate table
+  autoTable(doc, {
+    startY: yPos,
+    head: [tableColumn],
+    body: tableData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [83, 83, 83],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold'
+    },
+    styles: {
+      overflow: 'ellipsize',
+      cellWidth: 'wrap'
+    },
+    columnStyles: {
+      0: { cellWidth: 35 }, // Athlete name
+      1: { cellWidth: 20 }, // Team
+      2: { cellWidth: 20 }, // Date
+      3: { cellWidth: 30 }, // Training
+      4: { cellWidth: 20 }, // Status
+      5: { cellWidth: 'auto' } // Justification
+    }
+  });
+  
+  // Add summary
+  const totalRecords = records.length;
+  const presentRecords = records.filter(r => r.presente).length;
+  const absentRecords = records.filter(r => !r.presente).length;
+  const justifiedAbsences = records.filter(r => !r.presente && r.justificativa).length;
+  
+  let finalYPos = (doc as any).lastAutoTable.finalY + 10;
+  
+  doc.text(`Total de registros: ${totalRecords}`, 14, finalYPos);
+  finalYPos += 5;
+  doc.text(`Presenças: ${presentRecords} (${Math.round(presentRecords / totalRecords * 100)}%)`, 14, finalYPos);
+  finalYPos += 5;
+  doc.text(`Faltas: ${absentRecords} (${Math.round(absentRecords / totalRecords * 100)}%)`, 14, finalYPos);
+  finalYPos += 5;
+  doc.text(`Faltas justificadas: ${justifiedAbsences} (${Math.round(justifiedAbsences / absentRecords * 100)}%)`, 14, finalYPos);
   
   // Save the PDF
-  doc.save(fileName);
+  doc.save('relatorio-presencas.pdf');
 };

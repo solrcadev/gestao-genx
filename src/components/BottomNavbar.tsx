@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Users, Calendar, Activity, Home, Grid2x2, ClipboardCheck } from "lucide-react";
+import { Users, Calendar, Activity, Home, Grid2x2, ClipboardCheck, CheckSquare } from "lucide-react";
 
 const BottomNavbar = () => {
   const location = useLocation();
@@ -28,6 +28,10 @@ const BottomNavbar = () => {
       <Link to="/treino-do-dia" className={`bottom-nav-item ${isActive("/treino-do-dia")}`}>
         <ClipboardCheck className="bottom-nav-icon" />
         <span>Treino do Dia</span>
+      </Link>
+      <Link to="/presencas" className={`bottom-nav-item ${isActive("/presencas")}`}>
+        <CheckSquare className="bottom-nav-icon" />
+        <span>Presenças</span>
       </Link>
       <Link to="/exercicios" className={`bottom-nav-item ${isActive("/exercicios")}`}>
         <Grid2x2 className="bottom-nav-icon" />

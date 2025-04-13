@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +19,7 @@ import BottomNavbar from "./components/BottomNavbar";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StudentPerformance from './pages/StudentPerformance';
+import AttendanceManagement from './pages/AttendanceManagement';
 
 const queryClient = new QueryClient();
 
@@ -120,6 +122,11 @@ const App = () => {
                 <Route path="/aluno/:studentId/performance" element={
                   <ProtectedRoute>
                     <StudentPerformance />
+                  </ProtectedRoute>
+                } />
+                <Route path="/presencas" element={
+                  <ProtectedRoute>
+                    <AttendanceManagement />
                   </ProtectedRoute>
                 } />
                 
