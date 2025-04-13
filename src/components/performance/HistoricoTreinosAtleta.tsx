@@ -106,14 +106,15 @@ const HistoricoTreinosAtleta: React.FC<HistoricoTreinosAtletaProps> = ({ athlete
     setFiltroPeriodo(null);
   };
 
-  // Calcular a porcentagem de desempenho nos fundamentos
+  // Fix the line with the type error (around line 136)
   const calcularDesempenho = (fundamentos: HistoricoTreinoPorAtleta['fundamentos']) => {
     if (!fundamentos.length) return 0;
     
     const totalAcertos = fundamentos.reduce((acc, curr) => acc + curr.acertos, 0);
     const totalExecucoes = fundamentos.reduce((acc, curr) => acc + curr.acertos + curr.erros, 0);
     
-    return totalExecucoes > 0 ? (totalAcertos / totalExecucoes) * 100 : 0;
+    // Convert to number explicitly
+    return totalExecucoes > 0 ? Number(((totalAcertos / totalExecucoes) * 100).toFixed(1)) : 0;
   };
 
   const renderFundamentosDetalhe = (fundamentos: HistoricoTreinoPorAtleta['fundamentos']) => {
@@ -367,4 +368,4 @@ const HistoricoTreinosAtleta: React.FC<HistoricoTreinosAtletaProps> = ({ athlete
   );
 };
 
-export default HistoricoTreinosAtleta; 
+export default HistoricoTreinosAtleta;

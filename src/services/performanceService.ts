@@ -1,6 +1,35 @@
 import { supabase } from '@/lib/supabase';
 import { TeamType, AthletePerformance } from '@/types';
 
+// Interface for the performance data
+export interface PerformanceData {
+  frequency: number;
+  evolution: number;
+  completedTrainings: number;
+  totalTrainings: number;
+  goalsAchieved: number;
+  totalGoals: number;
+}
+
+// Interface for training history
+export interface TrainingHistory {
+  id: string;
+  date: string;
+  type: string;
+  duration: number;
+  status: string;
+}
+
+// Interface for goals
+export interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  targetDate: string;
+  progress: number;
+  status: 'achieved' | 'in_progress' | 'pending';
+}
+
 // Interface para os dados brutos das avaliações
 interface AvaliacaoRaw {
   atleta_id: string;
@@ -28,7 +57,7 @@ export interface HistoricoTreinoPorAtleta {
   }[];
 }
 
-// Interfaces
+// Interface for student performance
 export interface StudentPerformance {
   frequency: number;
   evolution: number;
@@ -830,303 +859,3 @@ export async function getStudentGoals(studentId: string): Promise<any[]> {
     
     if (!metas || metas.length === 0) {
       console.log('Não há metas para este atleta');
-      return [];
-    }
-    
-    // Formatar dados para o componente
-    return metas.map(meta => ({
-      id: meta.id,
-      title: meta.titulo,
-      description: meta.descricao,
-      targetDate: meta.data_alvo,
-      progress: meta.progresso
-    }));
-  } catch (error) {
-    console.error('Erro ao buscar metas do estudante:', error);
-    return [];
-  }
-}
-
-// Função para buscar avaliações salvas no localStorage
-function getLocalStorageAvaliacoes(): any[] {
-  try {
-    // Tentar buscar da tabela avaliacoes_exercicios (formato compatível com este serviço)
-    const avaliacoesExercicios = JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
-    
-    // Tentar buscar também da tabela avaliacoes_fundamento (onde as avaliações são salvas originalmente)
-    const avaliacoesFundamento = JSON.parse(localStorage.getItem('avaliacoes_fundamento') || '[]');
-    
-    // Se encontrou dados em avaliacoes_fundamento, converter para o formato esperado por este serviço
-    let convertedAvaliacoes: any[] = [];
-    if (avaliacoesFundamento.length > 0) {
-      convertedAvaliacoes = avaliacoesFundamento.map((avaliacao: any) => {
-        return {
-          ...avaliacao,
-          timestamp: avaliacao.timestamp || new Date().toISOString() // Garantir que há timestamp
-        };
-      });
-    }
-    
-    // Combinar as avaliações, removendo duplicatas por ID
-    const allAvaliacoes = [...avaliacoesExercicios];
-    
-    // Adicionar apenas as avaliações de avaliacoes_fundamento que não existem em avaliacoes_exercicios
-    for (const avaliacao of convertedAvaliacoes) {
-      if (!allAvaliacoes.some(a => a.id === avaliacao.id)) {
-        allAvaliacoes.push(avaliacao);
-      }
-    }
-    
-    return allAvaliacoes;
-  } catch (error) {
-    console.error('Erro ao buscar avaliações do localStorage:', error);
-    return [];
-  }
-}
-
-/**
- * Busca o histórico completo de treinos de um atleta específico
- * @param athleteId ID do atleta
- * @returns Array com o histórico de treinos
- */
-export async function getHistoricoTreinoPorAtleta(athleteId: string): Promise<HistoricoTreinoPorAtleta[]> {
-  try {
-    if (!athleteId) {
-      console.error("ID do atleta não especificado");
-      return [];
-    }
-
-    console.log(`Buscando histórico de treinos para o atleta ${athleteId}`);
-    
-    // Primeiro tentamos buscar da tabela 'presencas'
-    try {
-      const result = await supabase
-        .from('presencas')
-        .select(`
-          *,
-          treinos (*)
-        `)
-        .eq('atleta_id', athleteId)
-        .order('created_at', { ascending: false });
-      
-      // Se conseguimos buscar com sucesso e temos dados, usamos esses
-      if (!result.error && result.data && result.data.length > 0) {
-        console.log(`Encontrados ${result.data.length} registros de presença na tabela 'presencas'`);
-        
-        return mapearPresencasParaHistorico(result.data, athleteId);
-      }
-    } catch (error) {
-      console.log("Erro ao buscar na tabela 'presencas', tentando alternativa...", error);
-    }
-    
-    // Se não conseguimos da primeira tabela, tentamos da 'treinos_presencas'
-    console.log('Buscando na tabela treinos_presencas...');
-    
-    // 1. Buscar presenças do atleta
-    const { data: presencas, error: presencasError } = await supabase
-      .from('treinos_presencas')
-      .select('*')
-      .eq('atleta_id', athleteId)
-      .order('created_at', { ascending: false });
-    
-    if (presencasError) {
-      console.error('Erro ao buscar presenças:', presencasError);
-      return [];
-    }
-    
-    if (!presencas || presencas.length === 0) {
-      console.log('Nenhuma presença encontrada para o atleta');
-      return [];
-    }
-    
-    console.log(`Encontrados ${presencas.length} registros de presença`);
-    
-    // 2. Buscar informações dos treinos relacionados
-    const treinoIds = presencas
-      .filter(p => p.treino_id)
-      .map(p => p.treino_id);
-    
-    if (treinoIds.length === 0) {
-      console.log('Nenhum ID de treino encontrado nas presenças');
-      
-      // Retornar dados básicos sem informações de treino
-      return presencas.map(presenca => ({
-        treinoId: presenca.treino_id || 'desconhecido',
-        nomeTreino: 'Treino sem nome',
-        data: presenca.data 
-          ? new Date(presenca.data).toLocaleDateString('pt-BR')
-          : 'Data não disponível',
-        local: 'Local não especificado',
-        presenca: presenca.presente !== undefined ? presenca.presente : presenca.status === 'presente',
-        justificativa: presenca.justificativa,
-        fundamentos: []
-      }));
-    }
-    
-    // Buscar os treinos pelos IDs
-    const { data: treinos, error: treinosError } = await supabase
-      .from('treinos')
-      .select('*')
-      .in('id', treinoIds);
-    
-    if (treinosError) {
-      console.error('Erro ao buscar treinos:', treinosError);
-      // Continuar mesmo com erro
-    }
-    
-    // 3. Buscar avaliações do atleta para coletar dados de desempenho
-    const { data: avaliacoes, error: avaliacoesError } = await supabase
-      .from('avaliacoes_exercicios')
-      .select('*')
-      .eq('atleta_id', athleteId);
-    
-    if (avaliacoesError) {
-      console.error('Erro ao buscar avaliações:', avaliacoesError);
-      // Continuar mesmo com erro
-    }
-    
-    // 4. Complementar com avaliações do localStorage
-    const localAvaliacoes = getLocalStorageAvaliacoes()
-      .filter(a => a.atleta_id === athleteId);
-    
-    // Combinar todas as avaliações
-    const todasAvaliacoes = [...(avaliacoes || []), ...localAvaliacoes];
-    
-    // Criar mapa de treinos para acesso rápido
-    const treinosMap = new Map();
-    if (treinos) {
-      treinos.forEach(treino => {
-        treinosMap.set(treino.id, treino);
-      });
-    }
-    
-    // 5. Mapear os dados para o formato esperado
-    const historicoTreinos: HistoricoTreinoPorAtleta[] = presencas.map(presenca => {
-      // Verificar o nome do campo treino_id (pode variar entre implementações)
-      const treinoId = presenca.treino_id || presenca.treinos_id;
-      
-      // Buscar informações do treino
-      const treino = treinosMap.get(treinoId);
-      
-      // Encontrar as avaliações relacionadas a este treino
-      const avaliacoesTreino = todasAvaliacoes.filter(a => 
-        a.treino_id === treinoId
-      );
-      
-      // Agrupar avaliações por fundamento
-      const fundamentosMap: Record<string, { acertos: number, erros: number }> = {};
-      
-      avaliacoesTreino.forEach(avaliacao => {
-        const fundamento = avaliacao?.fundamento 
-          ? avaliacao.fundamento.toLowerCase() 
-          : 'desconhecido';
-        
-        if (!fundamentosMap[fundamento]) {
-          fundamentosMap[fundamento] = {
-            acertos: 0,
-            erros: 0
-          };
-        }
-        
-        fundamentosMap[fundamento].acertos += (avaliacao.acertos || 0);
-        fundamentosMap[fundamento].erros += (avaliacao.erros || 0);
-      });
-      
-      // Converter o mapa de fundamentos para array
-      const fundamentos = Object.entries(fundamentosMap).map(([fundamento, dados]) => ({
-        fundamento,
-        acertos: dados.acertos,
-        erros: dados.erros
-      }));
-      
-      // Verificar o nome do campo para presença (pode variar entre implementações)
-      const presencaStatus = presenca.presente !== undefined 
-        ? presenca.presente 
-        : presenca.status === 'presente';
-      
-      // Construir o objeto de histórico com verificações de segurança para dados ausentes
-      return {
-        treinoId: treinoId || 'desconhecido',
-        nomeTreino: treino?.nome || 'Treino sem nome',
-        data: treino?.data 
-          ? new Date(treino.data).toLocaleDateString('pt-BR') 
-          : presenca.data 
-            ? new Date(presenca.data).toLocaleDateString('pt-BR')
-            : 'Data não disponível',
-        local: treino?.local || 'Local não especificado',
-        presenca: presencaStatus,
-        justificativa: presenca.justificativa,
-        fundamentos
-      };
-    });
-    
-    console.log(`Histórico de treinos processado com ${historicoTreinos.length} registros`);
-    return historicoTreinos;
-  } catch (error) {
-    console.error('Erro ao buscar histórico de treinos:', error);
-    // Retornar array vazio em vez de lançar o erro
-    return [];
-  }
-}
-
-// Função auxiliar para mapear dados de presenças para o formato esperado
-function mapearPresencasParaHistorico(presencas: any[], athleteId: string): HistoricoTreinoPorAtleta[] {
-  try {
-    // Buscar avaliações do atleta para complementar
-    const localAvaliacoes = getLocalStorageAvaliacoes()
-      .filter(a => a.atleta_id === athleteId);
-    
-    return presencas.map(presenca => {
-      // Encontrar treino associado
-      const treino = presenca.treinos;
-      
-      // Verificar se temos avaliações para este treino
-      const avaliacoesTreino = localAvaliacoes.filter(a => 
-        a.treino_id === presenca.treino_id
-      );
-      
-      // Agrupar avaliações por fundamento
-      const fundamentosMap: Record<string, { acertos: number, erros: number }> = {};
-      
-      avaliacoesTreino.forEach(avaliacao => {
-        const fundamento = avaliacao?.fundamento 
-          ? avaliacao.fundamento.toLowerCase() 
-          : 'desconhecido';
-        
-        if (!fundamentosMap[fundamento]) {
-          fundamentosMap[fundamento] = {
-            acertos: 0,
-            erros: 0
-          };
-        }
-        
-        fundamentosMap[fundamento].acertos += (avaliacao.acertos || 0);
-        fundamentosMap[fundamento].erros += (avaliacao.erros || 0);
-      });
-      
-      // Converter o mapa de fundamentos para array
-      const fundamentos = Object.entries(fundamentosMap).map(([fundamento, dados]) => ({
-        fundamento,
-        acertos: dados.acertos,
-        erros: dados.erros
-      }));
-      
-      return {
-        treinoId: presenca.treino_id || 'desconhecido',
-        nomeTreino: treino?.nome || 'Treino sem nome',
-        data: treino?.data 
-          ? new Date(treino.data).toLocaleDateString('pt-BR') 
-          : presenca.data 
-            ? new Date(presenca.data).toLocaleDateString('pt-BR')
-            : 'Data não disponível',
-        local: treino?.local || 'Local não especificado',
-        presenca: presenca.presente !== undefined ? presenca.presente : false,
-        justificativa: presenca.justificativa,
-        fundamentos
-      };
-    });
-  } catch (error) {
-    console.error('Erro ao mapear presenças para histórico:', error);
-    return [];
-  }
-} 

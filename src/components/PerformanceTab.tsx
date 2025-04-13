@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Card, Tabs, Progress } from 'antd';
-import { getStudentPerformance, getTrainingHistory, getStudentGoals, PerformanceData, TrainingHistory, Goal } from '@/services/performanceService';
+import { 
+  getStudentPerformance, 
+  getTrainingHistory, 
+  getStudentGoals, 
+  PerformanceData, 
+  TrainingHistory, 
+  Goal,
+  StudentPerformance
+} from '@/services/performanceService';
 
 interface PerformanceTabProps {
   studentId: string;
 }
 
 export function PerformanceTab({ studentId }: PerformanceTabProps) {
-  const [performance, setPerformance] = useState<PerformanceData | null>(null);
+  const [performance, setPerformance] = useState<StudentPerformance | null>(null);
   const [history, setHistory] = useState<TrainingHistory[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +66,7 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
             <Progress percent={(performance.completedTrainings / performance.totalTrainings) * 100} />
           </Card>
           <Card title="Metas Alcançadas">
-            <Progress percent={(performance.goalsAchieved / performance.totalGoals) * 100} />
+            <Progress percent={(performance.achievedGoals / performance.totalGoals) * 100} />
           </Card>
         </div>
       ),
@@ -152,4 +160,4 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
   ];
 
   return <Tabs defaultActiveKey="1" items={items} />;
-} 
+}

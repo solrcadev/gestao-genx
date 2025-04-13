@@ -54,19 +54,31 @@ export const fetchAttendanceRecords = async (filters: AttendanceFilters = {}): P
       throw new Error('Failed to fetch attendance records');
     }
     
+    if (!records) {
+      return [];
+    }
+    
     // Transform and filter the records
-    let filteredRecords = records.map(record => ({
-      id: record.id,
-      atleta: record.atleta,
-      treino: {
-        nome: record.treino_do_dia.treino.nome,
-        data: record.treino_do_dia.data,
-        local: record.treino_do_dia.treino.local
-      },
-      presente: record.presente,
-      justificativa: record.justificativa,
-      treino_do_dia_id: record.treino_do_dia_id
-    }));
+    let filteredRecords: AttendanceRecord[] = records.map(record => {
+      // Fix type issues by accessing nested properties correctly
+      return {
+        id: record.id,
+        atleta: {
+          id: record.atleta.id,
+          nome: record.atleta.nome,
+          time: record.atleta.time,
+          posicao: record.atleta.posicao
+        },
+        treino: {
+          nome: record.treino_do_dia.treino.nome,
+          data: record.treino_do_dia.data,
+          local: record.treino_do_dia.treino.local
+        },
+        presente: record.presente,
+        justificativa: record.justificativa,
+        treino_do_dia_id: record.treino_do_dia_id
+      };
+    });
 
     // Apply client-side filters
     if (filters) {
@@ -82,14 +94,14 @@ export const fetchAttendanceRecords = async (filters: AttendanceFilters = {}): P
       if (filters.startDate) {
         filteredRecords = filteredRecords.filter(record => {
           const recordDate = parse(record.treino.data, 'yyyy-MM-dd', new Date());
-          return !isBefore(recordDate, filters.startDate);
+          return !isBefore(recordDate, filters.startDate!);
         });
       }
       
       if (filters.endDate) {
         filteredRecords = filteredRecords.filter(record => {
           const recordDate = parse(record.treino.data, 'yyyy-MM-dd', new Date());
-          return !isAfter(recordDate, filters.endDate);
+          return !isAfter(recordDate, filters.endDate!);
         });
       }
       

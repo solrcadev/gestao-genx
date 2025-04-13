@@ -182,3 +182,96 @@ export const generateAttendancePDF = (
   // Save the PDF
   doc.save('relatorio-presencas.pdf');
 };
+
+// New function to export training details with exercises to PDF
+export const exportTrainingToPdf = ({ training, exercises, userName }: { 
+  training: any; 
+  exercises: any[]; 
+  userName: string;
+}) => {
+  try {
+    // Create a new jsPDF instance
+    const doc = new jsPDF();
+
+    // Define title and basic information
+    const title = 'Plano de Treino';
+    doc.setFontSize(18);
+    doc.text(title, 105, 15, { align: 'center' });
+
+    // Add date of generation and user info
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 105, 22, { align: 'center' });
+    doc.text(`Gerado por: ${userName}`, 105, 28, { align: 'center' });
+
+    // Add training details
+    doc.setFontSize(14);
+    doc.text('Informações do Treino', 14, 38);
+    
+    doc.setFontSize(11);
+    doc.text(`Nome: ${training.nome || 'Não especificado'}`, 14, 46);
+    doc.text(`Data: ${formatDate(new Date(training.data), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 52);
+    doc.text(`Local: ${training.local || 'Não especificado'}`, 14, 58);
+    doc.text(`Time: ${training.time || 'Não especificado'}`, 14, 64);
+    
+    if (training.descricao) {
+      doc.text('Descrição:', 14, 70);
+      doc.setFontSize(10);
+      doc.text(training.descricao, 14, 76);
+    }
+    
+    // Add exercises table
+    doc.setFontSize(14);
+    let yPos = training.descricao ? 86 : 70;
+    doc.text('Exercícios', 14, yPos);
+    yPos += 8;
+    
+    if (exercises && exercises.length > 0) {
+      const headers = [
+        ['Ordem', 'Exercício', 'Tempo Est.', 'Fundamentos', 'Observações']
+      ];
+      
+      const data = exercises.map((ex, index) => [
+        (index + 1).toString(),
+        ex.exercicio?.nome || 'Não especificado',
+        ex.tempo_estimado ? `${ex.tempo_estimado} min` : 'N/A',
+        ex.exercicio?.fundamentos?.join(', ') || '-',
+        ex.observacao || '-'
+      ]);
+      
+      autoTable(doc, {
+        head: headers,
+        body: data,
+        startY: yPos,
+        margin: { horizontal: 14 },
+        styles: { overflow: 'linebreak' },
+        columnStyles: { 
+          0: { cellWidth: 15 }, 
+          1: { cellWidth: 60 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 40 },
+          4: { cellWidth: 50 }
+        },
+        headStyles: { fillColor: [80, 80, 80] }
+      });
+    } else {
+      doc.setFontSize(11);
+      doc.text('Nenhum exercício cadastrado para este treino.', 14, yPos);
+    }
+    
+    // Add footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+    }
+    
+    // Save the PDF
+    doc.save(`treino-${training.nome}-${formatDate(new Date(), 'dd-MM-yyyy')}.pdf`);
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao exportar treino para PDF:', error);
+    throw error;
+  }
+};
