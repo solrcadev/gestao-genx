@@ -17,6 +17,7 @@ import Dashboard from "./pages/Dashboard";
 import BottomNavbar from "./components/BottomNavbar";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import StudentPerformance from './pages/StudentPerformance';
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,11 @@ const App = () => {
                     </ProtectedRoute>
                   } 
                 />
+                <Route path="/aluno/:studentId/performance" element={
+                  <ProtectedRoute>
+                    <StudentPerformance />
+                  </ProtectedRoute>
+                } />
                 
                 {/* Rota 404 */}
                 <Route path="*" element={

@@ -474,87 +474,64 @@ export const salvarAvaliacaoExercicio = async ({
   erros: number;
 }): Promise<void> => {
   try {
-    // First, get the corresponding treino id
-    const { data: treinoDoDia, error: treinoError } = await supabase
-      .from('treinos_do_dia')
-      .select('treino_id')
-      .eq('id', treinoDoDiaId)
-      .single();
-
-    if (treinoError) {
-      console.error('Error fetching treino do dia for evaluation:', treinoError);
-      throw new Error(treinoError.message);
-    }
-
-    // Check if an evaluation already exists
-    const { data: existingEval, error: checkError } = await supabase
+    // Primeiro, recupera o treino do dia para obter o treino_id
+    const treinoDoDia = await fetchTreinoDoDia(treinoDoDiaId);
+    console.log("Salvando avaliação para o treino:", treinoDoDiaId, "exercício:", exercicioId, "atleta:", atletaId);
+    
+    // Documentar o que está tentando salvar
+    const avaliacaoData = {
+      treino_id: treinoDoDia.treino_id,
+      exercicio_id: exercicioId,
+      atleta_id: atletaId,
+      fundamento,
+      acertos,
+      erros,
+      timestamp: new Date().toISOString() // Adicionando timestamp para compatibilidade com performanceService
+    };
+    
+    console.log("Dados da avaliação a serem salvos:", avaliacaoData);
+    
+    // Primeiro tenta salvar na tabela original (avaliacoes_fundamento)
+    let savedInOriginalTable = false;
+    const originalResult = await supabase
       .from('avaliacoes_fundamento')
-      .select('id')
-      .eq('treino_id', treinoDoDia.treino_id)
-      .eq('exercicio_id', exercicioId)
-      .eq('atleta_id', atletaId)
-      .eq('fundamento', fundamento);
-
-    if (checkError) {
-      console.error('Error checking existing evaluation:', checkError);
-      throw new Error(checkError.message);
-    }
-
-    // Tenta operar usando supabase, mas se falhar por RLS, usa o fallback para contornar
-    if (existingEval && existingEval.length > 0) {
-      // Update existing evaluation
-      const { error } = await supabase
-        .from('avaliacoes_fundamento')
-        .update({
-          acertos,
-          erros
-        })
-        .eq('id', existingEval[0].id);
-
-      if (error) {
-        console.warn('RLS error updating evaluation, using local storage fallback:', error);
-        // Salvar em localStorage como fallback quando autenticação não está disponível
-        saveEvaluationToLocalStorage({
-          id: existingEval[0].id,
-          treino_id: treinoDoDia.treino_id,
-          exercicio_id: exercicioId,
-          atleta_id: atletaId,
-          fundamento,
-          acertos,
-          erros
-        });
-        return;
-      }
+      .insert([avaliacaoData]);
+      
+    if (!originalResult.error) {
+      savedInOriginalTable = true;
+      console.log("Avaliação salva com sucesso na tabela avaliacoes_fundamento");
     } else {
-      // Create new evaluation
-      const { error } = await supabase
-        .from('avaliacoes_fundamento')
-        .insert([
-          {
-            treino_id: treinoDoDia.treino_id,
-            exercicio_id: exercicioId,
-            atleta_id: atletaId,
-            fundamento,
-            acertos,
-            erros
-          }
-        ]);
-
-      if (error) {
-        console.warn('RLS error saving evaluation, using local storage fallback:', error);
-        // Salvar em localStorage como fallback quando autenticação não está disponível
-        const tempId = `local_${Date.now()}_${atletaId}_${fundamento}`;
-        saveEvaluationToLocalStorage({
-          id: tempId,
-          treino_id: treinoDoDia.treino_id,
-          exercicio_id: exercicioId,
-          atleta_id: atletaId,
-          fundamento,
-          acertos,
-          erros
-        });
-        return;
-      }
+      console.warn('Erro ao salvar na tabela avaliacoes_fundamento:', originalResult.error);
+    }
+    
+    // Tenta salvar também na tabela usada pelo performanceService (avaliacoes_exercicios)
+    let savedInPerformanceTable = false;
+    const performanceResult = await supabase
+      .from('avaliacoes_exercicios')
+      .insert([avaliacaoData]);
+      
+    if (!performanceResult.error) {
+      savedInPerformanceTable = true;
+      console.log("Avaliação salva com sucesso na tabela avaliacoes_exercicios");
+    } else {
+      console.warn('Erro ao salvar na tabela avaliacoes_exercicios:', performanceResult.error);
+    }
+    
+    // Se não conseguiu salvar em nenhuma das tabelas, usa o fallback para localStorage
+    if (!savedInOriginalTable && !savedInPerformanceTable) {
+      console.warn('RLS error saving evaluation, using local storage fallback');
+      // Salvar em localStorage como fallback quando autenticação não está disponível
+      const tempId = `local_${Date.now()}_${atletaId}_${fundamento}`;
+      saveEvaluationToLocalStorage({
+        id: tempId,
+        ...avaliacaoData
+      });
+      
+      // Também salvar uma cópia no localStorage específico para performance
+      saveEvaluationToLocalStorageForPerformance({
+        id: tempId,
+        ...avaliacaoData
+      });
     }
   } catch (error) {
     console.error('Error in salvarAvaliacaoExercicio:', error);
@@ -571,6 +548,7 @@ const saveEvaluationToLocalStorage = (evaluation: {
   fundamento: string;
   acertos: number;
   erros: number;
+  timestamp?: string;
 }) => {
   try {
     // Buscar avaliações existentes
@@ -592,6 +570,40 @@ const saveEvaluationToLocalStorage = (evaluation: {
     console.log('Evaluation saved to localStorage successfully');
   } catch (error) {
     console.error('Error saving to localStorage:', error);
+  }
+};
+
+// Função auxiliar para salvar avaliação no localStorage para performance (para garantir que vai ser lido)
+const saveEvaluationToLocalStorageForPerformance = (evaluation: {
+  id: string;
+  treino_id: string;
+  exercicio_id: string;
+  atleta_id: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+  timestamp?: string;
+}) => {
+  try {
+    // Buscar avaliações existentes
+    const existingEvals = JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
+    
+    // Verificar se já existe uma avaliação com este ID
+    const existingIndex = existingEvals.findIndex((e: any) => e.id === evaluation.id);
+    
+    if (existingIndex >= 0) {
+      // Atualizar avaliação existente
+      existingEvals[existingIndex] = evaluation;
+    } else {
+      // Adicionar nova avaliação
+      existingEvals.push(evaluation);
+    }
+    
+    // Salvar no localStorage
+    localStorage.setItem('avaliacoes_exercicios', JSON.stringify(existingEvals));
+    console.log('Evaluation saved to localStorage for performance successfully');
+  } catch (error) {
+    console.error('Error saving to localStorage for performance:', error);
   }
 };
 

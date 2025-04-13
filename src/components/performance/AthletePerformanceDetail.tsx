@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Tabs,
@@ -32,7 +31,7 @@ import {
   CircleX,
   ArrowUpRight
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { AthletePerformance } from "@/types";
@@ -48,7 +47,7 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
   const radarData = Object.entries(performance.avaliacoes.porFundamento).map(
     ([fundamento, dados]) => ({
       fundamento,
-      taxa: Number((dados.taxa * 100).toFixed(0)),
+      taxa: Number((dados.percentualAcerto).toFixed(0)),
     })
   );
 
@@ -56,26 +55,51 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
   const pieData = [
     {
       name: "Presente",
-      value: performance.presenca.presente,
+      value: performance.presenca.presentes,
       color: "#22c55e",
     },
     {
       name: "Ausente",
-      value: performance.presenca.total - performance.presenca.presente,
+      value: performance.presenca.total - performance.presenca.presentes,
       color: "#ef4444",
     },
   ];
 
+  // Função auxiliar para formatar a data com segurança
+  const formatarDataSegura = (dataString: string) => {
+    try {
+      // Verifica se já está no formato dd/MM
+      if (/^\d{2}\/\d{2}$/.test(dataString)) {
+        return dataString;
+      }
+      
+      // Tenta converter para Date
+      const date = new Date(dataString);
+      
+      // Verifica se a data é válida
+      if (isValid(date)) {
+        return format(date, "dd/MM", { locale: ptBR });
+      }
+      
+      return "Data inválida";
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, dataString);
+      return "Data inválida";
+    }
+  };
+
   // Last evaluations for bar chart
   const lastEvaluations = performance.ultimasAvaliacoes
-    .slice(0, 5)
-    .map((avaliacao) => ({
-      name: avaliacao.fundamento,
-      acertos: avaliacao.acertos,
-      erros: avaliacao.erros,
-      data: format(new Date(avaliacao.data), "dd/MM", { locale: ptBR }),
-      treino: avaliacao.treino,
-    }));
+    ? performance.ultimasAvaliacoes
+        .slice(0, 5)
+        .map((avaliacao) => ({
+          name: avaliacao.fundamento,
+          acertos: avaliacao.acertos,
+          erros: avaliacao.erros,
+          data: formatarDataSegura(avaliacao.data),
+          treino: avaliacao.treino || "Avaliação",
+        }))
+    : [];
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -99,11 +123,11 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
                 <div className="mt-1 flex items-center justify-center gap-1">
                   <CircleCheck className="h-4 w-4 text-green-500" />
                   <p className="text-2xl font-bold">
-                    {performance.presenca.percentual}%
+                    {performance.presenca.percentual.toFixed(0)}%
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {performance.presenca.presente} de {performance.presenca.total} treinos
+                  {performance.presenca.presentes} de {performance.presenca.total} treinos
                 </p>
               </CardContent>
             </Card>
@@ -198,12 +222,12 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="text-sm font-medium">{fundamento}</h4>
                         <Badge
-                          variant={dados.taxa > 0.6 ? "default" : "outline"}
+                          variant={dados.percentualAcerto > 60 ? "default" : "outline"}
                           className={
-                            dados.taxa > 0.6 ? "bg-green-500" : "text-amber-500"
+                            dados.percentualAcerto > 60 ? "bg-green-500" : "text-amber-500"
                           }
                         >
-                          {(dados.taxa * 100).toFixed(0)}% eficiência
+                          {(dados.percentualAcerto).toFixed(0)}% eficiência
                         </Badge>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
@@ -276,13 +300,13 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-medium">Histórico de Presenças</h3>
                 <Badge variant="outline">
-                  {performance.presenca.percentual}% presença
+                  {performance.presenca.percentual.toFixed(0)}% presença
                 </Badge>
               </div>
 
               {/* We would need more data for a detailed presence history */}
               <p className="text-center py-4 text-muted-foreground">
-                Presença em {performance.presenca.presente} de {performance.presenca.total} treinos
+                Presença em {performance.presenca.presentes} de {performance.presenca.total} treinos
               </p>
             </CardContent>
           </Card>

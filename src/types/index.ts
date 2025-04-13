@@ -1,4 +1,3 @@
-
 export type Team = "Masculino" | "Feminino";
 
 export type TeamType = "Masculino" | "Feminino";
@@ -27,7 +26,7 @@ export interface AthletePerformance {
   atleta: Athlete;
   presenca: {
     total: number;
-    presente: number;
+    presentes: number; // Alterado de 'presente' para 'presentes' para refletir o plural
     percentual: number;
   };
   avaliacoes: {
@@ -38,11 +37,12 @@ export interface AthletePerformance {
         acertos: number;
         erros: number;
         total: number;
-        taxa: number;
+        percentualAcerto: number; // Adicionado para compatibilidade
+        ultimaData?: string; // Data da última avaliação
       };
     };
   };
-  ultimasAvaliacoes: Array<{
+  ultimasAvaliacoes?: Array<{
     data: string;
     treino: string;
     fundamento: string;

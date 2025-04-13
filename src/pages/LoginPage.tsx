@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
+import { syncLocalStorageWithDatabase } from "@/services/syncService";
 
 // Esquema de validação do formulário
 const formSchema = z.object({
@@ -67,6 +68,15 @@ const LoginPage: React.FC = () => {
           title: "Login bem-sucedido",
           description: "Bem-vindo de volta!",
         });
+        
+        // Tentar sincronizar dados locais com o banco após login bem-sucedido
+        try {
+          await syncLocalStorageWithDatabase();
+        } catch (syncError) {
+          console.error("Erro ao sincronizar dados após login:", syncError);
+          // Não interrompe o fluxo se a sincronização falhar
+        }
+        
         navigate("/dashboard");
       }
     } catch (error) {
@@ -80,6 +90,28 @@ const LoginPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Função para sincronizar dados locais com o banco
+  async function syncLocalEvaluations() {
+    const localEvaluations = getLocalStorageEvaluations();
+    
+    for (const evaluation of localEvaluations) {
+      try {
+        const { error } = await supabase
+          .from('avaliacoes_exercicios')
+          .insert([evaluation]);
+          
+        if (!error) {
+          // Remover avaliação do armazenamento local após sincronização bem-sucedida
+          removeFromLocalStorage(evaluation.id);
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar avaliação:', err);
+      }
+    }
+  }
+
+  // Chamar esta função periodicamente ou quando o usuário voltar online
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-4">

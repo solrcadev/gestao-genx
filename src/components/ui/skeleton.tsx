@@ -15,15 +15,52 @@ function Skeleton({
 // Predefined skeletons para uso comum
 function CardSkeleton() {
   return (
-    <div className="card-athlete animate-pulse">
-      <div className="p-4">
-        <Skeleton className="h-16 w-16 rounded-full mb-4 mx-auto" />
-        <Skeleton className="h-4 w-3/4 mx-auto mb-2" />
-        <Skeleton className="h-3 w-1/2 mx-auto mb-4" />
-        <div className="flex justify-center gap-2">
-          <Skeleton className="h-6 w-16 rounded-md" />
-          <Skeleton className="h-6 w-16 rounded-md" />
+    <div className="animate-pulse border rounded-lg h-[320px] flex flex-col">
+      <div className="p-6 flex-1 flex flex-col">
+        <div className="flex flex-col items-center gap-4 mb-4">
+          <Skeleton className="h-16 w-16 rounded-full" />
+          <div className="text-center">
+            <Skeleton className="h-6 w-40 mx-auto mb-2" />
+            <Skeleton className="h-4 w-28 mx-auto" />
+          </div>
         </div>
+        
+        <div className="space-y-4 px-2 mt-4">
+          <div>
+            <div className="flex justify-between mb-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+            <Skeleton className="h-2.5 w-full" />
+          </div>
+          
+          <div>
+            <div className="flex justify-between mb-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+            <Skeleton className="h-2.5 w-full" />
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="p-2 rounded-md bg-muted/30">
+              <Skeleton className="h-3 w-12 mx-auto mb-1" />
+              <Skeleton className="h-5 w-6 mx-auto" />
+            </div>
+            <div className="p-2 rounded-md bg-muted/30">
+              <Skeleton className="h-3 w-12 mx-auto mb-1" />
+              <Skeleton className="h-5 w-6 mx-auto" />
+            </div>
+            <div className="p-2 rounded-md bg-muted/30">
+              <Skeleton className="h-3 w-12 mx-auto mb-1" />
+              <Skeleton className="h-5 w-6 mx-auto" />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="border-t p-3 flex justify-center">
+        <Skeleton className="h-9 w-28 rounded-md" />
       </div>
     </div>
   );
