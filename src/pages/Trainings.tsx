@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck } from 'lucide-react';
+import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck, Clipboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
@@ -253,6 +253,10 @@ const Trainings = () => {
           <Button variant="outline" onClick={handleOpenTreinoDoDia}>
             <ClipboardCheck className="mr-2 h-4 w-4" />
             Ver Treino do Dia
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/presencas')}>
+            <Clipboard className="mr-2 h-4 w-4" />
+            Gerenciar Presenças
           </Button>
           <Button onClick={() => navigate('/montagem-treino')}>
             <Plus className="mr-2 h-4 w-4" />

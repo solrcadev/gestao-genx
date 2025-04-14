@@ -6,10 +6,11 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Transition } from '@/components/ui/transition';
 import { useIsMobile } from '@/lib/responsive';
+import { useNavigate } from 'react-router-dom';
 
 interface AthleteCardProps {
   athlete: Athlete;
@@ -20,6 +21,7 @@ interface AthleteCardProps {
 
 const AthleteCard = ({ athlete, onEdit, onDelete, index = 0 }: AthleteCardProps) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   const getInitials = (name: string) => {
     if (!name) return ''; // Add null check to prevent split on undefined
@@ -67,6 +69,10 @@ const AthleteCard = ({ athlete, onEdit, onDelete, index = 0 }: AthleteCardProps)
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate(`/athletes/${athlete.id}`)} className="cursor-pointer">
+                  <Eye className="mr-2 h-4 w-4" />
+                  <span>Ver Detalhes</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit(athlete)} className="cursor-pointer">
                   <Edit className="mr-2 h-4 w-4" />
                   <span>Editar</span>

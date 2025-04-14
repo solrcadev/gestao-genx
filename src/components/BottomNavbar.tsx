@@ -1,43 +1,100 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Users, Calendar, Activity, Home, Grid2x2, ClipboardCheck } from "lucide-react";
+import {
+  Calendar,
+  BarChart3,
+  Dumbbell,
+  Users,
+  MoreHorizontal,
+  Clipboard,
+  Home,
+  Dices
+} from "lucide-react";
 
 const BottomNavbar = () => {
   const location = useLocation();
-  const pathname = location.pathname;
 
-  const isActive = (path: string) => {
-    return pathname === path ? "active" : "";
+  const isActive = (path: string): boolean => {
+    // Verifica se o pathname atual começa com o path especificado
+    return location.pathname.startsWith(path);
   };
 
   return (
-    <nav className="bottom-nav">
-      <Link to="/dashboard" className={`bottom-nav-item ${isActive("/dashboard")}`}>
-        <Home className="bottom-nav-icon" />
-        <span>Início</span>
-      </Link>
-      <Link to="/atletas" className={`bottom-nav-item ${isActive("/atletas")}`}>
-        <Users className="bottom-nav-icon" />
-        <span>Atletas</span>
-      </Link>
-      <Link to="/treinos" className={`bottom-nav-item ${isActive("/treinos")}`}>
-        <Calendar className="bottom-nav-icon" />
-        <span>Treinos</span>
-      </Link>
-      <Link to="/treino-do-dia" className={`bottom-nav-item ${isActive("/treino-do-dia")}`}>
-        <ClipboardCheck className="bottom-nav-icon" />
-        <span>Treino do Dia</span>
-      </Link>
-      <Link to="/exercicios" className={`bottom-nav-item ${isActive("/exercicios")}`}>
-        <Grid2x2 className="bottom-nav-icon" />
-        <span>Exercícios</span>
-      </Link>
-      <Link to="/desempenho" className={`bottom-nav-item ${isActive("/desempenho")}`}>
-        <Activity className="bottom-nav-icon" />
-        <span>Desempenho</span>
-      </Link>
-    </nav>
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-2 z-10">
+      <div className="flex items-center justify-between gap-1">
+        <Link
+          to="/dashboard"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/dashboard")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <Home size={20} />
+          <span className="text-xs">Início</span>
+        </Link>
+
+        <Link
+          to="/atletas"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/atletas")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <Users size={20} />
+          <span className="text-xs">Atletas</span>
+        </Link>
+
+        <Link
+          to="/treinos"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/treinos") || isActive("/montar-treino") || isActive("/montagem-treino") || isActive("/treino-do-dia") || isActive("/presencas")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <Dumbbell size={20} />
+          <span className="text-xs">Treinos</span>
+        </Link>
+
+        <Link
+          to="/exercicios"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/exercicios")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <Dices size={20} />
+          <span className="text-xs">Exercícios</span>
+        </Link>
+
+        <Link
+          to="/desempenho"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/desempenho")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <BarChart3 size={20} />
+          <span className="text-xs">Desempenho</span>
+        </Link>
+
+        <Link
+          to="/mais"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/mais")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <MoreHorizontal size={20} />
+          <span className="text-xs">Mais</span>
+        </Link>
+      </div>
+    </div>
   );
 };
 

@@ -662,135 +662,215 @@ export async function getTrainingHistory(studentId: string): Promise<any[]> {
       return [];
     }
     
-    // Primeiro tentamos buscar da tabela 'presencas'
+    // Tentamos buscar da tabela alternativa 'treinos_presencas' sem join
     try {
-      const result = await supabase
-        .from('presencas')
-        .select(`
-          *,
-          treinos (*)
-        `)
+      const { data: presencasData, error: presencasError } = await supabase
+        .from('treinos_presencas')
+        .select('*')
         .eq('atleta_id', studentId)
         .order('created_at', { ascending: false });
-      
-      // Se conseguimos buscar com sucesso e temos dados, usamos esses
-      if (!result.error && result.data && result.data.length > 0) {
-        console.log(`Encontrados ${result.data.length} registros de presença na tabela 'presencas'`);
+
+      // Se conseguimos buscar e temos dados, usamos esses
+      if (!presencasError && presencasData && presencasData.length > 0) {
+        console.log(`Encontrados ${presencasData.length} registros de presença na tabela 'treinos_presencas'`);
         
-        return result.data.map(presenca => {
-          const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
-          
-          let dataFormatada = 'Data não disponível';
-          if (presenca.treinos?.data) {
-            dataFormatada = new Date(presenca.treinos.data).toLocaleDateString('pt-BR');
-          } else if (presenca.data) {
-            dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
+        // Extrair IDs de treinos
+        const treinoIds = presencasData
+          .filter(p => p.treino_id)
+          .map(p => p.treino_id);
+        
+        // Se tiver IDs de treinos, buscar informações
+        if (treinoIds.length > 0) {
+          // Buscar os treinos pelos IDs
+          const { data: treinosData, error: treinosError } = await supabase
+            .from('treinos')
+            .select('id, nome, data')
+            .in('id', treinoIds);
+            
+          // Criar mapa para acesso rápido
+          const treinosMap = new Map();
+          if (!treinosError && treinosData && treinosData.length > 0) {
+            treinosData.forEach(treino => treinosMap.set(treino.id, treino));
           }
           
-          return {
-            id: presenca.id,
-            date: dataFormatada,
-            type: presenca.treinos?.nome || 'Treino',
-            duration: 90, // Tempo médio estimado para um treino
-            status: presencaStatus ? 'completed' : 'incomplete'
-          };
-        });
+          // Mapear resultados
+          return presencasData.map(presenca => {
+            const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
+            const treino = treinosMap.get(presenca.treino_id);
+            
+            let dataFormatada = 'Data não disponível';
+            if (treino?.data) {
+              dataFormatada = new Date(treino.data).toLocaleDateString('pt-BR');
+            } else if (presenca.data) {
+              dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
+            }
+            
+            return {
+              id: presenca.id,
+              date: dataFormatada,
+              type: treino?.nome || 'Treino',
+              duration: 90, // Tempo médio estimado para um treino
+              status: presencaStatus ? 'completed' : 'incomplete'
+            };
+          });
+        } else {
+          // Caso não tenha IDs de treinos, retornar dados básicos
+          return presencasData.map(presenca => {
+            const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
+            
+            return {
+              id: presenca.id,
+              date: presenca.data ? new Date(presenca.data).toLocaleDateString('pt-BR') : 'Data não disponível',
+              type: 'Treino',
+              duration: 90, // Tempo médio estimado para um treino
+              status: presencaStatus ? 'completed' : 'incomplete'
+            };
+          });
+        }
+      }
+    } catch (error) {
+      console.log("Erro ao buscar na tabela 'treinos_presencas'", error);
+    }
+
+    // Tentamos buscar da tabela alternativa 'presencas' sem join
+    try {
+      const { data: presencasData, error: presencasError } = await supabase
+        .from('presencas')
+        .select('*')
+        .eq('atleta_id', studentId)
+        .order('created_at', { ascending: false });
+
+      // Se conseguimos buscar e temos dados, usamos esses
+      if (!presencasError && presencasData && presencasData.length > 0) {
+        console.log(`Encontrados ${presencasData.length} registros de presença na tabela 'presencas'`);
+        
+        // Extrair IDs de treinos
+        const treinoIds = presencasData
+          .filter(p => p.treino_id)
+          .map(p => p.treino_id);
+        
+        // Se tiver IDs de treinos, buscar informações
+        if (treinoIds.length > 0) {
+          // Buscar os treinos pelos IDs
+          const { data: treinosData, error: treinosError } = await supabase
+            .from('treinos')
+            .select('id, nome, data')
+            .in('id', treinoIds);
+            
+          // Criar mapa para acesso rápido
+          const treinosMap = new Map();
+          if (!treinosError && treinosData && treinosData.length > 0) {
+            treinosData.forEach(treino => treinosMap.set(treino.id, treino));
+          }
+          
+          // Mapear resultados
+          return presencasData.map(presenca => {
+            const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
+            const treino = treinosMap.get(presenca.treino_id);
+            
+            let dataFormatada = 'Data não disponível';
+            if (treino?.data) {
+              dataFormatada = new Date(treino.data).toLocaleDateString('pt-BR');
+            } else if (presenca.data) {
+              dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
+            }
+            
+            return {
+              id: presenca.id,
+              date: dataFormatada,
+              type: treino?.nome || 'Treino',
+              duration: 90, // Tempo médio estimado para um treino
+              status: presencaStatus ? 'completed' : 'incomplete'
+            };
+          });
+        } else {
+          // Caso não tenha IDs de treinos, retornar dados básicos
+          return presencasData.map(presenca => {
+            const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
+            
+            return {
+              id: presenca.id,
+              date: presenca.data ? new Date(presenca.data).toLocaleDateString('pt-BR') : 'Data não disponível',
+              type: 'Treino',
+              duration: 90, // Tempo médio estimado para um treino
+              status: presencaStatus ? 'completed' : 'incomplete'
+            };
+          });
+        }
       }
     } catch (error) {
       console.log("Erro ao buscar na tabela 'presencas', tentando alternativa...", error);
     }
-    
-    // Se chegamos aqui, precisamos buscar da 'treinos_presencas'
-    console.log('Buscando na tabela treinos_presencas...');
-    
-    // 1. Buscar presenças do estudante
-    const { data: presencas, error: presencasError } = await supabase
-      .from('treinos_presencas')
-      .select('*')
-      .eq('atleta_id', studentId)
-      .order('created_at', { ascending: false });
-    
-    if (presencasError) {
-      console.error('Erro ao buscar presenças:', presencasError);
-      return [];
-    }
-    
-    if (!presencas || presencas.length === 0) {
-      console.log('Nenhuma presença encontrada para o estudante');
-      return [];
-    }
-    
-    console.log(`Encontrados ${presencas.length} registros de presença`);
-    
-    // 2. Buscar informações dos treinos relacionados
-    const treinoIds = presencas
-      .filter(p => p.treino_id)
-      .map(p => p.treino_id);
-    
-    if (treinoIds.length === 0) {
-      console.log('Nenhum ID de treino encontrado nas presenças');
-      
-      // Retornar dados básicos sem informações de treino
-      return presencas.map(presenca => {
-        const presencaStatus = presenca.presente !== undefined ? presenca.presente : presenca.status === 'presente';
+
+    // Tentamos buscar da tabela alternativa 'treinos_presencas' sem join
+    try {
+      const { data: presencasData, error: presencasError } = await supabase
+        .from('treinos_presencas')
+        .select('*')
+        .eq('atleta_id', studentId)
+        .order('created_at', { ascending: false });
+
+      // Se conseguimos buscar e temos dados, usamos esses
+      if (!presencasError && presencasData && presencasData.length > 0) {
+        console.log(`Encontrados ${presencasData.length} registros de presença na tabela 'treinos_presencas'`);
         
-        return {
-          id: presenca.id,
-          date: presenca.data ? new Date(presenca.data).toLocaleDateString('pt-BR') : 'Data não disponível',
-          type: 'Treino',
-          duration: 90, // Tempo médio estimado para um treino
-          status: presencaStatus ? 'completed' : 'incomplete'
-        };
-      });
-    }
-    
-    // Buscar os treinos pelos IDs
-    const { data: treinos, error: treinosError } = await supabase
-      .from('treinos')
-      .select('*')
-      .in('id', treinoIds);
-    
-    if (treinosError) {
-      console.error('Erro ao buscar treinos:', treinosError);
-      // Continuar mesmo com erro
-    }
-    
-    // Criar mapa de treinos para acesso rápido
-    const treinosMap = new Map();
-    if (treinos) {
-      treinos.forEach(treino => {
-        treinosMap.set(treino.id, treino);
-      });
-    }
-    
-    // 3. Mapear os dados para o formato esperado
-    return presencas.map(presenca => {
-      // Verificar o nome do campo treino_id (pode variar entre implementações)
-      const treinoId = presenca.treino_id || presenca.treinos_id;
-      
-      // Buscar informações do treino
-      const treino = treinosMap.get(treinoId);
-      
-      // Verificar o nome do campo para presença (pode variar entre implementações)
-      const presencaStatus = presenca.presente !== undefined 
-        ? presenca.presente 
-        : presenca.status === 'presente';
-      
-      let dataFormatada = 'Data não disponível';
-      if (treino?.data) {
-        dataFormatada = new Date(treino.data).toLocaleDateString('pt-BR');
-      } else if (presenca.data) {
-        dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
+        // Extrair IDs de treinos
+        const treinoIds = presencasData
+          .filter(p => p.treino_id)
+          .map(p => p.treino_id);
+        
+        // Se tiver IDs de treinos, buscar informações
+        if (treinoIds.length > 0) {
+          // Buscar os treinos pelos IDs
+          const { data: treinosData, error: treinosError } = await supabase
+            .from('treinos')
+            .select('id, nome, data')
+            .in('id', treinoIds);
+            
+          // Criar mapa para acesso rápido
+          const treinosMap = new Map();
+          if (!treinosError && treinosData && treinosData.length > 0) {
+            treinosData.forEach(treino => treinosMap.set(treino.id, treino));
+          }
+          
+          // Mapear resultados
+          return presencasData.map(presenca => {
+            const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
+            const treino = treinosMap.get(presenca.treino_id);
+            
+            let dataFormatada = 'Data não disponível';
+            if (treino?.data) {
+              dataFormatada = new Date(treino.data).toLocaleDateString('pt-BR');
+            } else if (presenca.data) {
+              dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
+            }
+            
+            return {
+              id: presenca.id,
+              date: dataFormatada,
+              type: treino?.nome || 'Treino',
+              duration: 90, // Tempo médio estimado para um treino
+              status: presencaStatus ? 'completed' : 'incomplete'
+            };
+          });
+        } else {
+          // Caso não tenha IDs de treinos, retornar dados básicos
+          return presencasData.map(presenca => {
+            const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
+            
+            return {
+              id: presenca.id,
+              date: presenca.data ? new Date(presenca.data).toLocaleDateString('pt-BR') : 'Data não disponível',
+              type: 'Treino',
+              duration: 90, // Tempo médio estimado para um treino
+              status: presencaStatus ? 'completed' : 'incomplete'
+            };
+          });
+        }
       }
-      
-      return {
-        id: presenca.id,
-        date: dataFormatada,
-        type: treino?.nome || 'Treino',
-        duration: 90, // Tempo médio estimado para um treino
-        status: presencaStatus ? 'completed' : 'incomplete'
-      };
-    });
+    } catch (error) {
+      console.log("Erro ao buscar na tabela 'treinos_presencas'", error);
+    }
   } catch (error) {
     console.error('Erro ao buscar histórico de treinos:', error);
     return [];
@@ -898,7 +978,7 @@ export async function getHistoricoTreinoPorAtleta(athleteId: string): Promise<Hi
 
     console.log(`Buscando histórico de treinos para o atleta ${athleteId}`);
     
-    // Primeiro tentamos buscar da tabela 'presencas'
+    // Primeiro tentamos buscar da tabela 'presencas' com join para treinos
     try {
       const result = await supabase
         .from('presencas')
@@ -919,10 +999,10 @@ export async function getHistoricoTreinoPorAtleta(athleteId: string): Promise<Hi
       console.log("Erro ao buscar na tabela 'presencas', tentando alternativa...", error);
     }
     
-    // Se não conseguimos da primeira tabela, tentamos da 'treinos_presencas'
+    // Se não conseguimos da primeira tabela, tentamos da 'treinos_presencas' com join para treinos
     console.log('Buscando na tabela treinos_presencas...');
     
-    // 1. Buscar presenças do atleta
+    // 1. Buscar presenças do atleta sem join para evitar erro de FK
     const { data: presencas, error: presencasError } = await supabase
       .from('treinos_presencas')
       .select('*')
@@ -940,38 +1020,27 @@ export async function getHistoricoTreinoPorAtleta(athleteId: string): Promise<Hi
     }
     
     console.log(`Encontrados ${presencas.length} registros de presença`);
-    
-    // 2. Buscar informações dos treinos relacionados
+
+    // 2. Extrair os IDs dos treinos para buscar informações adicionais
     const treinoIds = presencas
       .filter(p => p.treino_id)
       .map(p => p.treino_id);
     
-    if (treinoIds.length === 0) {
-      console.log('Nenhum ID de treino encontrado nas presenças');
-      
-      // Retornar dados básicos sem informações de treino
-      return presencas.map(presenca => ({
-        treinoId: presenca.treino_id || 'desconhecido',
-        nomeTreino: 'Treino sem nome',
-        data: presenca.data 
-          ? new Date(presenca.data).toLocaleDateString('pt-BR')
-          : 'Data não disponível',
-        local: 'Local não especificado',
-        presenca: presenca.presente !== undefined ? presenca.presente : presenca.status === 'presente',
-        justificativa: presenca.justificativa,
-        fundamentos: []
-      }));
-    }
-    
-    // Buscar os treinos pelos IDs
+    // Buscar os dados dos treinos relacionados em uma consulta separada
     const { data: treinos, error: treinosError } = await supabase
       .from('treinos')
-      .select('*')
+      .select('id, nome, data, local')
       .in('id', treinoIds);
     
     if (treinosError) {
-      console.error('Erro ao buscar treinos:', treinosError);
+      console.error('Erro ao buscar treinos relacionados:', treinosError);
       // Continuar mesmo com erro
+    }
+    
+    // Criar mapa para acesso rápido aos treinos
+    const treinosMap = new Map();
+    if (treinos && treinos.length > 0) {
+      treinos.forEach(treino => treinosMap.set(treino.id, treino));
     }
     
     // 3. Buscar avaliações do atleta para coletar dados de desempenho
@@ -992,18 +1061,10 @@ export async function getHistoricoTreinoPorAtleta(athleteId: string): Promise<Hi
     // Combinar todas as avaliações
     const todasAvaliacoes = [...(avaliacoes || []), ...localAvaliacoes];
     
-    // Criar mapa de treinos para acesso rápido
-    const treinosMap = new Map();
-    if (treinos) {
-      treinos.forEach(treino => {
-        treinosMap.set(treino.id, treino);
-      });
-    }
-    
     // 5. Mapear os dados para o formato esperado
     const historicoTreinos: HistoricoTreinoPorAtleta[] = presencas.map(presenca => {
       // Verificar o nome do campo treino_id (pode variar entre implementações)
-      const treinoId = presenca.treino_id || presenca.treinos_id;
+      const treinoId = presenca.treino_id || '';
       
       // Buscar informações do treino
       const treino = treinosMap.get(treinoId);
@@ -1039,20 +1100,24 @@ export async function getHistoricoTreinoPorAtleta(athleteId: string): Promise<Hi
         erros: dados.erros
       }));
       
-      // Verificar o nome do campo para presença (pode variar entre implementações)
+      // Verificar o nome do campo para presença
       const presencaStatus = presenca.presente !== undefined 
         ? presenca.presente 
-        : presenca.status === 'presente';
+        : false;
       
-      // Construir o objeto de histórico com verificações de segurança para dados ausentes
+      let dataFormatada = 'Data não disponível';
+      if (treino?.data) {
+        dataFormatada = new Date(treino.data).toLocaleDateString('pt-BR');
+      } else if (presenca.data) {
+        dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
+      }
+      
       return {
         treinoId: treinoId || 'desconhecido',
         nomeTreino: treino?.nome || 'Treino sem nome',
         data: treino?.data 
-          ? new Date(treino.data).toLocaleDateString('pt-BR') 
-          : presenca.data 
-            ? new Date(presenca.data).toLocaleDateString('pt-BR')
-            : 'Data não disponível',
+          ? new Date(treino.data).toISOString() // Mantendo o formato ISO para que a formatação seja feita no componente 
+          : new Date().toISOString(),
         local: treino?.local || 'Local não especificado',
         presenca: presencaStatus,
         justificativa: presenca.justificativa,

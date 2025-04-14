@@ -18,6 +18,8 @@ import BottomNavbar from "./components/BottomNavbar";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StudentPerformance from './pages/StudentPerformance';
+import AttendanceManagement from './pages/AttendanceManagement';
+import AthleteDetails from './pages/AthleteDetails';
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Athletes />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/athletes/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <AthleteDetails />
                     </ProtectedRoute>
                   } 
                 />
@@ -120,6 +130,13 @@ const App = () => {
                 <Route path="/aluno/:studentId/performance" element={
                   <ProtectedRoute>
                     <StudentPerformance />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Nova rota para gestão de presenças */}
+                <Route path="/presencas" element={
+                  <ProtectedRoute>
+                    <AttendanceManagement />
                   </ProtectedRoute>
                 } />
                 
