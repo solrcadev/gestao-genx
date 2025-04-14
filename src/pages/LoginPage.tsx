@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -38,6 +39,27 @@ const LoginPage: React.FC = () => {
       password: "",
     },
   });
+
+  // Function to get evaluations from localStorage
+  const getLocalStorageEvaluations = (): any[] => {
+    try {
+      return JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
+    } catch (error) {
+      console.error('Error parsing local storage evaluations:', error);
+      return [];
+    }
+  };
+
+  // Function to remove evaluation from localStorage
+  const removeFromLocalStorage = (id: string): void => {
+    try {
+      const evaluations = getLocalStorageEvaluations();
+      const filtered = evaluations.filter(ev => ev.id !== id);
+      localStorage.setItem('avaliacoes_exercicios', JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error removing evaluation from localStorage:', error);
+    }
+  };
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
@@ -194,4 +216,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage; 
+export default LoginPage;

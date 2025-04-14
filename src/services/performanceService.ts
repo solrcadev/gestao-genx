@@ -1,6 +1,35 @@
 import { supabase } from '@/lib/supabase';
 import { TeamType, AthletePerformance } from '@/types';
 
+// Interface for the performance data
+export interface PerformanceData {
+  frequency: number;
+  evolution: number;
+  completedTrainings: number;
+  totalTrainings: number;
+  goalsAchieved: number;
+  totalGoals: number;
+}
+
+// Interface for training history
+export interface TrainingHistory {
+  id: string;
+  date: string;
+  type: string;
+  duration: number;
+  status: string;
+}
+
+// Interface for goals
+export interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  targetDate: string;
+  progress: number;
+  status: 'achieved' | 'in_progress' | 'pending';
+}
+
 // Interface para os dados brutos das avaliações
 interface AvaliacaoRaw {
   atleta_id: string;
@@ -28,7 +57,7 @@ export interface HistoricoTreinoPorAtleta {
   }[];
 }
 
-// Interfaces
+// Interface for student performance
 export interface StudentPerformance {
   frequency: number;
   evolution: number;
@@ -1194,4 +1223,4 @@ function mapearPresencasParaHistorico(presencas: any[], athleteId: string): Hist
     console.error('Erro ao mapear presenças para histórico:', error);
     return [];
   }
-} 
+}

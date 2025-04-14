@@ -132,6 +132,11 @@ const App = () => {
                     <StudentPerformance />
                   </ProtectedRoute>
                 } />
+                <Route path="/presencas" element={
+                  <ProtectedRoute>
+                    <AttendanceManagement />
+                  </ProtectedRoute>
+                } />
                 
                 {/* Nova rota para gestão de presenças */}
                 <Route path="/presencas" element={
