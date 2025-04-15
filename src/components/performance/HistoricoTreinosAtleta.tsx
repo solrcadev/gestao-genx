@@ -145,9 +145,6 @@ const HistoricoTreinosAtleta: React.FC<HistoricoTreinosAtletaProps> = ({ atletaI
                             calcularEficiencia(fund.acertos, fund.erros) >= 70 ? "success" : 
                             calcularEficiencia(fund.acertos, fund.erros) >= 50 ? "outline" : 
                             "destructive"
-                          }
-                          className={
-                            calcularEficiencia(fund.acertos, fund.erros) >= 70 ? "bg-green-500 text-white" : ""
                           }>
                             {calcularEficiencia(fund.acertos, fund.erros)}%
                           </Badge>

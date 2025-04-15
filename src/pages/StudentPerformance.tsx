@@ -489,7 +489,7 @@ const StudentPerformance: React.FC = () => {
                 detalhes dos fundamentos avaliados naquele treino.
               </p>
               
-              {studentId && <HistoricoTreinosAtleta athleteId={studentId} />}
+              {studentId && <HistoricoTreinosAtleta atletaId={studentId} />}
             </Card>
           </TabPane>
         </Tabs>
@@ -498,4 +498,4 @@ const StudentPerformance: React.FC = () => {
   );
 };
 
-export default StudentPerformance; 
+export default StudentPerformance;

@@ -105,7 +105,6 @@ self.addEventListener('push', (event) => {
       body: data.body || 'Nova atualização disponível!',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/badge-96x96.png',
-      vibrate: [100, 50, 100],
       data: {
         url: data.url || '/'
       }

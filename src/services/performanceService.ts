@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { format, parse, isAfter, isBefore, subMonths } from 'date-fns';
 import { AthletePerformance, TeamType } from '@/types';
@@ -34,7 +35,7 @@ export interface TrainingHistoryItem {
   date: string;
   type: string;
   duration: number;
-  status: 'completed' | 'incomplete' | 'missed';
+  status: 'completed' | 'missed' | 'incomplete';
 }
 
 export interface Goal {

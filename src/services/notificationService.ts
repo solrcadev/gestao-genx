@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 
@@ -150,8 +151,7 @@ export const showLocalNotification = (title: string, body: string) => {
         registration.showNotification(title, {
           body: body,
           icon: '/icons/icon-192x192.png',
-          badge: '/icons/badge-96x96.png',
-          vibrate: [100, 50, 100]
+          badge: '/icons/badge-96x96.png'
         });
       });
     } catch (error) {
