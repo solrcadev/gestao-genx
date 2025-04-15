@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { format, parse, isAfter, isBefore } from 'date-fns';
 
@@ -63,15 +64,15 @@ export const fetchAttendanceRecords = async (filters: AttendanceFilters = {}): P
       return {
         id: record.id,
         atleta: {
-          id: record.atleta.id,
-          nome: record.atleta.nome,
-          time: record.atleta.time,
-          posicao: record.atleta.posicao
+          id: record.atleta?.id,
+          nome: record.atleta?.nome,
+          time: record.atleta?.time,
+          posicao: record.atleta?.posicao
         },
         treino: {
-          nome: record.treino_do_dia.treino.nome,
-          data: record.treino_do_dia.data,
-          local: record.treino_do_dia.treino.local
+          nome: record.treino_do_dia?.treino?.nome,
+          data: record.treino_do_dia?.data,
+          local: record.treino_do_dia?.treino?.local
         },
         presente: record.presente,
         justificativa: record.justificativa,
