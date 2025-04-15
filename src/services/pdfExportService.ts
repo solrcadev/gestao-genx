@@ -139,17 +139,17 @@ export const generateAttendancePDF = (
   ]);
   
   // Generate table
-  autoTable(doc, {
+    autoTable(doc, {
     startY: yPos,
     head: [tableColumn],
     body: tableData,
-    theme: 'grid',
-    headStyles: {
+      theme: 'grid',
+      headStyles: {
       fillColor: [83, 83, 83],
       textColor: [255, 255, 255],
       fontStyle: 'bold'
-    },
-    styles: {
+      },
+      styles: {
       overflow: 'ellipsize',
       cellWidth: 'wrap'
     },
@@ -261,7 +261,7 @@ export const exportTrainingToPdf = ({ training, exercises, userName }: {
     // Add footer
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
+    doc.setPage(i);
       doc.setFontSize(8);
       doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
     }

@@ -8,7 +8,8 @@ import {
   MoreHorizontal,
   Clipboard,
   Home,
-  Dices
+  Dices,
+  Target
 } from "lucide-react";
 
 const BottomNavbar = () => {
@@ -80,6 +81,18 @@ const BottomNavbar = () => {
         >
           <BarChart3 size={20} />
           <span className="text-xs">Desempenho</span>
+        </Link>
+
+        <Link
+          to="/metas-evolucao"
+          className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+            isActive("/metas-evolucao")
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+          }`}
+        >
+          <Target size={20} />
+          <span className="text-xs">Metas</span>
         </Link>
 
         <Link

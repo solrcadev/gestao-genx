@@ -20,6 +20,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import StudentPerformance from './pages/StudentPerformance';
 import AttendanceManagement from './pages/AttendanceManagement';
 import AthleteDetails from './pages/AthleteDetails';
+import MetasEvolucao from './pages/MetasEvolucao';
 
 const queryClient = new QueryClient();
 
@@ -56,7 +57,7 @@ const App = () => {
                   } 
                 />
                 <Route 
-                  path="/athletes/:id" 
+                  path="/atleta/:id" 
                   element={
                     <ProtectedRoute>
                       <AthleteDetails />
@@ -137,6 +138,14 @@ const App = () => {
                     <AttendanceManagement />
                   </ProtectedRoute>
                 } />
+                <Route
+                  path="/metas-evolucao"
+                  element={
+                    <ProtectedRoute>
+                      <MetasEvolucao />
+                    </ProtectedRoute>
+                  }
+                />
                 
                 {/* Nova rota para gestão de presenças */}
                 <Route path="/presencas" element={

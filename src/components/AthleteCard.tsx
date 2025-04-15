@@ -69,7 +69,7 @@ const AthleteCard = ({ athlete, onEdit, onDelete, index = 0 }: AthleteCardProps)
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate(`/athletes/${athlete.id}`)} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate(`/atleta/${athlete.id}`)} className="cursor-pointer">
                   <Eye className="mr-2 h-4 w-4" />
                   <span>Ver Detalhes</span>
                 </DropdownMenuItem>

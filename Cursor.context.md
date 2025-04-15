@@ -1,125 +1,117 @@
-# Projeto: Volley Track Pro
+# Painel GenX - Documentação do Projeto
 
-## 🎯 Objetivo do Projeto
-Aplicativo de Gerenciamento de Treinos de Vôlei, usado por técnicos para:
-- Cadastrar e gerenciar atletas
-- Criar exercícios personalizados com vídeos e imagens
-- Montar treinos selecionando exercícios
-- Aplicar o "Treino do Dia"
-- Avaliar presença, desempenho e fundamentos dos atletas
-- Gerar histórico de treinos e estatísticas de eficiência
-- Visualizar desempenho detalhado individual dos atletas
-- Visualizar histórico completo de treinos por atleta com filtros avançados
+## Visão Geral
+O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, focada em registrar dados de treinos, desempenhos e evolução dos atletas. A aplicação permite aos técnicos acompanhar o progresso dos atletas, registrar avaliações de fundamentos, controlar presença nos treinos e definir metas de evolução.
 
-O projeto é **Mobile-First**, com foco em design esportivo e responsivo.
+## Tecnologias Utilizadas
+- **Frontend**: React, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (PostgreSQL, Autenticação, APIs)
+- **Gerenciamento de Estado**: React Query
+- **Gráficos**: Recharts
+- **Roteamento**: React Router Dom
 
----
+## Principais Funcionalidades
 
-## 📁 Organização atual
+### 1. Gestão de Atletas
+- Cadastro e edição de atletas
+- Filtros por time (masculino/feminino)
+- Visualização detalhada por atleta
 
-- `src/pages`: Páginas principais da aplicação (ex: `TrainingAssembly.tsx`, `TreinoDosDia.tsx`, `StudentPerformance.tsx`)
-- `src/components`: Componentes reutilizáveis e modulares, como:
-  - `treino-do-dia/SelectTreinoParaDia.tsx`
-  - `treino-do-dia/AthleteAttendance.tsx`
-  - `treino-do-dia/ExerciseEvaluation.tsx`
-  - `performance/AthletePerformanceDetail.tsx`
-  - `performance/TeamPerformanceSummary.tsx`
-  - `performance/HistoricoTreinosAtleta.tsx`
-- `src/services`: Comunicação com Supabase (ex: `treinosDoDiaService.ts`, `performanceService.ts`)
-- `src/types`: Tipagens globais do projeto
+### 2. Treinos
+- Criação e montagem de treinos
+- Associação de exercícios aos treinos
+- Definição de treino do dia
+- Avaliação de desempenho durante os treinos (acertos/erros)
+- Sincronização em tempo real das avaliações
 
----
+### 3. Controle de Presença
+- Registro de presença nos treinos
+- Histórico de presença por atleta
 
-## 🧱 Banco de dados (Supabase)
+### 4. Desempenho
+- Dashboard com métricas de desempenho
+- Estatísticas por fundamento
+- Evolução ao longo do tempo
+- Desempenho detalhado por atleta
 
-As tabelas principais já existem:
+### 5. Metas e Evolução
+- Definição de metas individuais para atletas
+- Acompanhamento de progresso com gráficos
+- Registro de evolução ao longo do tempo
+- Filtros por status (Em andamento, Concluídas, Atrasadas)
+- Histórico de atualizações das metas
 
-- `athletes`: Cadastro de atletas (com `nome`, `posicao`, `time`, etc.)
-- `exercicios`: Exercícios com `nome`, `categoria`, `objetivo`, `imagem`, `video_url`
-- `treinos`: Treinos criados pelo técnico
-- `treinos_exercicios`: Relação treino <-> exercícios
-- `treinos_do_dia`: Treino selecionado para o dia atual
-- `presencas`: Presença/ausência de atletas com justificativas
-- `avaliacoes_exercicios`: Erros/acertos por atleta, por exercício
-- `metas`: Metas individuais para cada atleta (id, título, descrição, data alvo, progresso)
+## Estrutura do Banco de Dados
 
----
+### Tabelas Principais
+1. **athletes**: Cadastro de atletas do time
+2. **exercicios**: Exercícios disponíveis para treinos
+3. **treinos**: Dados dos treinos criados
+4. **treinos_exercicios**: Relação entre treinos e exercícios
+5. **treinos_do_dia**: Treino atual designado para o dia
+6. **presencas/treinos_presencas**: Controle de presença nos treinos
+7. **avaliacoes_fundamento**: Avaliações de fundamentos (acertos/erros)
+8. **metas**: Metas de evolução para atletas
+9. **historico_metas**: Histórico de atualizações das metas
 
-## ✅ Implementações Realizadas
+## Atualizações Recentes
 
-1. **Página de Desempenho Individual (`StudentPerformance.tsx`)**:
-   - Visualização detalhada do desempenho de um atleta
-   - Gráficos de evolução e histograma de acertos/erros
-   - Indicadores de frequência, evolução, treinos concluídos
-   - Estatísticas por fundamento técnico
-   - Histórico de treinos e participação
-   - Visualização e gerenciamento de metas do atleta
-   - Formulário para registro de novas avaliações de desempenho
+### Sincronização em Tempo Real de Avaliações
+- Implementação de sincronização em tempo real das avaliações durante os treinos
+- Armazenamento em localStorage como fallback quando offline
+- Sincronização automática com o Supabase quando a conexão é restabelecida
 
-2. **Componente de Relatório Detalhado (`AthletePerformanceDetail.tsx`)**:
-   - Relatório completo com gráficos e estatísticas
-   - Exibição de dados em abas: Visão Geral, Desempenho Técnico e Histórico
-   - Gráficos de radar, pizza e barras para visualização de dados
-   - Correção de bugs de formatação de datas
+### Módulo de Metas e Evolução
+- Criação do serviço `metasService.ts` para gerenciamento de metas
+- Implementação da página principal `MetasEvolucao.tsx`
+- Desenvolvimento do componente de detalhes `MetaDetalhes.tsx` com gráfico de evolução
+- Integração com o menu de navegação
 
-3. **Melhoria na navegação de desempenho**:
-   - Integração entre página de desempenho geral e desempenho individual
-   - Botão para visualizar desempenho detalhado do atleta
-   - Visualização de relatório completo em drawer/modal
+### Correções e Melhorias
+- Resolução de conflitos de merge nos arquivos após integrações com GitHub
+- Adaptação do componente Select para evitar valores vazios
+- Implementação de consultas separadas para contornar limitações de joins no Supabase
+- Verificação e criação automática de tabelas quando não existem no banco
 
-4. **Funcionalidade de avaliação direta**:
-   - Formulário para adicionar novas avaliações em tempo real
-   - Registro de acertos/erros por fundamento
-   - Atualização imediata das estatísticas
+## Scripts SQL
 
-5. **Histórico Completo de Treinos por Atleta**:
-   - Visualização detalhada de todos os treinos em que o atleta foi convocado
-   - Exibição de presença/ausência com justificativas quando aplicável
-   - Detalhamento dos fundamentos avaliados em cada treino
-   - Cálculo de desempenho geral por treino
-   - Interface interativa com linhas expansíveis para visualizar detalhes
-   - Integração completa com o banco de dados Supabase
-   - Sistema de filtros avançados:
-     - Filtro por presença (presentes/ausentes)
-     - Filtro por período de data com seletor de intervalo
-     - Indicadores visuais de filtros aplicados
-     - Contador de resultados filtrados
+### Criação das Tabelas de Metas
 
----
+```sql
+-- Habilitar a extensão para gerar UUIDs
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-## ❗ Problemas Solucionados
+-- Criar tabela de metas
+CREATE TABLE IF NOT EXISTS public.metas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  atleta_id UUID NOT NULL,
+  titulo TEXT NOT NULL,
+  descricao TEXT,
+  progresso INTEGER DEFAULT 0 CHECK (progresso >= 0 AND progresso <= 100),
+  data_alvo DATE NOT NULL,
+  observacoes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT fk_atleta FOREIGN KEY (atleta_id) REFERENCES public.athletes(id) ON DELETE CASCADE
+);
 
-1. **Erro `Invalid time value` no componente `AthletePerformanceDetail`**:
-   - Causa: Tentativa de formatar datas inválidas com `format(new Date(avaliacao.data))`
-   - Solução: Criada função `formatarDataSegura` para validar e tratar datas antes da formatação
-   - Adicionadas verificações para dados ausentes ou inválidos
+-- Criar tabela de histórico de progresso das metas
+CREATE TABLE IF NOT EXISTS public.historico_metas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  meta_id UUID NOT NULL,
+  progresso INTEGER NOT NULL CHECK (progresso >= 0 AND progresso <= 100),
+  observacao TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT fk_meta FOREIGN KEY (meta_id) REFERENCES public.metas(id) ON DELETE CASCADE
+);
+```
 
-2. **Erros de tipagem no TypeScript**:
-   - Correção de tipagem nas props dos componentes
-   - Adição de interfaces para garantir consistência de dados
-   - Correção de problemas de conversão de string para número em datas
+## Estado Atual e Próximos Passos
+1. O aplicativo possui todas as funcionalidades principais implementadas
+2. A sincronização de dados entre dispositivos está funcionando
+3. O módulo de Metas e Evolução está completo
+4. Próximos passos incluem melhorias na UX e relatórios avançados
 
-3. **Problemas de nomenclatura de campos**:
-   - Ajustados campos como `presente/presentes` e `taxa/percentualAcerto` para corresponder ao modelo de dados
-   - Padronização da formatação de dados numéricos
-
----
-
-## ⚠️ Problemas pendentes para resolver
-
-1. **Otimização do carregamento de dados** no componente StudentPerformance para melhorar a performance
-
-2. **Implementação de sistema de cache** para reduzir o número de requisições ao Supabase
-
-3. **Testes de integração** para validar o fluxo completo de avaliação de desempenho
-
----
-
-## 📌 Observações para o Cursor
-
-- Projeto usa Tailwind e shadcn/ui junto com componentes do Ant Design
-- O estilo atual é esportivo, com foco em escuro + contraste, mas poderá ser ajustado depois
-- Os gráficos utilizam a biblioteca Recharts para visualização de dados
-- A formatação de datas utiliza date-fns com locale pt-BR
-- Componentes de filtro e tabelas utilizam Ant Design para uma melhor experiência do usuário
+## Contribuidores
+- Equipe de desenvolvimento GenX
 

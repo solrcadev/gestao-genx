@@ -226,3 +226,43 @@ export const deleteTraining = async (id: string): Promise<boolean> => {
     throw error;
   }
 };
+
+export const updateTrainingExercises = async ({ trainingId, exercises }) => {
+  try {
+    // Primeiro, excluímos todos os exercícios existentes para este treino
+    const { error: deleteError } = await supabase
+      .from('treinos_exercicios')
+      .delete()
+      .eq('treino_id', trainingId);
+
+    if (deleteError) {
+      throw new Error('Erro ao remover exercícios existentes: ' + deleteError.message);
+    }
+
+    // Se não há novos exercícios para adicionar, retornamos
+    if (!exercises || exercises.length === 0) {
+      return true;
+    }
+
+    // Em seguida, inserimos os novos exercícios
+    const { error: insertError } = await supabase
+      .from('treinos_exercicios')
+      .insert(
+        exercises.map(ex => ({
+          treino_id: trainingId,
+          exercicio_id: ex.exercicio_id,
+          ordem: ex.ordem,
+          observacao: ex.observacao
+        }))
+      );
+
+    if (insertError) {
+      throw new Error('Erro ao adicionar novos exercícios: ' + insertError.message);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error updating training exercises:', error);
+    throw error;
+  }
+};

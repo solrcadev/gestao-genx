@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck, Clipboard } from 'lucide-react';
+import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck, Clipboard, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { fetchTrainings, createTraining, updateTraining, deleteTraining } from '@/services/trainingService';
 import { definirTreinoDoDia } from '@/services/treinosDoDiaService';
 import { Team, Training } from '@/types';
+import EditTrainingExercises from '@/components/training/EditTrainingExercises';
 
 const formSchema = z.object({
   nome: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
@@ -63,6 +64,7 @@ const Trainings = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditingExercises, setIsEditingExercises] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -207,6 +209,11 @@ const Trainings = () => {
     form.setValue('time', training.time);
   };
 
+  const handleEditExercises = (training: Training) => {
+    setSelectedTraining(training);
+    setIsEditingExercises(true);
+  };
+
   const handleUpdateTraining = (values: z.infer<typeof formSchema>) => {
     if (!selectedTraining) return;
     updateTrainingMutation.mutate({
@@ -278,44 +285,70 @@ const Trainings = () => {
           </Button>
         </div>
       ) : trainings.length > 0 ? (
-        <Table>
-          <TableCaption>Lista de treinos cadastrados.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Local</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trainings.map((training) => (
-              <TableRow key={training.id}>
-                <TableCell>{training.nome}</TableCell>
-                <TableCell>{training.local}</TableCell>
-                <TableCell>{format(new Date(training.data), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{training.time}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => handleDefinirTreinoDoDia(training)}>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Treino do Dia
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleEditTraining(training)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteTraining(training)} className="text-destructive hover:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </Button>
-                </TableCell>
+        <div className="rounded-md border">
+          <Table>
+            <TableCaption>Lista de treinos cadastrados</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {trainings.map((training) => (
+                <TableRow key={training.id}>
+                  <TableCell className="font-medium">{training.nome}</TableCell>
+                  <TableCell>
+                    {format(new Date(training.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={training.time === "Masculino" ? "bg-blue-500" : "bg-pink-500"}>
+                      {training.time}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDefinirTreinoDoDia(training)}
+                      >
+                        <ClipboardCheck className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditExercises(training)}
+                      >
+                        <ListChecks className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditTraining(training)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDeleteTraining(training)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20">
           <p className="text-muted-foreground">Nenhum treino cadastrado</p>
@@ -652,6 +685,21 @@ const Trainings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal for editing exercises */}
+      {isEditingExercises && selectedTraining && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed left-[50%] top-[50%] z-50 w-full max-w-3xl translate-x-[-50%] translate-y-[-50%] p-4 md:p-6">
+            <div className="bg-background rounded-lg shadow-lg border p-6 max-h-[90vh] overflow-y-auto">
+              <EditTrainingExercises 
+                trainingId={selectedTraining.id}
+                onSuccess={() => setIsEditingExercises(false)}
+                onCancel={() => setIsEditingExercises(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
