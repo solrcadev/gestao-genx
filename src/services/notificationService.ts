@@ -1,5 +1,5 @@
-
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/hooks/use-toast';
 
 // Function to convert urlBase64 to Uint8Array for VAPID public key
 function urlBase64ToUint8Array(base64String: string) {
@@ -30,8 +30,13 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 
   try {
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
+    const permission = await Notification.permission;
+    if (permission === 'granted') {
+      return true;
+    }
+    
+    const requestResult = await Notification.requestPermission();
+    return requestResult === 'granted';
   } catch (error) {
     console.error('Error requesting notification permission:', error);
     return false;
@@ -50,21 +55,25 @@ export const subscribeToPushNotifications = async (atletaId?: string): Promise<b
     
     // Get service worker registration
     const registration = await navigator.serviceWorker.ready;
+    console.log('Service worker is ready:', registration);
     
     // Check if there's an existing subscription
     let subscription = await registration.pushManager.getSubscription();
     
     if (!subscription) {
       // Create a new subscription
+      console.log('Creating new push subscription...');
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
       });
+      console.log('Successfully subscribed:', subscription);
     }
     
     // Save subscription to Supabase
     if (subscription) {
       const subscriptionJSON = subscription.toJSON();
+      console.log('Saving subscription to database:', subscriptionJSON);
       
       // Store in Supabase
       const { error } = await supabase
@@ -80,6 +89,12 @@ export const subscribeToPushNotifications = async (atletaId?: string): Promise<b
         console.error('Error storing push subscription:', error);
         return false;
       }
+      
+      // Mostrar uma notificação de teste
+      showLocalNotification(
+        '🏐 Notificações Ativadas!', 
+        'Você receberá atualizações sobre novas metas, atletas cadastrados e treinos do dia.'
+      );
       
       return true;
     }
@@ -125,4 +140,51 @@ export const unsubscribeFromPushNotifications = async (): Promise<boolean> => {
     console.error('Error unsubscribing from push notifications:', error);
     return false;
   }
+};
+
+// Função para exibir notificação local (útil para testes)
+export const showLocalNotification = (title: string, body: string) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, {
+          body: body,
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/badge-96x96.png',
+          vibrate: [100, 50, 100]
+        });
+      });
+    } catch (error) {
+      console.error('Erro ao exibir notificação local:', error);
+      // Fallback para notificação nativa
+      new Notification(title, {
+        body: body,
+        icon: '/icons/icon-192x192.png'
+      });
+    }
+  }
+};
+
+// Função para enviar notificação quando uma meta é criada
+export const sendGoalNotification = (titulo: string) => {
+  showLocalNotification(
+    '🎯 Nova Meta Criada!', 
+    `Uma nova meta foi definida: ${titulo}`
+  );
+};
+
+// Função para enviar notificação quando um atleta é cadastrado
+export const sendAthleteAddedNotification = (nome: string) => {
+  showLocalNotification(
+    '🏐 Novo Atleta Cadastrado!', 
+    `O atleta ${nome} foi adicionado à equipe.`
+  );
+};
+
+// Função para enviar notificação quando um treino do dia é definido
+export const sendTrainingDefinedNotification = (nome: string, data: string) => {
+  showLocalNotification(
+    '🏐 Treino do Dia Definido!', 
+    `O treino "${nome}" foi definido para ${data}.`
+  );
 };

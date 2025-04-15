@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { format, parse, isAfter, isBefore, subMonths } from 'date-fns';
 import { AthletePerformance, TeamType } from '@/types';
@@ -27,6 +26,15 @@ export interface TrainingHistory {
   type: string;
   duration: number;
   status: 'completed' | 'missed' | 'incomplete';
+}
+
+// Interface para componente StudentPerformance
+export interface TrainingHistoryItem {
+  id: string;
+  date: string;
+  type: string;
+  duration: number;
+  status: 'completed' | 'incomplete' | 'missed';
 }
 
 export interface Goal {
@@ -72,7 +80,7 @@ export const getStudentPerformance = async (studentId: string): Promise<StudentP
 };
 
 // Function to get training history data
-export const getTrainingHistory = async (studentId: string): Promise<TrainingHistory[]> => {
+export const getTrainingHistory = async (studentId: string): Promise<TrainingHistoryItem[]> => {
   try {
     // Mock data for training history
     return [
@@ -166,7 +174,9 @@ export const getAthletePerformance = async (athleteId: string): Promise<AthleteP
         posicao: 'Levantador',
         time: 'Masculino',
         idade: 22,
-        altura: 1.85
+        altura: 1.85,
+        created_at: new Date().toISOString(),
+        foto_url: null,
       },
       presenca: {
         percentual: 85,
@@ -174,6 +184,7 @@ export const getAthletePerformance = async (athleteId: string): Promise<AthleteP
         total: 20
       },
       avaliacoes: {
+        total: 60, // Adicionando a propriedade 'total' que faltava
         mediaNota: 75,
         porFundamento: {
           saque: {
@@ -207,11 +218,11 @@ export const getAthletePerformance = async (athleteId: string): Promise<AthleteP
         }
       },
       ultimasAvaliacoes: [
-        { data: '2024-04-10', acertos: 14, erros: 6 },
-        { data: '2024-04-08', acertos: 16, erros: 4 },
-        { data: '2024-04-05', acertos: 12, erros: 8 },
-        { data: '2024-04-03', acertos: 18, erros: 2 },
-        { data: '2024-04-01', acertos: 10, erros: 10 }
+        { data: '2024-04-10', treino: 'Técnico', fundamento: 'saque', acertos: 14, erros: 6 },
+        { data: '2024-04-08', treino: 'Tático', fundamento: 'recepção', acertos: 16, erros: 4 },
+        { data: '2024-04-05', treino: 'Físico', fundamento: 'levantamento', acertos: 12, erros: 8 },
+        { data: '2024-04-03', treino: 'Técnico', fundamento: 'ataque', acertos: 18, erros: 2 },
+        { data: '2024-04-01', treino: 'Jogo', fundamento: 'defesa', acertos: 10, erros: 10 }
       ]
     };
   } catch (error) {
@@ -232,7 +243,9 @@ export const getAthletesPerformance = async (team: TeamType): Promise<AthletePer
           posicao: 'Levantador',
           time: team,
           idade: 22,
-          altura: 1.85
+          altura: 1.85,
+          created_at: new Date().toISOString(),
+          foto_url: null,
         },
         presenca: {
           percentual: 85,
@@ -240,6 +253,7 @@ export const getAthletesPerformance = async (team: TeamType): Promise<AthletePer
           total: 20
         },
         avaliacoes: {
+          total: 70, // Adicionando a propriedade 'total' que faltava
           mediaNota: 75,
           porFundamento: {
             saque: {
@@ -267,7 +281,9 @@ export const getAthletesPerformance = async (team: TeamType): Promise<AthletePer
           posicao: 'Ponteiro',
           time: team,
           idade: 24,
-          altura: 1.92
+          altura: 1.92,
+          created_at: new Date().toISOString(),
+          foto_url: null,
         },
         presenca: {
           percentual: 90,
@@ -275,6 +291,7 @@ export const getAthletesPerformance = async (team: TeamType): Promise<AthletePer
           total: 20
         },
         avaliacoes: {
+          total: 80, // Adicionando a propriedade 'total' que faltava
           mediaNota: 82,
           porFundamento: {
             ataque: {
@@ -302,7 +319,9 @@ export const getAthletesPerformance = async (team: TeamType): Promise<AthletePer
           posicao: 'Central',
           time: team,
           idade: 25,
-          altura: 2.02
+          altura: 2.02,
+          created_at: new Date().toISOString(),
+          foto_url: null,
         },
         presenca: {
           percentual: 95,
@@ -310,6 +329,7 @@ export const getAthletesPerformance = async (team: TeamType): Promise<AthletePer
           total: 20
         },
         avaliacoes: {
+          total: 80, // Adicionando a propriedade 'total' que faltava
           mediaNota: 79,
           porFundamento: {
             bloqueio: {
@@ -370,7 +390,8 @@ export const getHistoricoTreinoPorAtleta = async (atletaId: string): Promise<His
         data: '05/04/2024',
         local: 'Academia',
         presenca: false,
-        justificativa: 'Consulta médica agendada'
+        justificativa: 'Consulta médica agendada',
+        fundamentos: [] // Adicionando fundamentos vazios para manter a consistência
       },
       {
         treinoId: '4',

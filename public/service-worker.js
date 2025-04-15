@@ -9,35 +9,42 @@ const STATIC_ASSETS = [
   '/favicon.ico'
 ];
 
-// Install event - cache assets
+// Evento de instalação - armazenar em cache os assets
 self.addEventListener('install', (event) => {
+  console.log('Service Worker está sendo instalado!');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
+        console.log('Cache aberto');
         return cache.addAll(STATIC_ASSETS);
       })
   );
+  // Ativar imediatamente sem esperar o antiga terminar
+  self.skipWaiting();
 });
 
-// Activate event - clean old caches
+// Evento de ativação - limpar caches antigos
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker ativo!');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
+  // Controlar as páginas imediatamente
+  event.waitUntil(clients.claim());
 });
 
-// Fetch event - use cache-first strategy
+// Evento fetch - usar estratégia cache-first
 self.addEventListener('fetch', (event) => {
-  // Skip Supabase API requests
+  // Pular requisições Supabase
   if (event.request.url.includes('supabase.co')) {
     return;
   }
@@ -45,22 +52,22 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached response if found
+        // Retornar resposta em cache se encontrada
         if (response) {
           return response;
         }
 
-        // Clone the request because it can only be used once
+        // Clonar a requisição porque ela só pode ser usada uma vez
         const fetchRequest = event.request.clone();
 
         return fetch(fetchRequest).then(
           (response) => {
-            // Don't cache if response is not valid
+            // Não armazenar em cache se a resposta não for válida
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
-            // Clone the response because it can only be used once
+            // Clonar a resposta porque ela só pode ser usada uma vez
             const responseToCache = response.clone();
 
             caches.open(CACHE_NAME)
@@ -71,7 +78,7 @@ self.addEventListener('fetch', (event) => {
             return response;
           }
         ).catch(() => {
-          // If fetch fails (offline), show offline page
+          // Se falhar o fetch (offline), mostrar página offline
           if (event.request.mode === 'navigate') {
             return caches.match('/offline.html');
           }
@@ -80,10 +87,20 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notification event
+// Evento de notificação push
 self.addEventListener('push', (event) => {
+  console.log('Push event recebido!', event);
   try {
-    const data = event.data.json();
+    let data;
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = {
+        title: 'GEN X - Notificação',
+        body: event.data ? event.data.text() : 'Nova atualização disponível!'
+      };
+    }
+    
     const options = {
       body: data.body || 'Nova atualização disponível!',
       icon: '/icons/icon-192x192.png',
@@ -94,13 +111,15 @@ self.addEventListener('push', (event) => {
       }
     };
 
+    console.log('Mostrando notificação:', data.title, options);
+
     event.waitUntil(
       self.registration.showNotification(data.title || 'GEN X - Notificação', options)
     );
   } catch (error) {
-    console.error('Error showing notification:', error);
+    console.error('Erro ao mostrar notificação:', error);
     
-    // Fallback notification if JSON parsing fails
+    // Notificação fallback se o parsing de JSON falhar
     event.waitUntil(
       self.registration.showNotification('GEN X - Notificação', {
         body: 'Nova atualização disponível!',
@@ -110,11 +129,37 @@ self.addEventListener('push', (event) => {
   }
 });
 
-// Notification click event
+// Evento de clique em notificação
 self.addEventListener('notificationclick', (event) => {
+  console.log('Clique em notificação:', event);
   event.notification.close();
   
   event.waitUntil(
-    clients.openWindow(event.notification.data?.url || '/')
+    clients.matchAll({type: 'window'}).then(clientsList => {
+      // Verificar se já existe uma janela/aba aberta e focar nela
+      const hadWindowToFocus = clientsList.some(client => {
+        if (client.url === event.notification.data?.url && 'focus' in client) {
+          client.focus();
+          return true;
+        }
+        return false;
+      });
+
+      // Se não encontrou uma janela para focar, abrir uma nova
+      if (!hadWindowToFocus) {
+        clients.openWindow(event.notification.data?.url || '/').then(windowClient => {
+          if (windowClient && 'focus' in windowClient) {
+            windowClient.focus();
+          }
+        });
+      }
+    })
   );
 });
+
+// Log de mensagens de debug para ajudar a diagnosticar problemas
+self.addEventListener('message', event => {
+  console.log('Mensagem recebida no Service Worker:', event.data);
+});
+
+console.log('Service worker carregado e pronto!');

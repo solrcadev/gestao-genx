@@ -6,6 +6,7 @@ import {
   isPushNotificationSupported, 
   requestNotificationPermission, 
   subscribeToPushNotifications,
+  showLocalNotification
 } from '@/services/notificationService';
 
 export function useNotifications() {
@@ -15,23 +16,25 @@ export function useNotifications() {
   const [isPermissionGranted, setIsPermissionGranted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
-  // Check if notifications are supported
+  // Verificar se as notificações são suportadas
   useEffect(() => {
-    setIsSupported(isPushNotificationSupported());
-  }, []);
-  
-  // Check permission status on mount
-  useEffect(() => {
-    const checkPermission = async () => {
-      if (isPushNotificationSupported()) {
-        setIsPermissionGranted(Notification.permission === 'granted');
-      }
-    };
+    const supported = isPushNotificationSupported();
+    setIsSupported(supported);
     
-    checkPermission();
+    // Verificar o status da permissão
+    if (supported) {
+      setIsPermissionGranted(Notification.permission === 'granted');
+    }
+    
+    // Registrar o service worker se ainda não estiver registrado
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        console.log('Service Worker está pronto:', registration);
+      });
+    }
   }, []);
   
-  // Function to request permission and subscribe to notifications
+  // Função para solicitar permissão e se inscrever nas notificações
   const setupNotifications = async (atletaId?: string) => {
     if (!isPushNotificationSupported()) {
       toast({
@@ -45,7 +48,8 @@ export function useNotifications() {
     setIsLoading(true);
     
     try {
-      // Request permission
+      // Solicitar permissão
+      console.log("Solicitando permissão para notificações...");
       const permissionGranted = await requestNotificationPermission();
       setIsPermissionGranted(permissionGranted);
       
@@ -59,14 +63,23 @@ export function useNotifications() {
         return false;
       }
       
-      // Subscribe to push notifications
+      console.log("Permissão concedida, inscrevendo nas notificações push...");
+      
+      // Inscrever-se nas notificações push
       const subscribed = await subscribeToPushNotifications(atletaId);
       
       if (subscribed) {
         toast({
           title: "Notificações ativadas",
-          description: "Você receberá notificações sobre novas metas e eventos.",
+          description: "Você receberá notificações sobre novas metas, atletas e treinos.",
         });
+        
+        // Mostrar uma notificação de teste
+        console.log("Mostrando notificação de teste...");
+        showLocalNotification(
+          "🏐 Notificações Ativadas!", 
+          "Você receberá atualizações sobre novas metas, atletas cadastrados e treinos do dia."
+        );
       } else {
         toast({
           title: "Erro ao ativar notificações",

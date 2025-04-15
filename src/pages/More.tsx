@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Settings, 
@@ -28,6 +28,40 @@ const More = () => {
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const { isSupported, isPermissionGranted, isLoading, setupNotifications } = useNotifications();
   const { toast } = useToast();
+  const [isPwaInstallable, setIsPwaInstallable] = useState(false);
+
+  // Verificar se o PWA pode ser instalado
+  useEffect(() => {
+    const checkPwaInstallable = () => {
+      const deferredPrompt = (window as any).deferredPrompt;
+      setIsPwaInstallable(!!deferredPrompt);
+    };
+
+    checkPwaInstallable();
+
+    // Adicionar listener para o evento 'appinstalled'
+    const handleAppInstalled = () => {
+      setIsPwaInstallable(false);
+      toast({
+        title: "Aplicativo instalado",
+        description: "O app foi instalado com sucesso no seu dispositivo.",
+        variant: "default",
+      });
+    };
+
+    // Adicionar listener para o evento 'pwaInstallable'
+    const handlePwaInstallable = () => {
+      setIsPwaInstallable(true);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('pwaInstallable', handlePwaInstallable);
+
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('pwaInstallable', handlePwaInstallable);
+    };
+  }, [toast]);
 
   const menuItems = [
     {
@@ -92,6 +126,19 @@ const More = () => {
     const result = await setupNotifications();
     if (result) {
       setNotificationDialogOpen(false);
+      toast({
+        title: "Notificações ativadas",
+        description: "Você receberá notificações sobre novas metas, atletas e treinos.",
+        variant: "default",
+      });
+      
+      // Para fins de demonstração, vamos mostrar uma notificação de teste
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notificacaoTeste = new Notification('🏐 Notificações Ativas!', {
+          body: 'Você receberá atualizações sobre novas metas, atletas cadastrados e treinos do dia.',
+          icon: '/icons/icon-192x192.png'
+        });
+      }
     }
   };
 
@@ -115,10 +162,12 @@ const More = () => {
         toast({
           title: "Instalação iniciada",
           description: "O app está sendo instalado em seu dispositivo.",
+          variant: "default",
         });
       }
       // Reset the deferred prompt variable
       (window as any).deferredPrompt = null;
+      setIsPwaInstallable(false);
     });
   };
 
@@ -129,14 +178,16 @@ const More = () => {
           <h1 className="text-2xl font-bold">Mais Opções</h1>
         </div>
         
-        <Button 
-          variant="outline" 
-          className="flex items-center gap-2" 
-          onClick={handleInstallPWA}
-        >
-          <Package size={16} />
-          <span>Instalar App</span>
-        </Button>
+        {isPwaInstallable && (
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2" 
+            onClick={handleInstallPWA}
+          >
+            <Package size={16} />
+            <span>Instalar App</span>
+          </Button>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -207,8 +258,8 @@ const More = () => {
                   <h4 className="font-medium">Receber notificações sobre:</h4>
                   <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                     <li>Novas metas e atualizações</li>
-                    <li>Lembretes de treinos</li>
-                    <li>Alterações no calendário</li>
+                    <li>Atletas recém cadastrados</li>
+                    <li>Treinos do dia definidos</li>
                     <li>Marcos de progresso atingidos</li>
                   </ul>
                 </div>

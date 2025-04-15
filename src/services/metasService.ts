@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { sendGoalNotification } from '@/services/notificationService';
 
 export interface Meta {
   id: string;
@@ -214,11 +215,6 @@ export async function sendNewGoalNotification(atletaId: string, title: string) {
       return;
     }
 
-    // If there are no subscriptions, we don't need to do anything
-    if (!subscriptions || subscriptions.length === 0) {
-      return;
-    }
-
     // Get athlete name
     const { data: atleta } = await supabase
       .from('athletes')
@@ -226,13 +222,10 @@ export async function sendNewGoalNotification(atletaId: string, title: string) {
       .eq('id', atletaId)
       .single();
 
-    // In a real application, you'd call a serverless function here
-    // that would handle the Web Push protocol
-    console.log(`Would send notification to ${atleta?.nome || 'Atleta'} about new goal: ${title}`);
+    // Enviar notificação local para teste
+    sendGoalNotification(title);
 
-    // In this example, we'll just log the details
-    // In a real application, you would make an API call to your server
-    // which would handle sending the actual push notification
+    console.log(`Enviando notificação para ${atleta?.nome || 'Atleta'} sobre nova meta: ${title}`);
     
     return { success: true };
   } catch (error) {
@@ -288,6 +281,7 @@ export async function criarMeta(meta: MetaInput) {
     }
 
     // Send push notification for the new goal
+    console.log('Enviando notificação para meta criada:', meta.titulo);
     try {
       await sendNewGoalNotification(meta.atleta_id, meta.titulo);
     } catch (notificationError) {
