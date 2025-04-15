@@ -20,6 +20,7 @@ export type Database = {
           posicao: string
           time: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           altura: number
@@ -31,6 +32,7 @@ export type Database = {
           posicao: string
           time: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           altura?: number
@@ -42,6 +44,7 @@ export type Database = {
           posicao?: string
           time?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -618,6 +621,27 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       registro_execucoes: {
         Row: {
           atleta_id: string
@@ -1042,10 +1066,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_has_role: {
+        Args: { requested_role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "coach" | "athlete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1160,6 +1187,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["coach", "athlete"],
+    },
   },
 } as const

@@ -1,6 +1,5 @@
-
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import Dashboard from './pages/Dashboard';
@@ -20,20 +19,7 @@ import Historico from './pages/StudentPerformance';
 import Calendario from './pages/TreinoDosDia';
 import Configuracoes from './pages/StudentPerformance';
 import More from './pages/More';
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  
-  useEffect(() => {
-    registerPWAInstallListener();
-  }, []);
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  return <>{children}</>;
-};
+import RoleProtectedRoute from "./components/RoleProtectedRoute";
 
 const App = () => {
   const { loading: authLoading } = useAuth();
@@ -53,65 +39,48 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          
+          {/* Coach Routes */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={["coach"]}>
               <Dashboard />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/atletas" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={["coach"]}>
               <Atletas />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/treinos" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={["coach"]}>
               <Treinos />
-            </ProtectedRoute>
-          } />
-          <Route path="/metas-evolucao" element={
-            <ProtectedRoute>
-              <MetasEvolucao />
-            </ProtectedRoute>
-          } />
-          <Route path="/desempenho-detalhado" element={
-            <ProtectedRoute>
-              <DesempenhoDetalhado />
-            </ProtectedRoute>
-          } />
-          <Route path="/presencas" element={
-            <ProtectedRoute>
-              <Presencas />
-            </ProtectedRoute>
-          } />
-          <Route path="/historico" element={
-            <ProtectedRoute>
-              <Historico />
-            </ProtectedRoute>
-          } />
-          <Route path="/calendario" element={
-            <ProtectedRoute>
-              <Calendario />
-            </ProtectedRoute>
-          } />
-          <Route path="/configuracoes" element={
-            <ProtectedRoute>
-              <Configuracoes />
-            </ProtectedRoute>
-          } />
-          <Route path="/more" element={
-            <ProtectedRoute>
-              <More />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           
-          {/* Add the new NotificationSettings route */}
+          {/* Shared Routes (both coach and athlete) */}
+          <Route path="/metas-evolucao" element={
+            <RoleProtectedRoute allowedRoles={["coach", "athlete"]}>
+              <MetasEvolucao />
+            </RoleProtectedRoute>
+          } />
+          <Route path="/desempenho-detalhado" element={
+            <RoleProtectedRoute allowedRoles={["coach", "athlete"]}>
+              <DesempenhoDetalhado />
+            </RoleProtectedRoute>
+          } />
+          <Route path="/presencas" element={
+            <RoleProtectedRoute allowedRoles={["coach", "athlete"]}>
+              <Presencas />
+            </RoleProtectedRoute>
+          } />
+          
+          {/* Notification settings accessible to all authenticated users */}
           <Route path="/notification-settings" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={["coach", "athlete"]}>
               <NotificationSettings />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
 
-          <Route path="/register" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <AutoSync />

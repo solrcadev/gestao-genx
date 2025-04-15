@@ -1,10 +1,25 @@
 export type TeamType = "Masculino" | "Feminino";
+export type UserRole = "coach" | "athlete";
+
+export interface Profile {
+  id: string;
+  role: UserRole;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface Athlete {
   id: string;
   nome: string;
   posicao: string;
-  time?: TeamType;
+  time: TeamType;
+  idade: number;
+  altura: number;
+  email?: string;
+  telefone?: string;
+  observacoes?: string;
+  imagem_url?: string;
+  user_id?: string;
 }
 
 export interface AthletePerformance {
