@@ -5,7 +5,6 @@
  * 
  * Características:
  * - Exibe indicadores gerais de desempenho (frequência, evolução, treinos concluídos)
- * - Visualiza estatísticas por fundamento técnico (saque, recepção, etc.)
  * - Mostra histórico de treinos e participação
  * - Exibe metas do atleta
  * - Permite registrar novas avaliações de desempenho por fundamento
@@ -18,19 +17,11 @@ import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Progress, Table, Tag, Spin, Tabs, Form, Input, Select, InputNumber, Button as AntButton, message } from 'antd';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useParams, Link } from 'react-router-dom';
-import { getAthletePerformance, getTrainingHistory, getStudentGoals, registrarAvaliacaoDesempenho } from '../services/performanceService';
+import { getAthletePerformance, getTrainingHistory, getStudentGoals, registrarAvaliacaoDesempenho, TrainingHistoryItem } from '../services/performanceService';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { AthletePerformance } from '@/types';
 import HistoricoTreinosAtleta from '@/components/performance/HistoricoTreinosAtleta';
-
-interface TrainingHistoryItem {
-  id: string;
-  date: string;
-  type: string;
-  duration: number;
-  status: 'completed' | 'incomplete';
-}
 
 interface Goal {
   id: string;
@@ -119,8 +110,14 @@ const StudentPerformance: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'completed' ? 'green' : 'red'}>
-          {status === 'completed' ? 'Concluído' : 'Incompleto'}
+        <Tag color={
+          status === 'completed' ? 'green' : 
+          status === 'missed' ? 'red' : 
+          'orange'
+        }>
+          {status === 'completed' ? 'Concluído' : 
+           status === 'missed' ? 'Ausente' : 
+           'Incompleto'}
         </Tag>
       ),
     },
