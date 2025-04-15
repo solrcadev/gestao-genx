@@ -384,3 +384,151 @@ export async function getMostFrequentAthletes(
     return [];
   }
 }
+
+// Nova função para obter o desempenho de todos os atletas de um time
+export async function getAthletesPerformance(teamType: TeamType): Promise<AthletePerformance[]> {
+  try {
+    // Buscar todos os atletas do time especificado
+    const { data: athletes, error: athletesError } = await supabase
+      .from('athletes')
+      .select('id, nome, posicao')
+      .eq('time', teamType);
+
+    if (athletesError) {
+      console.error('Erro ao buscar atletas do time:', athletesError);
+      throw athletesError;
+    }
+
+    if (!athletes || athletes.length === 0) {
+      return [];
+    }
+
+    // Período de análise: últimos 3 meses
+    const endDate = new Date();
+    const startDate = subMonths(endDate, 3);
+
+    // Resultado que será retornado
+    const result: AthletePerformance[] = [];
+
+    // Para cada atleta, buscar suas avaliações de fundamento
+    for (const athlete of athletes) {
+      // Buscar avaliações de fundamentos
+      const { data: avaliacoes, error: avaliacoesError } = await supabase
+        .from('avaliacoes_fundamento')
+        .select('*')
+        .eq('atleta_id', athlete.id)
+        .gte('created_at', format(startDate, 'yyyy-MM-dd'));
+
+      if (avaliacoesError) {
+        console.error(`Erro ao buscar avaliações para atleta ${athlete.id}:`, avaliacoesError);
+        continue;
+      }
+
+      // Buscar presenças em treinos
+      const { data: presencas, error: presencasError } = await supabase
+        .from('treinos_atletas')
+        .select('presente, treino_id')
+        .eq('atleta_id', athlete.id);
+
+      if (presencasError) {
+        console.error(`Erro ao buscar presenças para atleta ${athlete.id}:`, presencasError);
+        continue;
+      }
+
+      // Calcular dados de presença
+      const totalTreinos = presencas ? presencas.length : 0;
+      const treinosPresente = presencas ? presencas.filter(p => p.presente).length : 0;
+      const percentualPresenca = totalTreinos > 0 ? (treinosPresente / totalTreinos) * 100 : 0;
+
+      // Processar avaliações por fundamento
+      const fundamentoMap: {
+        [fundamento: string]: {
+          acertos: number;
+          erros: number;
+          total: number;
+          percentualAcerto: number;
+          ultimaData?: string;
+        };
+      } = {};
+
+      let notaTotal = 0;
+      let avaliacoesComNota = 0;
+
+      // Últimas avaliações para o gráfico
+      const ultimasAvaliacoes = (avaliacoes || [])
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 10)
+        .map(av => ({
+          data: av.created_at,
+          fundamento: av.fundamento,
+          acertos: av.acertos,
+          erros: av.erros,
+          treino: 'Treino'
+        }));
+
+      // Processar cada avaliação para calcular estatísticas
+      (avaliacoes || []).forEach(av => {
+        if (!fundamentoMap[av.fundamento]) {
+          fundamentoMap[av.fundamento] = {
+            acertos: 0,
+            erros: 0,
+            total: 0,
+            percentualAcerto: 0
+          };
+        }
+
+        fundamentoMap[av.fundamento].acertos += av.acertos;
+        fundamentoMap[av.fundamento].erros += av.erros;
+        fundamentoMap[av.fundamento].total += (av.acertos + av.erros);
+
+        // Atualizar a data da última avaliação deste fundamento
+        if (!fundamentoMap[av.fundamento].ultimaData || 
+            new Date(av.created_at) > new Date(fundamentoMap[av.fundamento].ultimaData!)) {
+          fundamentoMap[av.fundamento].ultimaData = av.created_at;
+        }
+
+        // Se existe nota, adicionar ao cálculo da média
+        if (av.acertos + av.erros > 0) {
+          const nota = (av.acertos / (av.acertos + av.erros)) * 10;
+          notaTotal += nota;
+          avaliacoesComNota++;
+        }
+      });
+
+      // Calcular percentual de acerto para cada fundamento
+      Object.keys(fundamentoMap).forEach(fundamento => {
+        const fund = fundamentoMap[fundamento];
+        fund.percentualAcerto = fund.total > 0 ? (fund.acertos / fund.total) * 100 : 0;
+      });
+
+      // Calcular média de nota geral
+      const mediaNota = avaliacoesComNota > 0 ? notaTotal / avaliacoesComNota : 0;
+
+      // Montar objeto de retorno para este atleta
+      result.push({
+        atleta: {
+          id: athlete.id,
+          nome: athlete.nome,
+          posicao: athlete.posicao
+        },
+        presenca: {
+          total: totalTreinos,
+          presentes: treinosPresente,
+          percentual: percentualPresenca
+        },
+        avaliacoes: {
+          total: avaliacoes?.length || 0,
+          mediaNota,
+          porFundamento: fundamentoMap
+        },
+        ultimasAvaliacoes
+      });
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Erro ao obter desempenho dos atletas:', error);
+    return [];
+  }
+}
