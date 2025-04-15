@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { format, parse, isAfter, isBefore, subMonths } from 'date-fns';
 import { AthletePerformance, TeamType } from '@/types';
@@ -391,7 +392,7 @@ export const getHistoricoTreinoPorAtleta = async (atletaId: string): Promise<His
         local: 'Academia',
         presenca: false,
         justificativa: 'Consulta médica agendada',
-        fundamentos: [] // Adicionando fundamentos vazios para manter a consistência
+        fundamentos: []
       },
       {
         treinoId: '4',
