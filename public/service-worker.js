@@ -105,6 +105,7 @@ self.addEventListener('push', (event) => {
       body: data.body || 'Nova atualização disponível!',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/badge-96x96.png',
+      vibrate: [100, 50, 100],
       data: {
         url: data.url || '/'
       }
@@ -122,7 +123,8 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
       self.registration.showNotification('GEN X - Notificação', {
         body: 'Nova atualização disponível!',
-        icon: '/icons/icon-192x192.png'
+        icon: '/icons/icon-192x192.png',
+        vibrate: [100, 50, 100]
       })
     );
   }
@@ -154,6 +156,20 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// Evento específico para notificação de metas
+self.addEventListener('goalnotification', (event) => {
+  console.log('Notificação de meta recebida:', event.data);
+  
+  const { titulo, atletaNome } = event.data || {};
+  
+  self.registration.showNotification('🎯 Nova Meta Criada!', {
+    body: `Uma nova meta "${titulo}" foi definida para ${atletaNome || 'você'}!`,
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/badge-96x96.png',
+    vibrate: [100, 50, 100]
+  });
 });
 
 // Log de mensagens de debug para ajudar a diagnosticar problemas

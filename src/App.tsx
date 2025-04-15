@@ -1,187 +1,123 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Athletes from "./pages/Athletes";
-import Trainings from "./pages/Trainings";
-import Performance from "./pages/Performance";
-import More from "./pages/More";
-import NotFound from "./pages/NotFound";
-import Exercises from "./pages/Exercises";
-import TrainingAssembly from "./pages/TrainingAssembly";
-import TreinoDoDia from "./pages/TreinoDosDia";
-import LoginPage from "./pages/LoginPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import Dashboard from "./pages/Dashboard";
-import BottomNavbar from "./components/BottomNavbar";
-import { AuthProvider } from "./contexts/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import StudentPerformance from './pages/StudentPerformance';
-import AttendanceManagement from './pages/AttendanceManagement';
-import AthleteDetails from './pages/AthleteDetails';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LoginPage } from './pages/Login';
+import { ForgotPasswordPage } from './pages/ForgotPassword';
+import { Dashboard } from './pages/Dashboard';
+import { Index } from './pages/Index';
+import { NotFound } from './pages/NotFound';
+import { useAuth } from './contexts/AuthContext';
+import { Toaster } from '@/components/ui/toaster';
+import { AutoSync } from './components/AutoSync';
+import { registerPWAInstallListener } from './services/pwaService';
+import NotificationSettings from './pages/NotificationSettings';
+import Atletas from './pages/Atletas';
+import Treinos from './pages/Treinos';
 import MetasEvolucao from './pages/MetasEvolucao';
+import DesempenhoDetalhado from './pages/DesempenhoDetalhado';
+import Presencas from './pages/Presencas';
+import Historico from './pages/Historico';
+import Calendario from './pages/Calendario';
+import Configuracoes from './pages/Configuracoes';
+import More from './pages/More';
 
-const queryClient = new QueryClient();
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    registerPWAInstallListener();
+  }, []);
 
-const App = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <div className="bg-background min-h-screen">
-              <Routes>
-                {/* Rotas públicas */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                
-                {/* Rotas protegidas */}
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/atletas" 
-                  element={
-                    <ProtectedRoute>
-                      <Athletes />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/atleta/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <AthleteDetails />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/treinos" 
-                  element={
-                    <ProtectedRoute>
-                      <Trainings />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/exercicios" 
-                  element={
-                    <ProtectedRoute>
-                      <Exercises />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/montar-treino" 
-                  element={
-                    <ProtectedRoute>
-                      <TrainingAssembly />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/montagem-treino" 
-                  element={
-                    <ProtectedRoute>
-                      <TrainingAssembly />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/desempenho" 
-                  element={
-                    <ProtectedRoute>
-                      <Performance />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/mais" 
-                  element={
-                    <ProtectedRoute>
-                      <More />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/treino-do-dia/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <TreinoDoDia />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/treino-do-dia" 
-                  element={
-                    <ProtectedRoute>
-                      <TreinoDoDia />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route path="/aluno/:studentId/performance" element={
-                  <ProtectedRoute>
-                    <StudentPerformance />
-                  </ProtectedRoute>
-                } />
-                <Route path="/presencas" element={
-                  <ProtectedRoute>
-                    <AttendanceManagement />
-                  </ProtectedRoute>
-                } />
-                <Route
-                  path="/metas-evolucao"
-                  element={
-                    <ProtectedRoute>
-                      <MetasEvolucao />
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* Nova rota para gestão de presenças */}
-                <Route path="/presencas" element={
-                  <ProtectedRoute>
-                    <AttendanceManagement />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Rota 404 */}
-                <Route path="*" element={
-                  <ProtectedRoute>
-                    <NotFound />
-                  </ProtectedRoute>
-                } />
-              </Routes>
-              
-              {/* BottomNavbar apenas em rotas autenticadas */}
-              <AuthNavbarWrapper />
-            </div>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  return <>{children}</>;
 };
 
-// Componente wrapper para mostrar o BottomNavbar apenas em rotas autenticadas
-const AuthNavbarWrapper = () => {
-  const currentPath = window.location.pathname;
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
-  
-  if (publicRoutes.some(route => currentPath.startsWith(route))) {
-    return null;
+const App = () => {
+  const { authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <span className="loading loading-spinner text-primary"></span>
+      </div>
+    );
   }
-  
-  return <BottomNavbar />;
+
+  return (
+    <BrowserRouter>
+      <div className="app">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/atletas" element={
+            <ProtectedRoute>
+              <Atletas />
+            </ProtectedRoute>
+          } />
+          <Route path="/treinos" element={
+            <ProtectedRoute>
+              <Treinos />
+            </ProtectedRoute>
+          } />
+          <Route path="/metas-evolucao" element={
+            <ProtectedRoute>
+              <MetasEvolucao />
+            </ProtectedRoute>
+          } />
+          <Route path="/desempenho-detalhado" element={
+            <ProtectedRoute>
+              <DesempenhoDetalhado />
+            </ProtectedRoute>
+          } />
+          <Route path="/presencas" element={
+            <ProtectedRoute>
+              <Presencas />
+            </ProtectedRoute>
+          } />
+          <Route path="/historico" element={
+            <ProtectedRoute>
+              <Historico />
+            </ProtectedRoute>
+          } />
+          <Route path="/calendario" element={
+            <ProtectedRoute>
+              <Calendario />
+            </ProtectedRoute>
+          } />
+          <Route path="/configuracoes" element={
+            <ProtectedRoute>
+              <Configuracoes />
+            </ProtectedRoute>
+          } />
+          <Route path="/more" element={
+            <ProtectedRoute>
+              <More />
+            </ProtectedRoute>
+          } />
+          
+          {/* Add the new NotificationSettings route */}
+          <Route path="/notification-settings" element={
+            <ProtectedRoute>
+              <NotificationSettings />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/register" element={<LoginPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <AutoSync />
+        <Toaster />
+      </div>
+    </BrowserRouter>
+  );
 };
 
 export default App;

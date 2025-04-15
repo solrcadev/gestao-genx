@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -98,7 +97,7 @@ const More = () => {
       icon: <Bell className="h-5 w-5" />,
       title: "Notificações",
       description: "Configurar preferências de notificações",
-      action: () => setNotificationDialogOpen(true)
+      path: "/notification-settings" // Changed from action to path
     },
     {
       icon: <Settings className="h-5 w-5" />,
@@ -219,64 +218,7 @@ const More = () => {
         ))}
       </div>
 
-      {/* Notification preferences dialog */}
-      <Dialog open={notificationDialogOpen} onOpenChange={setNotificationDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Preferências de Notificações</DialogTitle>
-            <DialogDescription>
-              Configure as notificações para receber atualizações sobre metas, treinos e mais.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {!isSupported && (
-              <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-4 border border-amber-200 dark:border-amber-900">
-                <p className="text-amber-800 dark:text-amber-300 text-sm">
-                  Seu navegador não suporta notificações push. Use um navegador moderno como Chrome ou Firefox.
-                </p>
-              </div>
-            )}
-            
-            {isSupported && (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-medium">Status das Notificações</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {isPermissionGranted 
-                        ? "Notificações estão ativadas" 
-                        : "Notificações estão desativadas"}
-                    </p>
-                  </div>
-                  <Badge variant={isPermissionGranted ? "secondary" : "destructive"}>
-                    {isPermissionGranted ? "Ativado" : "Desativado"}
-                  </Badge>
-                </div>
-                
-                <div className="space-y-1">
-                  <h4 className="font-medium">Receber notificações sobre:</h4>
-                  <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                    <li>Novas metas e atualizações</li>
-                    <li>Atletas recém cadastrados</li>
-                    <li>Treinos do dia definidos</li>
-                    <li>Marcos de progresso atingidos</li>
-                  </ul>
-                </div>
-                
-                <Button
-                  onClick={handleEnableNotifications}
-                  disabled={isLoading || isPermissionGranted}
-                  className="w-full"
-                >
-                  {isLoading ? "Configurando..." : 
-                   isPermissionGranted ? "Notificações Ativadas" : "Ativar Notificações"}
-                </Button>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Remove the notification dialog since we now have a dedicated page */}
     </div>
   );
 };
