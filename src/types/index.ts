@@ -54,3 +54,36 @@ export interface AthletePerformance {
     treino?: string;
   }[];
 }
+
+export type TrainingHistory = {
+  id: string;
+  date: string;
+  type: string;
+  duration: number;
+  status: 'completed' | 'missed' | 'partial';
+};
+
+export type Goal = {
+  id: string;
+  title: string;
+  description: string;
+  targetDate: string;
+  progress: number;
+  status: 'achieved' | 'in_progress' | 'pending';
+};
+
+export type Position = 'Levantador' | 'Ponteiro' | 'Central' | 'Oposto' | 'Líbero';
+export type Team = 'Masculino' | 'Feminino';
+export type Training = {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  status: string;
+  exercises: {
+    id: string;
+    name: string;
+    duration: number;
+    order: number;
+  }[];
+};
