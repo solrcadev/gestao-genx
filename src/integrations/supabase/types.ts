@@ -356,6 +356,38 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_metas: {
+        Row: {
+          created_at: string | null
+          id: string
+          meta_id: string
+          observacao: string | null
+          progresso: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          meta_id: string
+          observacao?: string | null
+          progresso: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          meta_id?: string
+          observacao?: string | null
+          progresso?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_meta"
+            columns: ["meta_id"]
+            isOneToOne: false
+            referencedRelation: "metas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_treinos: {
         Row: {
           created_at: string | null
@@ -393,6 +425,195 @@ export type Database = {
             columns: ["treino_id"]
             isOneToOne: false
             referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      macrociclos: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      mesociclos: {
+        Row: {
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          id: string
+          macrociclo_id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          id?: string
+          macrociclo_id: string
+          nome: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          macrociclo_id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mesociclos_macrociclo_id_fkey"
+            columns: ["macrociclo_id"]
+            isOneToOne: false
+            referencedRelation: "macrociclos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metas: {
+        Row: {
+          atleta_id: string
+          created_at: string | null
+          data_alvo: string
+          descricao: string | null
+          id: string
+          observacoes: string | null
+          progresso: number | null
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          atleta_id: string
+          created_at?: string | null
+          data_alvo: string
+          descricao?: string | null
+          id?: string
+          observacoes?: string | null
+          progresso?: number | null
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          atleta_id?: string
+          created_at?: string | null
+          data_alvo?: string
+          descricao?: string | null
+          id?: string
+          observacoes?: string | null
+          progresso?: number | null
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_atleta"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      microciclos: {
+        Row: {
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          id: string
+          mesociclo_id: string
+          nome: string
+          objetivo: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          id?: string
+          mesociclo_id: string
+          nome: string
+          objetivo?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          mesociclo_id?: string
+          nome?: string
+          objetivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "microciclos_mesociclo_id_fkey"
+            columns: ["mesociclo_id"]
+            isOneToOne: false
+            referencedRelation: "mesociclos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      microciclos_treinos: {
+        Row: {
+          created_at: string | null
+          id: string
+          microciclo_id: string
+          posicao: number | null
+          treino_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          microciclo_id: string
+          posicao?: number | null
+          treino_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          microciclo_id?: string
+          posicao?: number | null
+          treino_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "microciclos_treinos_microciclo_id_fkey"
+            columns: ["microciclo_id"]
+            isOneToOne: false
+            referencedRelation: "microciclos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "microciclos_treinos_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
             referencedColumns: ["id"]
           },
         ]
@@ -448,6 +669,38 @@ export type Database = {
             columns: ["treino_id"]
             isOneToOne: false
             referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          atleta_id: string | null
+          created_at: string | null
+          id: string
+          subscription_data: Json
+          updated_at: string | null
+        }
+        Insert: {
+          atleta_id?: string | null
+          created_at?: string | null
+          id?: string
+          subscription_data: Json
+          updated_at?: string | null
+        }
+        Update: {
+          atleta_id?: string | null
+          created_at?: string | null
+          id?: string
+          subscription_data?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
         ]

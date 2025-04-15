@@ -200,6 +200,47 @@ export async function getMetaById(id: string) {
   }
 }
 
+// Function to send push notification for new goals
+export async function sendNewGoalNotification(atletaId: string, title: string) {
+  try {
+    // Get subscriptions for this athlete
+    const { data: subscriptions, error } = await supabase
+      .from('subscriptions')
+      .select('subscription_data')
+      .eq('atleta_id', atletaId);
+
+    if (error) {
+      console.error('Error fetching subscriptions:', error);
+      return;
+    }
+
+    // If there are no subscriptions, we don't need to do anything
+    if (!subscriptions || subscriptions.length === 0) {
+      return;
+    }
+
+    // Get athlete name
+    const { data: atleta } = await supabase
+      .from('athletes')
+      .select('nome')
+      .eq('id', atletaId)
+      .single();
+
+    // In a real application, you'd call a serverless function here
+    // that would handle the Web Push protocol
+    console.log(`Would send notification to ${atleta?.nome || 'Atleta'} about new goal: ${title}`);
+
+    // In this example, we'll just log the details
+    // In a real application, you would make an API call to your server
+    // which would handle sending the actual push notification
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending goal notification:', error);
+    return { success: false };
+  }
+}
+
 // Criar uma nova meta
 export async function criarMeta(meta: MetaInput) {
   try {
@@ -244,6 +285,14 @@ export async function criarMeta(meta: MetaInput) {
     if (error) {
       console.error('Erro ao criar meta:', error);
       throw error;
+    }
+
+    // Send push notification for the new goal
+    try {
+      await sendNewGoalNotification(meta.atleta_id, meta.titulo);
+    } catch (notificationError) {
+      console.error('Error sending notification:', notificationError);
+      // Continue with the function even if notification fails
     }
 
     return data;
@@ -460,4 +509,4 @@ export async function verificarECriarTabelaMetas() {
     console.error('Erro ao verificar/criar tabelas:', error);
     return false;
   }
-} 
+}
