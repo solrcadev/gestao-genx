@@ -156,7 +156,7 @@ const More = () => {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{item.title}</h3>
                   {item.title === "Notificações" && (
-                    <Badge variant={isPermissionGranted ? "success" : "outline"} className="ml-1">
+                    <Badge variant={isPermissionGranted ? "secondary" : "outline"} className="ml-1">
                       {isPermissionGranted ? "Ativadas" : "Desativadas"}
                     </Badge>
                   )}
@@ -198,7 +198,7 @@ const More = () => {
                         : "Notificações estão desativadas"}
                     </p>
                   </div>
-                  <Badge variant={isPermissionGranted ? "success" : "destructive"}>
+                  <Badge variant={isPermissionGranted ? "secondary" : "destructive"}>
                     {isPermissionGranted ? "Ativado" : "Desativado"}
                   </Badge>
                 </div>
