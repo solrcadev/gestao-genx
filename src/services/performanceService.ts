@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { format, parse, isAfter, isBefore, subMonths } from 'date-fns';
 import { AthletePerformance, TeamType } from '@/types';
