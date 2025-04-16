@@ -31,9 +31,9 @@ export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<His
 
     const historico: HistoricoTreinoPorAtleta[] = (treinosAtleta || []).map(item => ({
       treinoId: item.treino_id,
-      nomeTreino: item.treinos?.nome || 'Treino sem nome',
-      data: item.treinos?.data || new Date().toISOString().split('T')[0],
-      local: item.treinos?.local || 'Local não especificado',
+      nomeTreino: item.treinos ? item.treinos.nome : 'Treino sem nome',
+      data: item.treinos ? item.treinos.data : new Date().toISOString().split('T')[0],
+      local: item.treinos ? item.treinos.local : 'Local não especificado',
       presenca: item.presente,
       justificativa: item.justificativa_falta,
       fundamentos: (avaliacoes || [])

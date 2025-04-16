@@ -19,7 +19,8 @@ export interface Athlete {
   email?: string;
   telefone?: string;
   observacoes?: string;
-  imagem_url?: string; // Changed from foto_url to match database
+  imagem_url?: string; // This is the correct field name in the database
+  foto_url?: string;   // Adding this alias for backward compatibility
   user_id?: string;
 }
 
@@ -31,6 +32,8 @@ export interface AthletePerformance {
     time?: TeamType;  // Added this field
     idade?: number;   // Added this field
     altura?: number;  // Added this field
+    foto_url?: string; // Added for backward compatibility
+    imagem_url?: string; // Added actual field name
   };
   presenca: {
     total: number;

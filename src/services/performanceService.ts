@@ -40,8 +40,8 @@ export type Goal = {
 export type StudentPerformance = {
   id: string;
   name: string;
-  position: Position;
-  team: Team;
+  position: string; // Changed from Position type to string
+  team: string; // Changed from Team type to string
   frequency: number;
   evolution: number;
   completedTrainings: number;
