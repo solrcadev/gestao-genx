@@ -1,5 +1,6 @@
+
 import { supabase } from '@/lib/supabase';
-import { HistoricoTreinoPorAtleta } from '@/types';
+import { HistoricoTreinoPorAtleta } from '@/services/performanceService';
 
 export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<HistoricoTreinoPorAtleta[]> {
   try {

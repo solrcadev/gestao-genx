@@ -1,23 +1,8 @@
-/**
- * StudentPerformance.tsx
- * 
- * Componente para exibição detalhada do desempenho de um atleta/estudante.
- * 
- * Características:
- * - Exibe indicadores gerais de desempenho (frequência, evolução, treinos concluídos)
- * - Mostra histórico de treinos e participação
- * - Exibe metas do atleta
- * - Permite registrar novas avaliações de desempenho por fundamento
- * - Visualização gráfica da evolução do atleta ao longo do tempo
- * 
- * O componente utiliza React com Ant Design para a interface e Recharts para
- * visualização de dados. Dados são obtidos através dos serviços de performance.
- */
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Progress, Table, Tag, Spin, Tabs, Form, Input, Select, InputNumber, Button as AntButton, message } from 'antd';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useParams, Link } from 'react-router-dom';
-import { getAthletePerformance, getTrainingHistory, getStudentGoals, registrarAvaliacaoDesempenho, TrainingHistoryItem } from '../services/performanceService';
+import { getAthletePerformance, registrarAvaliacaoDesempenho, getTrainingHistory, getStudentGoals, TrainingHistoryItem } from '@/services/performanceService';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { AthletePerformance } from '@/types';
@@ -48,13 +33,22 @@ const StudentPerformance: React.FC = () => {
       if (studentId) {
         try {
           setLoading(true);
-          const [performanceData, historyData, goalsData] = await Promise.all([
-            getAthletePerformance(studentId),
-            getTrainingHistory(studentId),
-            getStudentGoals(studentId)
-          ]);
           
-          setPerformance(performanceData);
+          // Using a sample date range
+          const startDate = new Date();
+          startDate.setMonth(startDate.getMonth() - 3); // 3 months ago
+          const endDate = new Date(); // today
+          
+          const performanceData = await getAthletePerformance(studentId, startDate, endDate);
+          const historyData = await getTrainingHistory(studentId);
+          const goalsData = await getStudentGoals(studentId);
+          
+          if (performanceData && performanceData.length > 0) {
+            setPerformance(performanceData[0]);
+          } else {
+            console.error('No performance data returned');
+          }
+          
           setHistory(historyData);
           setGoals(goalsData);
         } catch (error) {

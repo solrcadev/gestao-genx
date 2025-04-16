@@ -1,3 +1,4 @@
+
 export type TeamType = "Masculino" | "Feminino";
 export type UserRole = "coach" | "athlete";
 
@@ -18,7 +19,7 @@ export interface Athlete {
   email?: string;
   telefone?: string;
   observacoes?: string;
-  imagem_url?: string;
+  imagem_url?: string; // Changed from foto_url to match database
   user_id?: string;
 }
 
@@ -27,6 +28,9 @@ export interface AthletePerformance {
     id: string;
     nome: string;
     posicao: string;
+    time?: TeamType;  // Added this field
+    idade?: number;   // Added this field
+    altura?: number;  // Added this field
   };
   presenca: {
     total: number;
@@ -72,18 +76,38 @@ export type Goal = {
   status: 'achieved' | 'in_progress' | 'pending';
 };
 
-export type Position = 'Levantador' | 'Ponteiro' | 'Central' | 'Oposto' | 'Líbero';
+export type Position = 'Levantador' | 'Ponteiro' | 'Central' | 'Oposto' | 'Líbero' | 'Outro';
 export type Team = 'Masculino' | 'Feminino';
 export type Training = {
   id: string;
-  name: string;
-  date: string;
-  location: string;
+  name?: string;
+  date?: string;
+  location?: string;
   status: string;
+  nome?: string;   // Added for compatibility
+  data?: string;   // Added for compatibility
+  local?: string;  // Added for compatibility
+  time?: TeamType; // Added for compatibility
+  descricao?: string; // Added for compatibility
   exercises: {
     id: string;
     name: string;
     duration: number;
     order: number;
+  }[];
+}
+
+// Add histórico treino type
+export type HistoricoTreino = {
+  treinoId: string;
+  nomeTreino: string;
+  data: string;
+  local: string;
+  presenca: boolean;
+  justificativa?: string;
+  fundamentos: {
+    fundamento: string;
+    acertos: number;
+    erros: number;
   }[];
 };

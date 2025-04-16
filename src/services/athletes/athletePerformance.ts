@@ -54,3 +54,86 @@ export async function getTeamPerformance(
     return [];
   }
 }
+
+// Mock function to get athletes performance - used by Performance.tsx
+export async function getAthletesPerformance(teamType: TeamType): Promise<AthletePerformance[]> {
+  try {
+    // In a real implementation, this would fetch data from the database
+    // For now, we'll return mock data
+    return [
+      {
+        atleta: {
+          id: '1',
+          nome: 'João Silva',
+          posicao: 'Levantador',
+          time: teamType,
+          idade: 22,
+          altura: 1.85
+        },
+        presenca: {
+          total: 20,
+          presentes: 18,
+          percentual: 90
+        },
+        avaliacoes: {
+          total: 15,
+          mediaNota: 85,
+          porFundamento: {
+            'saque': {
+              acertos: 45,
+              erros: 15,
+              total: 60,
+              percentualAcerto: 75,
+              ultimaData: '2023-05-01'
+            },
+            'levantamento': {
+              acertos: 120,
+              erros: 10,
+              total: 130,
+              percentualAcerto: 92,
+              ultimaData: '2023-05-02'
+            }
+          }
+        }
+      },
+      {
+        atleta: {
+          id: '2',
+          nome: 'Maria Oliveira',
+          posicao: 'Ponteiro',
+          time: teamType,
+          idade: 20,
+          altura: 1.78
+        },
+        presenca: {
+          total: 20,
+          presentes: 16,
+          percentual: 80
+        },
+        avaliacoes: {
+          total: 12,
+          mediaNota: 70,
+          porFundamento: {
+            'saque': {
+              acertos: 30,
+              erros: 20,
+              total: 50,
+              percentualAcerto: 60,
+              ultimaData: '2023-05-01'
+            },
+            'ataque': {
+              acertos: 80,
+              erros: 30,
+              total: 110,
+              percentualAcerto: 73,
+              ultimaData: '2023-05-02'
+            }
+          }
+        }
+      }
+    ];
+  } catch (error) {
+    console.error('Error fetching athletes performance:', error);
+    return [];
+  }
+}
