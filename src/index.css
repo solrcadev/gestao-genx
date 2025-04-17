@@ -2,62 +2,516 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 15%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 252 94% 67%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 199 89% 48%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 222 47% 20%;
-    --muted-foreground: 210 40% 80%;
-
-    --accent: 222 47% 20%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
-    --ring: 252 94% 67%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 252 94% 67%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 222 47% 15%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 15%;
-    --sidebar-ring: 252 94% 67%;
-    
-    /* Sport-specific colors */
-    --sport-blue: 199 89% 48%;
-    --sport-red: 0 84.2% 60.2%;
-    --sport-green: 142 71% 45%;
-    --sport-yellow: 38 92% 50%;
-    --sport-purple: 252 94% 67%;
-  }
+/* Define a cor primária e secundária */
+:root {
+  --primary: #FFCC00; /* Amarelo esportivo */
+  --secondary: #1E90FF; /* Azul vibrante */
+  --background: #121212; /* Dark esportivo */
+  --card: #1E1E1E;
+  --border: #333;
+  --input: #333;
+  --ring: #FFCC00;
+  --radius: 0.5rem;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+.dark {
+  --primary: #FFCC00; /* Amarelo esportivo */
+  --secondary: #1E90FF; /* Azul vibrante */
+  --background: #121212; /* Dark esportivo */
+  --card: #1E1E1E;
+  --border: #333;
+  --input: #333;
+  --ring: #FFCC00;
+}
 
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--background);
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Estilos para scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e6b800;
+}
+
+/* Estilos para links */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #e6b800;
+}
+
+/* Estilos para botões */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--background);
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #e6b800;
+}
+
+/* Estilos para cards */
+.card {
+  background-color: var(--card);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilos para inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  background-color: var(--input);
+  color: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 15px;
+  width: 100%;
+  transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Estilos específicos para o tema esportivo */
+.sport-blue {
+  background-color: #1E90FF;
+  color: #fff;
+}
+
+.sport-red {
+  background-color: #FF4500;
+  color: #fff;
+}
+
+/* Estilos para feedback visual nos cards */
+.card-hover {
+  transition: transform 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: scale(1.03);
+}
+
+/* Estilos para feedback tátil em dispositivos touch */
+.touch-feedback {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.touch-feedback:active {
+  opacity: 0.8;
+}
+
+/* Estilos para a navbar inferior */
+.bottom-navbar {
+  background-color: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-navbar a {
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.bottom-navbar a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos para a página de atletas */
+.athlete-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Estilos para o card de atleta */
+.card-athlete {
+  background-color: var(--card);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-athlete h3 {
+  font-size: 1.2em;
+  margin-bottom: 5px;
+}
+
+.card-athlete p {
+  color: #aaa;
+  font-size: 0.9em;
+}
+
+/* Estilos para a lista de treinos */
+.training-list {
+  list-style: none;
+  padding: 0;
+}
+
+.training-list li {
+  background-color: var(--card);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.training-list li h3 {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.training-list li p {
+  color: #aaa;
+  font-size: 0.9em;
+}
+
+/* Estilos para a tabela de desempenho */
+.performance-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.performance-table th,
+.performance-table td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: left;
+}
+
+.performance-table th {
+  background-color: var(--card);
+  font-weight: bold;
+}
+
+/* Estilos para a página "Mais" */
+.more-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.more-options a {
+  background-color: var(--card);
+  color: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.more-options a:hover {
+  background-color: #333;
+}
+
+/* Estilos para a página de exercícios */
+.exercise-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Estilos para o card de exercício */
+.card-exercise {
+  background-color: var(--card);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-exercise h3 {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.card-exercise p {
+  color: #aaa;
+  font-size: 0.9em;
+}
+
+/* Estilos para o seletor de tema */
+.theme-selector {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.theme-selector button {
+  background-color: var(--card);
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin: 0 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.theme-selector button:hover {
+  background-color: #333;
+}
+
+/* Estilos para links dentro de cards */
+.card a {
+  color: var(--primary);
+}
+
+.card a:hover {
+  color: #e6b800;
+}
+
+/* Estilos para a página de login */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  background-color: var(--card);
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.login-form h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #fff;
+}
+
+.login-form input[type="email"],
+.login-form input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background-color: var(--input);
+  color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+.login-form input[type="email"]:focus,
+.login-form input[type="password"]:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.login-form button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--primary);
+  color: var(--background);
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-form button[type="submit"]:hover {
+  background-color: #e6b800;
+}
+
+.login-form .forgot-password {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.login-form .forgot-password a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.login-form .forgot-password a:hover {
+  color: #e6b800;
+}
+
+/* Estilos para a página de dashboard */
+.dashboard-container {
+  padding: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-header h1 {
+  font-size: 2em;
+  color: #fff;
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.dashboard-card {
+  background-color: var(--card);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-card h2 {
+  font-size: 1.5em;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.dashboard-card p {
+  color: #aaa;
+  font-size: 1em;
+}
+
+/* Estilos para a página de detalhes do atleta */
+.athlete-details-container {
+  padding: 20px;
+}
+
+.athlete-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.athlete-details-header h1 {
+  font-size: 2em;
+  color: #fff;
+}
+
+.athlete-details-card {
+  background-color: var(--card);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.athlete-details-card h2 {
+  font-size: 1.5em;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.athlete-details-card p {
+  color: #aaa;
+  font-size: 1em;
+}
+
+/* Estilos para a página de metas e evolução */
+.goals-evolution-container {
+  padding: 20px;
+}
+
+.goals-evolution-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.goals-evolution-header h1 {
+  font-size: 2em;
+  color: #fff;
+}
+
+.goals-evolution-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.goals-evolution-card {
+  background-color: var(--card);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.goals-evolution-card h2 {
+  font-size: 1.5em;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.goals-evolution-card p {
+  color: #aaa;
+  font-size: 1em;
+}
+
+/* PWA enhancements */
+@media (display-mode: standalone) {
   body {
+<<<<<<< HEAD
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
@@ -263,6 +717,39 @@
 
   .subtitle-responsive {
     @apply text-lg sm:text-xl md:text-xl lg:text-2xl font-semibold;
+=======
+    /* Prevent overscrolling on iOS */
+    overscroll-behavior: none;
+    /* Prevent text selection */
+    user-select: none;
+    /* Disable zooming */
+    touch-action: manipulation;
+  }
+  
+  /* Fix safe area on iOS */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 56px);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    
+    /* Adjust bottom navbar on PWA */
+    .fixed.bottom-0 {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+  
+  /* Disable text selection in PWA mode */
+  * {
+    -webkit-touch-callout: none;
+  }
+  
+  /* Make the app feel more app-like */
+  a, button {
+    -webkit-tap-highlight-color: transparent;
+>>>>>>> f1b3285a32698cf39fc0b4ec27169b31117b1f90
   }
 
   /* Gráficos responsivos */
@@ -505,4 +992,61 @@
       @apply max-w-3xl mx-auto;
     }
   }
+}
+
+/* Offline indicators */
+.offline-indicator {
+  display: none;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background-color: #FF3B30;
+  color: white;
+  border-radius: 4px;
+}
+
+@media (display-mode: standalone) {
+  .offline .offline-indicator {
+    display: flex;
+  }
+}
+
+/* Improve tap targets for mobile */
+button, 
+a[role="button"],
+.button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* PWA installation banner */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px 16px;
+  z-index: 1000;
+  width: calc(100% - 32px);
+  max-width: 500px;
+  animation: slideUp 0.5s;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.dark .pwa-install-banner {
+  background-color: #1e1e1e;
+  border: 1px solid #333;
 }

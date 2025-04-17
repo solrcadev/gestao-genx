@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { sendGoalNotification } from '@/services/notificationService';
 
 export interface Meta {
   id: string;
@@ -200,6 +201,39 @@ export async function getMetaById(id: string) {
   }
 }
 
+// Function to send push notification for new goals
+export async function sendNewGoalNotification(atletaId: string, title: string) {
+  try {
+    // Get subscriptions for this athlete
+    const { data: subscriptions, error } = await supabase
+      .from('subscriptions')
+      .select('subscription_data')
+      .eq('atleta_id', atletaId);
+
+    if (error) {
+      console.error('Error fetching subscriptions:', error);
+      return;
+    }
+
+    // Get athlete name
+    const { data: atleta } = await supabase
+      .from('athletes')
+      .select('nome')
+      .eq('id', atletaId)
+      .single();
+
+    // Enviar notificação local para teste
+    sendGoalNotification(title);
+
+    console.log(`Enviando notificação para ${atleta?.nome || 'Atleta'} sobre nova meta: ${title}`);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending goal notification:', error);
+    return { success: false };
+  }
+}
+
 // Criar uma nova meta
 export async function criarMeta(meta: MetaInput) {
   try {
@@ -244,6 +278,15 @@ export async function criarMeta(meta: MetaInput) {
     if (error) {
       console.error('Erro ao criar meta:', error);
       throw error;
+    }
+
+    // Send push notification for the new goal
+    console.log('Enviando notificação para meta criada:', meta.titulo);
+    try {
+      await sendNewGoalNotification(meta.atleta_id, meta.titulo);
+    } catch (notificationError) {
+      console.error('Error sending notification:', notificationError);
+      // Continue with the function even if notification fails
     }
 
     return data;
@@ -460,4 +503,4 @@ export async function verificarECriarTabelaMetas() {
     console.error('Erro ao verificar/criar tabelas:', error);
     return false;
   }
-} 
+}

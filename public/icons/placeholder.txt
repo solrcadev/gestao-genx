@@ -1,0 +1,7 @@
+
+Place your icon files here:
+- icon-192x192.png
+- icon-512x512.png
+- badge-96x96.png
+
+These files should be created with your app's branding.
