@@ -1,8 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import webpush from 'web-push';
+import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
 
-// Tipos
+// Configurar Web Push
+webpush.setVapidDetails(
+  'mailto:contato@genx.com.br', // Ajuste para seu email de contato
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+  process.env.VAPID_PRIVATE_KEY || ''
+);
+
+// Tipos para as notificações
 interface NotificationPayload {
   title: string;
   body: string;
@@ -10,32 +17,20 @@ interface NotificationPayload {
   badge?: string;
   tag?: string;
   data?: any;
-  actions?: Array<{ action: string; title: string }>;
-  silent?: boolean;
   requireInteraction?: boolean;
+  silent?: boolean;
+  actions?: Array<{
+    action: string;
+    title: string;
+    icon?: string;
+  }>;
 }
 
-interface PushSubscription {
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
-  };
+interface RequestBody {
+  targetType: 'athlete' | 'team' | 'broadcast' | 'role';
+  targetId?: string;
+  notification: NotificationPayload;
 }
-
-// Configurar VAPID para Web Push
-// Estas chaves devem ser geradas e armazenadas de forma segura
-// Para desenvolvimento, você pode gerar em https://web-push-codelab.glitch.me/
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BFnrHhwNKc9JZP1QVQGGKr2xSOPVk7Gg54tGg3XSuaTRxJkJ5Ch9M0Ss0u1-iBx9F1i5jJKR_ERTBwmCJbtA3BY';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'k1ILuL5K3E6CbEYiQa0Z9wFHxqBYJdFvXn5h9JZxnMY';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:contato@genx.com.br';
-
-// Configurar web-push
-webpush.setVapidDetails(
-  VAPID_SUBJECT,
-  VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
-);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[API] Recebida solicitação para enviar notificação');
@@ -50,18 +45,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Inicializar cliente Supabase
     const supabase = createServerSupabaseClient({ req, res });
     
-    // Verificar autenticação (opcional - você pode remover se quiser permitir requisições não autenticadas)
+    // Verificar autenticação (opcional)
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!session) {
-      console.error('[API] Usuário não autenticado');
-      return res.status(401).json({ error: 'Não autorizado' });
-    }
-
     // Extrair dados da requisição
-    const { targetType, targetId, notification } = req.body;
+    const { targetType, targetId, notification } = req.body as RequestBody;
     
     if (!notification || !notification.title || !notification.body) {
       console.error('[API] Dados de notificação inválidos:', notification);
@@ -77,26 +67,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Filtrar subscriptions com base no tipo de alvo
     if (targetType === 'athlete' && targetId) {
-      subscriptionsQuery = subscriptionsQuery.eq('atleta_id', targetId);
+      subscriptionsQuery = subscriptionsQuery.eq('athlete_id', targetId);
     } else if (targetType === 'team' && targetId) {
       // Buscar primeiro os IDs dos atletas dessa equipe
       const { data: atletasData, error: atletasError } = await supabase
-        .from('atletas')
+        .from('athletes')
         .select('id')
-        .eq('equipe_id', targetId);
+        .eq('time', targetId);
       
       if (atletasError) {
         console.error('[API] Erro ao buscar atletas da equipe:', atletasError);
         return res.status(500).json({ error: 'Erro ao buscar atletas da equipe' });
       }
       
-      const atletaIds = atletasData.map(atleta => atleta.id);
+      const atletaIds = atletasData?.map(atleta => atleta.id) || [];
       if (atletaIds.length === 0) {
         console.warn('[API] Nenhum atleta encontrado para a equipe:', targetId);
         return res.status(200).json({ sent: 0, message: 'Nenhum atleta encontrado para esta equipe' });
       }
       
-      subscriptionsQuery = subscriptionsQuery.in('atleta_id', atletaIds);
+      subscriptionsQuery = subscriptionsQuery.in('athlete_id', atletaIds);
     } else if (targetType === 'role' && targetId) {
       subscriptionsQuery = subscriptionsQuery.eq('user_role', targetId);
     }
@@ -121,7 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
         try {
-          const pushSubscription: PushSubscription = sub.subscription_data;
+          const pushSubscription = sub.subscription_data;
           const payload = JSON.stringify({
             title: notification.title,
             body: notification.body,
@@ -178,17 +168,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const failed = results.filter(r => r.status === 'rejected' || !(r as any).value.success).length;
     
     // Registrar o envio no histórico
-    await supabase.from('notificacoes_historico').insert({
-      tipo: targetType,
-      target_id: targetId || null,
-      titulo: notification.title,
-      mensagem: notification.body,
-      enviadas: successful,
-      falhas: failed,
-      data: notification.data || null,
-      created_at: new Date().toISOString(),
-      user_id: session.user.id
-    });
+    if (session?.user?.id) {
+      await supabase.from('notificacoes_historico').insert({
+        tipo: targetType,
+        target_id: targetId || null,
+        titulo: notification.title,
+        mensagem: notification.body,
+        enviadas: successful,
+        falhas: failed,
+        data: notification.data || null,
+        created_at: new Date().toISOString(),
+        user_id: session.user.id
+      });
+    }
 
     return res.status(200).json({
       success: true,

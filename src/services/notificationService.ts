@@ -112,21 +112,32 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 };
 
-// Obter VAPID public key da API ou usar fallback
+// Obter a chave pública VAPID do servidor
 export const getVapidPublicKey = async (): Promise<string> => {
   try {
-    // Tenta obter a chave do servidor
-    const response = await fetch('/api/notifications/vapid-public-key');
-    if (response.ok) {
-      const data = await response.json();
-      console.log('VAPID public key obtida do servidor');
-      return data.vapidPublicKey;
+    // Usar URL absoluta
+    const apiUrl = window.location.origin + '/api/notifications/vapid-public-key';
+    console.log('Buscando VAPID public key de:', apiUrl);
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Erro ao obter VAPID public key: ${response.status} ${response.statusText}`);
     }
-    throw new Error('Falha ao obter VAPID key');
+    
+    const data = await response.json();
+    console.log('VAPID public key obtida com sucesso');
+    
+    return data.key;
   } catch (error) {
-    console.warn('Usando VAPID key de fallback:', error);
-    // Fallback para uma chave estática (apenas para desenvolvimento)
-    return 'BFnrHhwNKc9JZP1QVQGGKr2xSOPVk7Gg54tGg3XSuaTRxJkJ5Ch9M0Ss0u1-iBx9F1i5jJKR_ERTBwmCJbtA3BY';
+    console.error('Erro ao buscar VAPID public key:', error);
+    // Usar a chave do .env público como fallback
+    const fallbackKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (fallbackKey) {
+      console.log('Usando VAPID public key de fallback');
+      return fallbackKey;
+    }
+    throw error;
   }
 };
 
@@ -332,7 +343,16 @@ export const sendNotificationToAthlete = async (
   console.log(`Enviando notificação para atleta ${atletaId}:`, notification);
   
   try {
-    const response = await fetch('/api/notifications/send', {
+    // Verificar que temos um athleteId válido
+    if (!atletaId) {
+      console.error('ID de atleta não especificado');
+      return false;
+    }
+
+    // URL absoluta para evitar problemas de caminho relativo
+    const apiUrl = window.location.origin + '/api/notifications/send';
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -345,10 +365,19 @@ export const sendNotificationToAthlete = async (
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Erro na resposta da API: ${response.status} ${response.statusText}`, errorText);
       throw new Error(`Erro: ${response.status} ${response.statusText}`);
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (jsonError) {
+      console.error('Erro ao analisar resposta JSON:', await response.text());
+      throw new Error('Resposta da API não é um JSON válido');
+    }
+    
     console.log('Notificação enviada com sucesso:', result);
     return true;
   } catch (error) {
