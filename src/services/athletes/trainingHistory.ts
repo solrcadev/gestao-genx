@@ -31,16 +31,25 @@ export const getHistoricoTreinoPorAtleta = async (atletaId: string): Promise<His
       // Certifique-se que treino existe e possui os campos esperados
       const treino = presenca.treino_do_dia?.treino || {};
       
-      return {
+      const item: HistoricoTreinoPorAtleta = {
         id: presenca.id,
+        treinoId: treino.id || '',
+        nomeTreino: treino.nome || "Treino sem nome",
         data: treino.data || new Date().toISOString().split('T')[0],
-        nome_treino: treino.nome || "Treino sem nome",
         local: treino.local || "Local não especificado",
-        presente: presenca.presente,
+        presenca: presenca.presente,
         justificativa: presenca.justificativa || null,
         treino_id: treino.id || null,
         treino_do_dia_id: presenca.treino_do_dia_id,
+        fundamentos: [],
+        // For compatibility with PerformanceTab
+        date: treino.data || new Date().toISOString().split('T')[0],
+        type: "Treino técnico",
+        duration: 90,
+        status: presenca.presente ? 'completed' : 'missed'
       };
+      
+      return item;
     });
 
     return historico;

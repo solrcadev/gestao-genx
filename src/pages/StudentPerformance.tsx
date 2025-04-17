@@ -1,28 +1,19 @@
-/**
- * StudentPerformance.tsx
- * 
- * Componente para exibição detalhada do desempenho de um atleta/estudante.
- * 
- * Características:
- * - Exibe indicadores gerais de desempenho (frequência, evolução, treinos concluídos)
- * - Visualiza estatísticas por fundamento técnico (saque, recepção, etc.)
- * - Mostra histórico de treinos e participação
- * - Exibe metas do atleta
- * - Permite registrar novas avaliações de desempenho por fundamento
- * - Visualização gráfica da evolução do atleta ao longo do tempo
- * 
- * O componente utiliza React com Ant Design para a interface e Recharts para
- * visualização de dados. Dados são obtidos através dos serviços de performance.
- */
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Progress, Table, Tag, Spin, Tabs, Form, Input, Select, InputNumber, Button as AntButton, message } from 'antd';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useParams, Link } from 'react-router-dom';
-import { getAthletePerformance, getTrainingHistory, getStudentGoals, registrarAvaliacaoDesempenho } from '../services/performanceService';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { getAthletePerformance, getTrainingHistory, getStudentGoals } from '@/services/performanceService';
 import { AthletePerformance } from '@/types';
 import HistoricoTreinosAtleta from '@/components/performance/HistoricoTreinosAtleta';
+import { 
+  adaptAthleteToStudentPerformance, 
+  adaptTrainingHistory,
+  createMockGoals,
+  TrainingHistoryItem
+} from '@/utils/performanceAdapters';
+import { Goal } from '@/types';
+import { Card, Row, Col, Progress, Table, Tag, Spin, Tabs, Form, Input, Select, InputNumber, Button as AntButton, message } from 'antd';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface TrainingHistoryItem {
   id: string;
@@ -30,14 +21,6 @@ interface TrainingHistoryItem {
   type: string;
   duration: number;
   status: 'completed' | 'incomplete';
-}
-
-interface Goal {
-  id: string;
-  title: string;
-  description: string;
-  targetDate: string;
-  progress: number;
 }
 
 const { TabPane } = Tabs;
@@ -57,8 +40,14 @@ const StudentPerformance: React.FC = () => {
       if (studentId) {
         try {
           setLoading(true);
+          
+          // Get current date and date 6 months ago for date range
+          const now = new Date();
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(now.getMonth() - 6);
+          
           const [performanceData, historyData, goalsData] = await Promise.all([
-            getAthletePerformance(studentId),
+            getAthletePerformance(studentId, sixMonthsAgo, now),
             getTrainingHistory(studentId),
             getStudentGoals(studentId)
           ]);
@@ -153,6 +142,7 @@ const StudentPerformance: React.FC = () => {
     },
   ];
 
+  // Fix for line 177
   const handleSubmitAvaliacao = async (values: any) => {
     if (!studentId) return;
     
@@ -174,7 +164,11 @@ const StudentPerformance: React.FC = () => {
       avaliacaoForm.resetFields();
       
       // Recarregar os dados de desempenho
-      const performanceData = await getAthletePerformance(studentId);
+      const now = new Date();
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(now.getMonth() - 6);
+      
+      const performanceData = await getAthletePerformance(studentId, sixMonthsAgo, now);
       setPerformance(performanceData);
     } catch (error) {
       console.error('Erro ao registrar avaliação:', error);
@@ -565,4 +559,4 @@ const StudentPerformance: React.FC = () => {
   );
 };
 
-export default StudentPerformance; 
+export default StudentPerformance;

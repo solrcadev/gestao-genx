@@ -1,42 +1,33 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
-import { syncLocalStorageWithDatabase } from "@/services/syncService";
-import { 
-  getRoute, 
-  ATTEMPTED_ROUTE_KEY, 
-  ROUTE_STORAGE_KEY 
-} from "@/utils/route-persistence";
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useMutation } from '@tanstack/react-query';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
+import { authenticateUser } from '@/services/authService';
+import { setAuthToken } from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
+import { Icons } from '@/components/icons';
 
-// Esquema de validação do formulário
 const formSchema = z.object({
-  email: z.string().email({ message: "Digite um email válido" }),
-  password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
+  email: z.string().email({ message: "Por favor, insira um email válido." }),
+  password: z.string().min(8, { message: "A senha deve ter pelo menos 8 caracteres." }),
 });
 
-type FormValues = z.infer<typeof formSchema>;
-
 const LoginPage: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
@@ -44,178 +35,108 @@ const LoginPage: React.FC = () => {
     },
   });
 
-  // Função para recuperar a rota de redirecionamento após login
-  const getRedirectRoute = (): string => {
-    // Primeiro verificar se há uma rota tentada (quando o usuário tentou acessar uma página protegida)
-    const attemptedRoute = getRoute(ATTEMPTED_ROUTE_KEY, true); // true = limpar após leitura
-    if (attemptedRoute) {
-      console.log("Redirecionando para rota tentada:", attemptedRoute.pathname);
-      return attemptedRoute.pathname + (attemptedRoute.search || '');
-    }
-    
-    // Se não houver rota tentada, verificar a última rota visitada
-    const lastRoute = getRoute(ROUTE_STORAGE_KEY);
-    if (lastRoute) {
-      console.log("Redirecionando para última rota visitada:", lastRoute.pathname);
-      return lastRoute.pathname + (lastRoute.search || '');
-    }
-    
-    // Se não houver rotas salvas válidas, retornar a rota padrão
-    return "/dashboard";
-  };
-
-  // Function to get evaluations from localStorage
-  const getLocalStorageEvaluations = (): any[] => {
-    try {
-      return JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
-    } catch (error) {
-      console.error('Error parsing local storage evaluations:', error);
-      return [];
-    }
-  };
-
-  // Function to remove evaluation from localStorage
-  const removeFromLocalStorage = (id: string): void => {
-    try {
-      const evaluations = getLocalStorageEvaluations();
-      const filtered = evaluations.filter(ev => ev.id !== id);
-      localStorage.setItem('avaliacoes_exercicios', JSON.stringify(filtered));
-    } catch (error) {
-      console.error('Error removing evaluation from localStorage:', error);
-    }
-  };
-
-  const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (error) {
-        toast({
-          title: "Erro ao fazer login",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data?.user) {
-        toast({
-          title: "Login realizado com sucesso",
-          description: "Você será redirecionado para o dashboard.",
-        });
-
-        // Sincronizar avaliações do localStorage com o banco de dados
-        const localEvaluations = getLocalStorageEvaluations();
-        if (localEvaluations.length > 0) {
-          console.log("Sincronizando avaliações do localStorage:", localEvaluations);
-          
-          for (const evaluation of localEvaluations) {
-            try {
-              await syncLocalStorageWithDatabase(evaluation, data.user.id);
-              removeFromLocalStorage(evaluation.id);
-            } catch (syncError) {
-              console.error("Erro ao sincronizar avaliação:", syncError);
-            }
-          }
-        }
-
-        // Redirecionar para a rota adequada
-        const redirectRoute = getRedirectRoute();
-        navigate(redirectRoute);
-      }
-    } catch (err) {
-      console.error("Erro no login:", err);
+  const { mutate } = useMutation(authenticateUser, {
+    onSuccess: (data) => {
+      setIsLoading(false);
+      setAuthToken(data.token);
+      login(data.user);
       toast({
-        title: "Erro ao fazer login",
-        description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        title: "Login successful",
+        description: "You have been logged in successfully."
+      });
+      navigate("/");
+    },
+    onError: (error: any) => {
+      setIsLoading(false);
+      toast({
+        title: "Authentication failed",
+        description: error.message || "Invalid credentials.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
-    }
+    },
+  });
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    mutate(values);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background px-4">
-      <div className="w-full max-w-md space-y-8 p-6 bg-card rounded-lg shadow-md">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">GEN X - Painel de Gestão</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Faça login para acessar o painel de gerenciamento
-          </p>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="seu.email@exemplo.com"
-                      {...field}
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="********"
-                      {...field}
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                "Entrar"
-              )}
-            </Button>
-
-            <div className="text-center">
-              <Button
-                variant="link"
-                className="text-sm text-muted-foreground hover:text-primary"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Implementar a recuperação de senha
-                  navigate("/forgot-password");
-                }}
-              >
-                Esqueci minha senha
+    <div className="flex items-center justify-center h-screen">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl text-center">Login</CardTitle>
+          <CardDescription className="text-center">
+            Entre com seu email e senha
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="seuemail@exemplo.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={isPasswordVisible ? "text" : "password"}
+                          placeholder="********"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                          onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                        >
+                          {isPasswordVisible ? (
+                            <Icons.eyeOff className="h-4 w-4" />
+                          ) : (
+                            <Icons.eye className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">Mostrar senha</span>
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button disabled={isLoading} className="w-full" type="submit">
+                {isLoading && (
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Entrar
               </Button>
-            </div>
-          </form>
-        </Form>
-      </div>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-muted-foreground">
+            Não tem uma conta?{" "}
+            <Link to="/register" className="text-primary hover:underline">
+              Registre-se
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

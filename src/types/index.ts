@@ -110,15 +110,35 @@ export interface PageTitleProps {
 
 // Interface for historical training data
 export interface HistoricoTreinoPorAtleta {
+  id: string; 
   treinoId: string;
   nomeTreino: string;
   data: string;
   local: string;
   presenca: boolean;
-  justificativa?: string;
+  justificativa?: string | null;
+  treino_id?: string | null;
+  treino_do_dia_id?: string | null;
   fundamentos: Array<{
     fundamento: string;
     acertos: number;
     erros: number;
   }>;
+  // For compatibility with PerformanceTab 
+  date?: string;
+  type?: string;
+  duration?: number;
+  status?: 'completed' | 'missed' | 'partial';
 }
+
+// Adding missing Goal interface for PerformanceTab
+export interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  deadline: Date;
+  targetDate?: string;
+  progress: number;
+  status?: 'achieved' | 'in_progress' | 'pending';
+}
+
