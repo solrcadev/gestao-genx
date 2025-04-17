@@ -1,7 +1,19 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 
-// This is a stub for compatibility - the actual implementation would be in a Next.js API route
-// In a Vite project, this functionality would be handled by a backend service
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Apenas permitir solicitações GET
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Método não permitido' });
+  }
 
-export default async function handler() {
-  throw new Error('This is a stub API file for Next.js. Not implemented in Vite.');
-}
+  // Obter a chave pública VAPID do ambiente
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+  if (!vapidPublicKey) {
+    console.error('VAPID public key não está configurada nas variáveis de ambiente');
+    return res.status(500).json({ error: 'VAPID public key não configurada' });
+  }
+
+  // Retornar a chave pública
+  return res.status(200).json({ key: vapidPublicKey });
+} 

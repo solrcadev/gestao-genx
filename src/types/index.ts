@@ -1,4 +1,3 @@
-
 export type Team = "Masculino" | "Feminino";
 
 export type TeamType = "Masculino" | "Feminino";
@@ -11,25 +10,15 @@ export type Position =
   | "Líbero"
   | "Outro";
 
-export type UserRole = 'admin' | 'coach' | 'trainer' | 'athlete' | 'user';
-
-export interface Profile {
-  id: string;
-  role: UserRole;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface Athlete {
   id: string;
   created_at: string;
-  nome: string;
-  idade: number;
-  altura: number;
-  posicao: string;
-  time: Team;
+  nome: string;  // Changed from 'name' to 'nome' to match DB schema
+  idade: number; // Changed from 'age' to 'idade' to match DB schema
+  altura: number; // Changed from 'height' to 'altura' to match DB schema
+  posicao: string; // Changed from 'position' to 'posicao' to match DB schema
+  time: Team;     // Changed from 'team' to 'time' to match DB schema
   foto_url: string | null;
-  imagem_url?: string | null;
   email?: string;
   telefone?: string;
   observacoes?: string;
@@ -77,68 +66,3 @@ export interface Training {
   updated_at?: string;
   status?: string;
 }
-
-// Interface for StudentPerformance to fix PerformanceTab errors
-export interface StudentPerformance {
-  id: string;
-  name: string;
-  position: string;
-  totalTrainings: number;
-  totalGoals: number;
-  attendance: number;
-  performanceScore: number;
-  recentActivity: {
-    date: string;
-    type: string;
-    details: string;
-  }[];
-}
-
-// Interface for export training button
-export interface ExportTrainingButtonProps {
-  trainingId: string;
-  isTreinoDoDia?: boolean;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-}
-
-// Interface for PageTitle component
-export interface PageTitleProps {
-  title?: string;
-  children?: React.ReactNode;
-}
-
-// Interface for historical training data
-export interface HistoricoTreinoPorAtleta {
-  id: string; 
-  treinoId: string;
-  nomeTreino: string;
-  data: string;
-  local: string;
-  presenca: boolean;
-  justificativa?: string | null;
-  treino_id?: string | null;
-  treino_do_dia_id?: string | null;
-  fundamentos: Array<{
-    fundamento: string;
-    acertos: number;
-    erros: number;
-  }>;
-  // For compatibility with PerformanceTab 
-  date?: string;
-  type?: string;
-  duration?: number;
-  status?: 'completed' | 'missed' | 'partial';
-}
-
-// Adding missing Goal interface for PerformanceTab
-export interface Goal {
-  id: string;
-  title: string;
-  description: string;
-  deadline: Date;
-  targetDate?: string;
-  progress: number;
-  status?: 'achieved' | 'in_progress' | 'pending';
-}
-

@@ -13,7 +13,6 @@ export type Database = {
         Row: {
           altura: number
           created_at: string | null
-          foto_url: string | null
           id: string
           idade: number
           imagem_url: string | null
@@ -26,7 +25,6 @@ export type Database = {
         Insert: {
           altura: number
           created_at?: string | null
-          foto_url?: string | null
           id?: string
           idade: number
           imagem_url?: string | null
@@ -39,7 +37,6 @@ export type Database = {
         Update: {
           altura?: number
           created_at?: string | null
-          foto_url?: string | null
           id?: string
           idade?: number
           imagem_url?: string | null
@@ -624,136 +621,6 @@ export type Database = {
           },
         ]
       }
-      notificacoes_historico: {
-        Row: {
-          created_at: string | null
-          data: Json | null
-          enviadas: number | null
-          falhas: number | null
-          id: string
-          mensagem: string
-          target_id: string | null
-          tipo: string
-          titulo: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          data?: Json | null
-          enviadas?: number | null
-          falhas?: number | null
-          id?: string
-          mensagem: string
-          target_id?: string | null
-          tipo: string
-          titulo: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          data?: Json | null
-          enviadas?: number | null
-          falhas?: number | null
-          id?: string
-          mensagem?: string
-          target_id?: string | null
-          tipo?: string
-          titulo?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      notificacoes_preferencias: {
-        Row: {
-          athlete_id: string | null
-          ausencias_sem_justificativa: boolean | null
-          avaliacoes: boolean | null
-          created_at: string | null
-          id: string
-          lembretes_treino: boolean | null
-          novas_metas: boolean | null
-          ranking_semanal: boolean | null
-          treino_do_dia: boolean | null
-          updated_at: string | null
-        }
-        Insert: {
-          athlete_id?: string | null
-          ausencias_sem_justificativa?: boolean | null
-          avaliacoes?: boolean | null
-          created_at?: string | null
-          id?: string
-          lembretes_treino?: boolean | null
-          novas_metas?: boolean | null
-          ranking_semanal?: boolean | null
-          treino_do_dia?: boolean | null
-          updated_at?: string | null
-        }
-        Update: {
-          athlete_id?: string | null
-          ausencias_sem_justificativa?: boolean | null
-          avaliacoes?: boolean | null
-          created_at?: string | null
-          id?: string
-          lembretes_treino?: boolean | null
-          novas_metas?: boolean | null
-          ranking_semanal?: boolean | null
-          treino_do_dia?: boolean | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notificacoes_preferencias_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notificacoes_subscriptions: {
-        Row: {
-          athlete_id: string | null
-          created_at: string | null
-          device_info: Json | null
-          endpoint: string
-          id: string
-          last_used: string | null
-          subscription_data: Json
-          updated_at: string | null
-          user_role: string
-        }
-        Insert: {
-          athlete_id?: string | null
-          created_at?: string | null
-          device_info?: Json | null
-          endpoint: string
-          id?: string
-          last_used?: string | null
-          subscription_data: Json
-          updated_at?: string | null
-          user_role?: string
-        }
-        Update: {
-          athlete_id?: string | null
-          created_at?: string | null
-          device_info?: Json | null
-          endpoint?: string
-          id?: string
-          last_used?: string | null
-          subscription_data?: Json
-          updated_at?: string | null
-          user_role?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notificacoes_subscriptions_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           created_at: string | null
@@ -1194,45 +1061,11 @@ export type Database = {
           },
         ]
       }
-      users: {
-        Row: {
-          created_at: string | null
-          email: string
-          encrypted_password: string
-          id: string
-          nome: string
-          role: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          encrypted_password: string
-          id?: string
-          nome: string
-          role?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          encrypted_password?: string
-          id?: string
-          nome?: string
-          role?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      cleanup_old_subscriptions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       user_has_role: {
         Args: { requested_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
