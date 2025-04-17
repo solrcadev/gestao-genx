@@ -66,104 +66,97 @@
     @apply mx-auto max-w-md px-4 pb-20 pt-4;
   }
 
+  /* Containers responsivos aprimorados - mais compactos em mobile */
   .container-sm {
-    @apply mx-auto max-w-sm px-4;
+    @apply mx-auto max-w-sm px-3 sm:px-4;
   }
 
   .container-md {
-    @apply mx-auto max-w-md px-4;
+    @apply mx-auto max-w-md px-3 sm:px-4;
   }
 
   .container-lg {
-    @apply mx-auto max-w-lg px-4;
+    @apply mx-auto max-w-lg px-3 sm:px-4;
   }
 
   .container-xl {
-    @apply mx-auto max-w-xl px-4;
+    @apply mx-auto max-w-xl px-3 sm:px-4;
   }
 
   .container-2xl {
-    @apply mx-auto max-w-2xl px-4;
+    @apply mx-auto max-w-2xl px-3 sm:px-4;
   }
 
-  .card-athlete {
-    @apply relative overflow-hidden bg-card rounded-xl border border-border transition-all hover:shadow-md hover:border-primary/50;
+  /* Melhor espaçamento em colunas para mobile */
+  .grid-cols-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4;
   }
 
-  .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 flex justify-around items-center h-16 bg-card border-t border-border shadow-lg z-50;
+  /* Sistema de grid flexível para contagem variável de colunas */
+  .grid-cols-auto-fill {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 
-  .bottom-nav-item {
-    @apply flex flex-col items-center justify-center text-xs text-muted-foreground transition-colors;
+  .grid-cols-auto-fill-sm {
+    @apply grid gap-3 sm:gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 
-  .bottom-nav-item.active {
-    @apply text-primary;
+  /* Melhor área de toque para botões */
+  button, .btn, [role="button"], 
+  a.btn, a[role="button"],
+  label[for], input[type="checkbox"] + label, 
+  input[type="radio"] + label {
+    @apply min-h-[40px] sm:min-h-[44px] min-w-[40px] sm:min-w-[44px];
+    touch-action: manipulation;
   }
   
-  .bottom-nav-icon {
-    @apply mb-1 h-5 w-5;
+  /* Para garantir que inputs e areas de interação sejam adequadas para touch */
+  input, select, textarea {
+    @apply text-base leading-relaxed;
+    font-size: max(16px, 1rem);
   }
 
-  .floating-action-button {
-    @apply fixed bottom-20 right-4 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 z-40;
+  /* Espaçamentos mais densos em mobile */
+  .p-mobile-dense {
+    @apply p-3 sm:p-4 md:p-6;
   }
   
-  .smooth-animation {
-    @apply transition-all duration-200;
+  .px-mobile-dense {
+    @apply px-3 sm:px-4 md:px-6;
   }
   
-  /* Exercise-specific styles */
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  .py-mobile-dense {
+    @apply py-3 sm:py-4 md:py-6;
   }
 
-  .bg-sport-blue {
-    @apply bg-blue-500 text-white;
-  }
-  
-  .bg-sport-red {
-    @apply bg-red-500 text-white;
+  /* Tamanhos de texto responsivos */
+  .text-responsive {
+    @apply text-sm sm:text-base;
   }
 
-  /* Animation Classes */
-  .animate-fade-in {
-    animation: fadeIn 0.3s ease-out;
+  .text-responsive-title {
+    @apply text-lg sm:text-xl md:text-2xl font-semibold;
   }
 
-  .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
+  .text-responsive-subtitle {
+    @apply text-base sm:text-lg font-medium;
   }
 
-  .animate-scale-in {
-    animation: scaleIn 0.3s ease-out;
+  /* Para garantir que elementos com overflow tenham scroll suave */
+  .overflow-container {
+    @apply overflow-auto overscroll-contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 
-  .animate-pulse-soft {
-    animation: pulseSoft 2s infinite;
-  }
-
-  /* Transições melhoradas */
-  .transition-all {
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 200ms;
-  }
-
-  .transition-fast {
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-  }
-
-  .transition-slow {
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
+  /* Cards otimizados para mobile */
+  .card-mobile-friendly {
+    @apply w-full border rounded-lg overflow-hidden;
+    @apply p-3 sm:p-4;
+    @apply flex flex-col;
+    @apply break-words;
   }
 
   /* Estilos para feedback tátil em dispositivos móveis */
@@ -233,6 +226,32 @@
     }
   }
 
+  /* Animações para elementos */
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.4s ease-out forwards;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+
+  .animate-staggered-item {
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+
+  /* Gerar classes para animações com atraso */
+  .delay-0 { animation-delay: 0ms; }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+
   /* Estilos responsivos para textos */
   .text-responsive {
     @apply text-sm sm:text-base md:text-base lg:text-base;
@@ -244,5 +263,246 @@
 
   .subtitle-responsive {
     @apply text-lg sm:text-xl md:text-xl lg:text-2xl font-semibold;
+  }
+
+  /* Gráficos responsivos */
+  .chart-container {
+    @apply w-full overflow-hidden;
+    height: min(300px, 70vh);
+  }
+  
+  /* Melhorar legibilidade de tabelas em dispositivos móveis */
+  .table-mobile-friendly {
+    @apply w-full;
+  }
+  
+  .table-mobile-friendly th,
+  .table-mobile-friendly td {
+    @apply p-2 sm:p-3;
+    @apply text-sm sm:text-base;
+    @apply truncate;
+  }
+  
+  /* Barra de navegação fixa na parte inferior para mobile */
+  .mobile-bottom-nav {
+    @apply fixed bottom-0 left-0 right-0;
+    @apply bg-background/95 backdrop-blur-sm border-t;
+    @apply flex justify-around items-center;
+    @apply py-2 px-1;
+    @apply z-50;
+    height: 60px;
+  }
+  
+  .mobile-bottom-nav-button {
+    @apply flex flex-col items-center justify-center;
+    @apply w-16 h-12;
+    @apply rounded-md;
+    @apply text-xs font-medium;
+  }
+  
+  /* Garantir conteúdo principal não seja sobreposto pela navegação móvel */
+  .pb-safe {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px) + 60px);
+  }
+  
+  /* Layout de lista para mobile */
+  .mobile-list {
+    @apply space-y-2 sm:space-y-3;
+  }
+  
+  .mobile-list-item {
+    @apply p-3 sm:p-4;
+    @apply border rounded-lg;
+    @apply flex items-center justify-between;
+    @apply break-words;
+  }
+  
+  /* Responsividade para modais */
+  .modal-mobile-friendly {
+    @apply max-h-[85vh] overflow-auto;
+    @apply p-3 sm:p-5;
+    @apply w-[95vw] sm:w-auto sm:min-w-[400px] max-w-[95vw] sm:max-w-[600px];
+  }
+
+  /* Helpers para bordas arredondadas mais adequadas em mobile */
+  .rounded-mobile {
+    @apply rounded-lg sm:rounded-xl;
+  }
+
+  /* Sombreamentos otimizados para interfaces móveis */
+  .shadow-mobile {
+    @apply shadow-sm sm:shadow-md;
+  }
+
+  /* Espaçamento seguro para notch e home bar em dispositivos iOS */
+  .pt-safe {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  }
+
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+
+  /* Melhorias para acessibilidade em dispositivos touch */
+  @media (pointer: coarse) {
+    .touch-target {
+      @apply min-h-[44px] min-w-[44px];
+    }
+  }
+
+  /* Estilos melhorados para modais de exercícios com conteúdo scrollável */
+  .modal-exercise {
+    /* Altura máxima para garantir que caiba em telas menores */
+    @apply max-h-[90vh] lg:max-h-[85vh];
+    /* Layout flexível para posicionar cabeçalho, conteúdo e rodapé */
+    @apply flex flex-col;
+  }
+
+  .modal-exercise-header {
+    /* Cabeçalho fixo */
+    @apply sticky top-0 bg-background z-10 pt-4 px-4 pb-3 border-b;
+  }
+
+  .modal-exercise-content {
+    /* Conteúdo com scroll */
+    @apply flex-1 overflow-y-auto p-4 overscroll-contain;
+    /* Garantir scroll suave em dispositivos touch */
+    -webkit-overflow-scrolling: touch;
+    /* Espaço para o footer fixo */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .modal-exercise-footer {
+    /* Rodapé fixo na parte inferior do modal */
+    @apply sticky bottom-0 bg-background border-t p-4 mt-auto z-10;
+    /* Adicionar padding para iOS home indicator */
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    /* Sombra sutil para indicar que é um elemento fixo */
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Melhorias para touch */
+  .modal-close-button {
+    @apply absolute right-4 top-4 z-20 p-2 rounded-full bg-background/60 backdrop-blur-sm;
+    @apply text-foreground hover:bg-muted transition-colors;
+    @apply touch-feedback touch-target;
+  }
+
+  /* Ajuste para botões nos formulários de modal */
+  .modal-form-buttons {
+    @apply flex flex-row justify-end gap-2;
+    @apply w-full;
+  }
+
+  .modal-form-buttons button {
+    @apply px-4 min-h-[44px] touch-feedback;
+  }
+
+  /* Ajustes específicos para modais em dispositivos de tela pequena */
+  @media (max-width: 640px) {
+    .drawer-content-exercise {
+      @apply p-0 !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+    }
+
+    /* Aumentar área de toque no mobile */
+    .modal-exercise button, 
+    .modal-exercise [role="button"],
+    .modal-exercise .touch-target {
+      @apply min-h-[48px] min-w-[48px];
+      @apply touch-feedback;
+    }
+
+    /* Garantir que o backdrop tenha um z-index adequado */
+    .modal-exercise-backdrop {
+      @apply z-50;
+    }
+  }
+  
+  /* Ajustes específicos para orientação de tela em dispositivos móveis */
+  @media (max-width: 768px) and (orientation: portrait) {
+    .modal-exercise-header {
+      padding-top: calc(env(safe-area-inset-top, 16px) + 8px);
+    }
+    
+    .modal-exercise-content {
+      /* Ajuste para maior espaço para conteúdo em modo retrato */
+      max-height: calc(100vh - 120px - env(safe-area-inset-bottom, 0px));
+    }
+    
+    .modal-exercise-footer {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    }
+    
+    /* Classe específica para usar com orientação */
+    .modal-exercise-portrait {
+      @apply flex-col;
+      max-height: 100vh;
+    }
+  }
+  
+  @media (max-width: 768px) and (orientation: landscape) {
+    .modal-exercise {
+      /* Ajuste para modo paisagem onde a altura é limitada */
+      @apply flex-row overflow-hidden;
+      max-height: 100vh;
+    }
+    
+    .modal-exercise-header {
+      @apply sticky top-0 w-1/3 min-w-[200px] border-r border-b-0 h-screen;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+    }
+    
+    .modal-exercise-content {
+      @apply flex-1 h-screen pt-4;
+      padding-bottom: 80px;
+    }
+    
+    .modal-exercise-footer {
+      @apply fixed bottom-0 right-0 left-0 border-t;
+      width: calc(100% - 200px);
+      margin-left: 200px;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    }
+    
+    /* Classe específica para usar com orientação */
+    .modal-exercise-landscape {
+      @apply flex-row overflow-hidden;
+      max-height: 100vh;
+    }
+    
+    .modal-exercise-landscape .modal-exercise-header {
+      @apply sticky top-0 w-1/3 min-w-[200px] border-r border-b-0 h-screen;
+    }
+    
+    .modal-exercise-landscape .modal-exercise-content {
+      @apply flex-1 h-screen;
+    }
+    
+    .modal-exercise-landscape .modal-exercise-footer {
+      @apply fixed bottom-0 right-0 left-0;
+      width: calc(100% - 200px);
+      margin-left: 200px;
+    }
+  }
+  
+  /* Ajustes para diferentes tamanhos de iPhone */
+  @media (max-width: 375px) {
+    .modal-exercise-content {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+    
+    .modal-form-buttons button {
+      @apply px-3 text-sm;
+    }
+  }
+  
+  /* Ajustes para iPads e tablets */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .modal-exercise {
+      @apply max-w-3xl mx-auto;
+    }
   }
 }

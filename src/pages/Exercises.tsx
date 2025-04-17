@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, X } from 'lucide-react';
 import { Drawer } from '@/components/ui/drawer';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import {
   DrawerHeader,
   DrawerTitle
 } from '@/components/ui/drawer';
+import { useDeviceInfo } from '@/hooks/use-mobile';
 
 // Categories for exercises
 const CATEGORIES = [
@@ -43,18 +44,9 @@ const ExercisesPage = () => {
   const [categoryFilter, setCategoryFilter] = useState("all-categories");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+  const { isMobile, isSmallScreen, orientation } = useDeviceInfo();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Track window size for responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Fetch exercises
   const { data: exercises = [], isLoading } = useQuery({
@@ -97,7 +89,7 @@ const ExercisesPage = () => {
   // Handlers
   const handleOpenForm = (exercise = null) => {
     setEditingExercise(exercise);
-    if (isMobileView) {
+    if (isMobile) {
       setIsDrawerOpen(true);
     } else {
       setIsDialogOpen(true);
@@ -184,8 +176,15 @@ const ExercisesPage = () => {
       )}
       
       {/* Mobile: Drawer for exercise form */}
-      <Drawer open={isDrawerOpen && isMobileView} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="p-4 pt-8 max-h-dvh">
+      <Drawer open={isDrawerOpen && isMobile} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent className="drawer-content-exercise">
+          <button
+            onClick={() => setIsDrawerOpen(false)}
+            className="modal-close-button"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <ExerciseForm 
             exercise={editingExercise}
             onClose={handleFormClose}
@@ -196,8 +195,15 @@ const ExercisesPage = () => {
       </Drawer>
 
       {/* Desktop: Dialog for exercise form */}
-      <Dialog open={isDialogOpen && !isMobileView} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
+      <Dialog open={isDialogOpen && !isMobile} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="p-0 modal-exercise-backdrop">
+          <button 
+            onClick={() => setIsDialogOpen(false)}
+            className="modal-close-button"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <ExerciseForm 
             exercise={editingExercise}
             onClose={handleFormClose}

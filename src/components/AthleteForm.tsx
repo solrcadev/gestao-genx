@@ -85,7 +85,7 @@ const AthleteForm = ({ athlete, open, onClose, onSave }: AthleteFormProps) => {
 
       if (photoFile) {
         try {
-          photoUrl = await uploadAthletePhoto(photoFile);
+          photoUrl = await uploadAthletePhoto(photoFile, athlete?.id);
         } catch (error: any) {
           setUploadError(error.message || "Não foi possível fazer upload da foto. Verifique o tamanho e o formato.");
           setShowUploadAlert(true);

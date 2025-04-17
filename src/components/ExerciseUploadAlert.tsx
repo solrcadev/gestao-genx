@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BucketCreationGuide } from "./BucketCreationGuide";
 
-interface PhotoUploadAlertProps {
+interface ExerciseUploadAlertProps {
   open: boolean;
   onClose: () => void;
   onContinue: () => void;
@@ -20,13 +20,13 @@ interface PhotoUploadAlertProps {
   error: string;
 }
 
-export function PhotoUploadAlert({
+export function ExerciseUploadAlert({
   open,
   onClose,
   onContinue,
   onCancel,
   error
-}: PhotoUploadAlertProps) {
+}: ExerciseUploadAlertProps) {
   const [showGuide, setShowGuide] = useState(false);
   const isBucketNotFoundError = error?.includes("Bucket not found") || error?.toLowerCase().includes("bucket");
 
@@ -35,17 +35,17 @@ export function PhotoUploadAlert({
       <AlertDialog open={open} onOpenChange={onClose}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Erro no upload da foto</AlertDialogTitle>
+            <AlertDialogTitle>Erro no upload da imagem</AlertDialogTitle>
             <AlertDialogDescription>
-              {error || "Não foi possível fazer upload da foto."}
+              {error || "Não foi possível fazer upload da imagem."}
               
               {isBucketNotFoundError && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <p className="text-sm font-medium mb-2">
-                    Parece que o bucket 'athletes-images' não existe no seu projeto Supabase.
+                    Parece que o bucket 'exercises-images' não existe no seu projeto Supabase.
                   </p>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Este bucket é necessário para armazenar as fotos dos atletas.
+                    Este bucket é necessário para armazenar as imagens dos exercícios.
                   </p>
                   <Button 
                     variant="outline" 
@@ -62,7 +62,7 @@ export function PhotoUploadAlert({
           <AlertDialogFooter>
             <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={onContinue}>
-              Continuar sem foto
+              Continuar sem imagem
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

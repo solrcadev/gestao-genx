@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -18,6 +17,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { syncLocalStorageWithDatabase } from "@/services/syncService";
+import { 
+  getRoute, 
+  ATTEMPTED_ROUTE_KEY, 
+  ROUTE_STORAGE_KEY 
+} from "@/utils/route-persistence";
 
 // Esquema de validação do formulário
 const formSchema = z.object({
@@ -39,6 +43,26 @@ const LoginPage: React.FC = () => {
       password: "",
     },
   });
+
+  // Função para recuperar a rota de redirecionamento após login
+  const getRedirectRoute = (): string => {
+    // Primeiro verificar se há uma rota tentada (quando o usuário tentou acessar uma página protegida)
+    const attemptedRoute = getRoute(ATTEMPTED_ROUTE_KEY, true); // true = limpar após leitura
+    if (attemptedRoute) {
+      console.log("Redirecionando para rota tentada:", attemptedRoute.pathname);
+      return attemptedRoute.pathname + (attemptedRoute.search || '');
+    }
+    
+    // Se não houver rota tentada, verificar a última rota visitada
+    const lastRoute = getRoute(ROUTE_STORAGE_KEY);
+    if (lastRoute) {
+      console.log("Redirecionando para última rota visitada:", lastRoute.pathname);
+      return lastRoute.pathname + (lastRoute.search || '');
+    }
+    
+    // Se não houver rotas salvas válidas, retornar a rota padrão
+    return "/dashboard";
+  };
 
   // Function to get evaluations from localStorage
   const getLocalStorageEvaluations = (): any[] => {
@@ -70,70 +94,50 @@ const LoginPage: React.FC = () => {
       });
 
       if (error) {
-        let errorMessage = "Falha no login. Tente novamente.";
-
-        if (error.message.includes("Invalid login credentials")) {
-          errorMessage = "Email ou senha incorretos.";
-        } else if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Seu email ainda não foi confirmado.";
-        }
-
         toast({
           title: "Erro ao fazer login",
-          description: errorMessage,
+          description: error.message,
           variant: "destructive",
         });
-        console.error("Login error:", error);
-      } else {
-        // Login bem-sucedido
-        toast({
-          title: "Login bem-sucedido",
-          description: "Bem-vindo de volta!",
-        });
-        
-        // Tentar sincronizar dados locais com o banco após login bem-sucedido
-        try {
-          await syncLocalStorageWithDatabase();
-        } catch (syncError) {
-          console.error("Erro ao sincronizar dados após login:", syncError);
-          // Não interrompe o fluxo se a sincronização falhar
-        }
-        
-        navigate("/dashboard");
+        return;
       }
-    } catch (error) {
-      console.error("Unexpected error during login:", error);
+
+      if (data?.user) {
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Você será redirecionado para o dashboard.",
+        });
+
+        // Sincronizar avaliações do localStorage com o banco de dados
+        const localEvaluations = getLocalStorageEvaluations();
+        if (localEvaluations.length > 0) {
+          console.log("Sincronizando avaliações do localStorage:", localEvaluations);
+          
+          for (const evaluation of localEvaluations) {
+            try {
+              await syncLocalStorageWithDatabase(evaluation, data.user.id);
+              removeFromLocalStorage(evaluation.id);
+            } catch (syncError) {
+              console.error("Erro ao sincronizar avaliação:", syncError);
+            }
+          }
+        }
+
+        // Redirecionar para a rota adequada
+        const redirectRoute = getRedirectRoute();
+        navigate(redirectRoute);
+      }
+    } catch (err) {
+      console.error("Erro no login:", err);
       toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro ao tentar fazer login.",
+        title: "Erro ao fazer login",
+        description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Função para sincronizar dados locais com o banco
-  async function syncLocalEvaluations() {
-    const localEvaluations = getLocalStorageEvaluations();
-    
-    for (const evaluation of localEvaluations) {
-      try {
-        const { error } = await supabase
-          .from('avaliacoes_exercicios')
-          .insert([evaluation]);
-          
-        if (!error) {
-          // Remover avaliação do armazenamento local após sincronização bem-sucedida
-          removeFromLocalStorage(evaluation.id);
-        }
-      } catch (err) {
-        console.error('Erro ao sincronizar avaliação:', err);
-      }
-    }
-  }
-
-  // Chamar esta função periodicamente ou quando o usuário voltar online
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-4">

@@ -5,7 +5,7 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 
 ## Tecnologias Utilizadas
 - **Frontend**: React, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Supabase (PostgreSQL, Autenticação, APIs)
+- **Backend**: Supabase (PostgreSQL, Autenticação, APIs, Storage)
 - **Gerenciamento de Estado**: React Query
 - **Gráficos**: Recharts
 - **Roteamento**: React Router Dom
@@ -16,10 +16,12 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 - Cadastro e edição de atletas
 - Filtros por time (masculino/feminino)
 - Visualização detalhada por atleta
+- Upload de fotos de atletas
 
 ### 2. Treinos
 - Criação e montagem de treinos
 - Associação de exercícios aos treinos
+- Edição de exercícios em treinos já cadastrados
 - Definição de treino do dia
 - Avaliação de desempenho durante os treinos (acertos/erros)
 - Sincronização em tempo real das avaliações
@@ -41,6 +43,11 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 - Filtros por status (Em andamento, Concluídas, Atrasadas)
 - Histórico de atualizações das metas
 
+### 6. Biblioteca de Exercícios
+- Cadastro de exercícios com imagens ilustrativas
+- Categorização de exercícios
+- Reutilização de exercícios em diferentes treinos
+
 ## Estrutura do Banco de Dados
 
 ### Tabelas Principais
@@ -54,7 +61,23 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 8. **metas**: Metas de evolução para atletas
 9. **historico_metas**: Histórico de atualizações das metas
 
+### Buckets do Storage
+1. **athletes-images**: Armazena fotos de atletas
+2. **exercises-images**: Armazena imagens ilustrativas de exercícios
+
 ## Atualizações Recentes
+
+### Edição de Exercícios em Treinos
+- Implementação da funcionalidade para editar exercícios em treinos já cadastrados
+- Criação do componente `EditTrainingExercises` para gerenciar a edição
+- Adição de função `updateTrainingExercises` no serviço de treinos para atualizar os exercícios
+
+### Correção do Upload de Imagens
+- Correção de erro "Bucket not found" nas funcionalidades de upload
+- Atualização dos nomes dos buckets de 'avatars' para 'athletes-images' e de 'exercicios' para 'exercises-images'
+- Implementação de scripts de verificação e criação automática de buckets
+- Melhoria no tratamento de erros de upload, com mensagens amigáveis e guias de solução
+- Criação de componentes para exibir alertas específicos para cada tipo de upload
 
 ### Sincronização em Tempo Real de Avaliações
 - Implementação de sincronização em tempo real das avaliações durante os treinos
@@ -72,6 +95,7 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 - Adaptação do componente Select para evitar valores vazios
 - Implementação de consultas separadas para contornar limitações de joins no Supabase
 - Verificação e criação automática de tabelas quando não existem no banco
+- Documentação detalhada sobre solução de problemas com Storage
 
 ## Scripts SQL
 
@@ -106,11 +130,47 @@ CREATE TABLE IF NOT EXISTS public.historico_metas (
 );
 ```
 
+## Configuração do Storage do Supabase
+
+Para garantir que o upload de imagens funcione corretamente, é necessário configurar os buckets do Storage do Supabase:
+
+1. Criar dois buckets:
+   - `athletes-images`: para fotos de atletas
+   - `exercises-images`: para imagens de exercícios
+   
+2. Configurar políticas de acesso para permitir upload e download de imagens.
+
+O script `scripts/setup-storage.js` automatiza este processo, verificando a existência dos buckets e criando-os quando necessário.
+
+## Scripts de Utilitários
+
+### Verificação e Criação de Buckets
+O script `src/scripts/createBuckets.js` verifica automaticamente se os buckets necessários existem no Supabase e os cria se necessário:
+
+```javascript
+const REQUIRED_BUCKETS = [
+  { name: 'athletes-images', isPublic: true },
+  { name: 'exercises-images', isPublic: true }
+];
+
+async function checkAndCreateBuckets() {
+  // Verificar buckets existentes
+  // Criar os que não existem
+  // Configurar políticas de acesso
+}
+```
+
 ## Estado Atual e Próximos Passos
 1. O aplicativo possui todas as funcionalidades principais implementadas
 2. A sincronização de dados entre dispositivos está funcionando
 3. O módulo de Metas e Evolução está completo
-4. Próximos passos incluem melhorias na UX e relatórios avançados
+4. Upload e gerenciamento de imagens corrigido e funcionando
+5. Próximos passos incluem melhorias na UX e relatórios avançados
+
+## Documentação Adicional
+- `STORAGE_README.md`: Instruções detalhadas para configuração do Storage
+- `src/docs/UPLOAD_TROUBLESHOOTING.md`: Guia de solução de problemas de upload
+- `src/docs/IMPLEMENTACAO.md`: Detalhes técnicos das correções implementadas
 
 ## Contribuidores
 - Equipe de desenvolvimento GenX

@@ -19,7 +19,7 @@ export function BucketCreationGuide({ open, onClose }: BucketCreationGuideProps)
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Como criar o bucket 'avatars' no Supabase</DialogTitle>
+          <DialogTitle>Como criar os buckets necessários no Supabase</DialogTitle>
           <DialogDescription>
             Siga estas instruções para configurar seu armazenamento no Supabase
           </DialogDescription>
@@ -49,15 +49,27 @@ export function BucketCreationGuide({ open, onClose }: BucketCreationGuideProps)
             </section>
             
             <section className="space-y-2">
-              <h3 className="text-lg font-semibold">4. Crie um novo bucket</h3>
+              <h3 className="text-lg font-semibold">4. Crie os buckets necessários</h3>
               <p className="text-sm text-muted-foreground">
-                Clique no botão "Create new bucket" ou "New bucket".
+                Você precisa criar dois buckets para o sistema funcionar corretamente. Para cada bucket, clique no botão "Create new bucket" ou "New bucket".
               </p>
+
+              <h4 className="text-base font-medium">4.1 Bucket para fotos de atletas</h4>
               <p className="text-sm text-muted-foreground">
                 No formulário que aparece:
               </p>
               <ul className="list-disc list-inside text-sm text-muted-foreground ml-4 space-y-1">
-                <li>Digite <span className="font-mono bg-muted px-1 rounded">avatars</span> como nome do bucket</li>
+                <li>Digite <span className="font-mono bg-muted px-1 rounded">athletes-images</span> como nome do bucket</li>
+                <li>Marque a opção "Public" para permitir acesso público às imagens</li>
+                <li>Clique em "Create bucket" para finalizar</li>
+              </ul>
+
+              <h4 className="text-base font-medium mt-3">4.2 Bucket para imagens de exercícios</h4>
+              <p className="text-sm text-muted-foreground">
+                Repita o processo para o segundo bucket:
+              </p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground ml-4 space-y-1">
+                <li>Digite <span className="font-mono bg-muted px-1 rounded">exercises-images</span> como nome do bucket</li>
                 <li>Marque a opção "Public" para permitir acesso público às imagens</li>
                 <li>Clique em "Create bucket" para finalizar</li>
               </ul>
@@ -66,7 +78,7 @@ export function BucketCreationGuide({ open, onClose }: BucketCreationGuideProps)
             <section className="space-y-2">
               <h3 className="text-lg font-semibold">5. Configure as permissões</h3>
               <p className="text-sm text-muted-foreground">
-                Após criar o bucket, vá para a aba "Policies" e configure uma política para permitir uploads:
+                Para cada bucket criado, vá para a aba "Policies" e configure uma política para permitir uploads:
               </p>
               <ul className="list-disc list-inside text-sm text-muted-foreground ml-4 space-y-1">
                 <li>Clique em "Add policy" ou "New policy"</li>
@@ -76,14 +88,14 @@ export function BucketCreationGuide({ open, onClose }: BucketCreationGuideProps)
                 <li>Clique em "Save policy"</li>
               </ul>
               <p className="text-sm text-muted-foreground mt-2">
-                Isso criará uma política que permite uploads para o bucket 'avatars'.
+                Isso criará uma política que permite uploads para o bucket, configurando assim todas as permissões necessárias.
               </p>
             </section>
             
             <section className="space-y-2 pt-4">
               <h3 className="text-lg font-semibold text-primary">Importante</h3>
               <p className="text-sm text-muted-foreground">
-                Após criar o bucket e configurar as políticas, atualize a página da aplicação e tente novamente o upload da foto.
+                Após criar os buckets e configurar as políticas, atualize a página da aplicação e tente novamente o upload das imagens.
               </p>
               <p className="text-sm text-muted-foreground">
                 Para um ambiente de produção, recomenda-se configurar políticas mais seguras que apenas permitam uploads para usuários autenticados.

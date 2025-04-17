@@ -254,40 +254,54 @@ const StudentPerformance: React.FC = () => {
       </Row>
       
       <Row gutter={[16, 16]}>
-        <Col span={6}>
-          <Card title="Frequência">
-            <Progress
-              type="circle"
-              percent={performance.presenca.percentual}
-              format={percent => `${Math.round(percent)}%`}
-            />
+        <Col xs={24} sm={12} md={8}>
+          <Card>
+            <div className="text-center p-2">
+              <Progress
+                type="circle"
+                percent={Math.round(performance.presenca.percentual)}
+                format={(percent) => `${percent}%`}
+                strokeColor="#1890ff"
+              />
+              <div className="mt-2">
+                <h4 className="text-base font-medium">Frequência</h4>
+                <p className="text-sm text-gray-500">% de presença em treinos</p>
+              </div>
+            </div>
           </Card>
         </Col>
-        <Col span={6}>
-          <Card title="Evolução">
-            <Progress
-              type="circle"
-              percent={performance.avaliacoes.mediaNota}
-              format={percent => `${Math.round(percent)}%`}
-            />
+        
+        <Col xs={24} sm={12} md={8}>
+          <Card>
+            <div className="text-center p-2">
+              <Progress
+                type="circle"
+                percent={Math.round(performance.avaliacoes.mediaNota)}
+                format={(percent) => `${percent}%`}
+                strokeColor="#52c41a"
+              />
+              <div className="mt-2">
+                <h4 className="text-base font-medium">Evolução</h4>
+                <p className="text-sm text-gray-500">Progresso técnico</p>
+              </div>
+            </div>
           </Card>
         </Col>
-        <Col span={6}>
-          <Card title="Treinos Concluídos">
-            <Progress
-              type="circle"
-              percent={(performance.presenca.presentes / Math.max(performance.presenca.total, 1)) * 100}
-              format={() => `${performance.presenca.presentes}`}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card title="Fundamentos Avaliados">
-            <Progress
-              type="circle"
-              percent={Object.keys(performance.avaliacoes.porFundamento).length * 16.6}
-              format={() => `${Object.keys(performance.avaliacoes.porFundamento).length}`}
-            />
+        
+        <Col xs={24} sm={12} md={8}>
+          <Card>
+            <div className="text-center p-2">
+              <Progress
+                type="circle"
+                percent={Math.round((performance.presenca.presentes / Math.max(performance.presenca.total, 1)) * 100)}
+                format={() => <span className="text-base">{performance.presenca.presentes}/{performance.presenca.total || 0}</span>}
+                strokeColor="#722ed1"
+              />
+              <div className="mt-2">
+                <h4 className="text-base font-medium">Treinos Concluídos</h4>
+                <p className="text-sm text-gray-500">Total de participações</p>
+              </div>
+            </div>
           </Card>
         </Col>
       </Row>
@@ -297,24 +311,38 @@ const StudentPerformance: React.FC = () => {
           <TabPane tab="Evolução" key="1">
             <Row gutter={[16, 16]}>
               <Col span={12}>
-                <Card title="Evolução do Desempenho" bordered={false}>
-                  <div style={{ height: '300px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                <Card title="Evolução de Desempenho" className="mt-4">
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={300}>
                       <LineChart
                         data={evolutionData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
                       >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="data" />
-                        <YAxis domain={[0, 100]} />
-                        <Tooltip formatter={(value) => [`${Math.round(Number(value))}%`]} />
-                        <Legend />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis 
+                          dataKey="data" 
+                          tick={{ fontSize: 12 }}
+                          angle={-25}
+                          textAnchor="end"
+                          height={50}
+                        />
+                        <YAxis 
+                          domain={[0, 100]}
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value}%`, 'Aproveitamento']}
+                          contentStyle={{ fontSize: '12px', padding: '8px' }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Line 
-                          type="monotone" 
-                          dataKey="percentual" 
-                          name="Taxa de Acerto" 
-                          stroke="#8884d8" 
-                          activeDot={{ r: 8 }} 
+                          type="monotone"
+                          dataKey="percentual"
+                          stroke="#1890ff"
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -373,12 +401,51 @@ const StudentPerformance: React.FC = () => {
           </TabPane>
 
           <TabPane tab="Histórico de Treinos" key="3">
-            <Table
-              dataSource={history}
-              columns={historyColumns}
-              rowKey="id"
-              pagination={{ pageSize: 5 }}
-            />
+            <Card title="Histórico de Treinos" className="mt-4 overflow-hidden">
+              <div className="overflow-x-auto -mx-4 px-4">
+                <Table
+                  dataSource={history}
+                  columns={[
+                    {
+                      title: 'Data',
+                      dataIndex: 'date',
+                      key: 'date',
+                      render: (text) => new Date(text).toLocaleDateString('pt-BR'),
+                      sorter: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+                    },
+                    {
+                      title: 'Tipo',
+                      dataIndex: 'type',
+                      key: 'type',
+                      filters: [
+                        { text: 'Técnico', value: 'Técnico' },
+                        { text: 'Tático', value: 'Tático' },
+                        { text: 'Físico', value: 'Físico' },
+                      ],
+                      onFilter: (value, record) => record.type === value,
+                    },
+                    {
+                      title: 'Status',
+                      dataIndex: 'status',
+                      key: 'status',
+                      render: (status: string) => (
+                        <Tag color={status === 'completed' ? 'success' : 'error'}>
+                          {status === 'completed' ? 'Concluído' : 'Incompleto'}
+                        </Tag>
+                      ),
+                      filters: [
+                        { text: 'Concluído', value: 'completed' },
+                        { text: 'Incompleto', value: 'incomplete' },
+                      ],
+                      onFilter: (value, record) => record.status === value,
+                    },
+                  ]}
+                  pagination={{ pageSize: 5, size: 'small' }}
+                  size="small"
+                  scroll={{ x: 'max-content' }}
+                />
+              </div>
+            </Card>
           </TabPane>
 
           <TabPane tab="Metas" key="4">

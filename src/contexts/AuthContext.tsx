@@ -4,6 +4,9 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 
+// Constante da chave de localStorage para manter consistência
+const ROUTE_STORAGE_KEY = 'last_route';
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -20,6 +23,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Função para verificar se há uma rota salva para restaurar
+  const getPersistedRoute = () => {
+    try {
+      const savedRouteJSON = localStorage.getItem(ROUTE_STORAGE_KEY);
+      if (!savedRouteJSON) return null;
+      
+      const savedRoute = JSON.parse(savedRouteJSON);
+      
+      // Verificar se a rota salva não é muito antiga (24 horas)
+      const savedTime = savedRoute.timestamp || 0;
+      const currentTime = new Date().getTime();
+      const MAX_AGE = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+      
+      if (currentTime - savedTime > MAX_AGE) {
+        localStorage.removeItem(ROUTE_STORAGE_KEY);
+        return null;
+      }
+      
+      return savedRoute;
+    } catch (error) {
+      console.error("Erro ao ler rota salva:", error);
+      localStorage.removeItem(ROUTE_STORAGE_KEY);
+      return null;
+    }
+  };
+
+  // Limpa a rota persistida
+  const clearPersistedRoute = () => {
+    localStorage.removeItem(ROUTE_STORAGE_KEY);
+  };
 
   useEffect(() => {
     // Verificar sessão atual ao iniciar
@@ -47,8 +81,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
 
         if (event === "SIGNED_IN") {
-          navigate("/dashboard");
+          // Verificar se há uma rota salva para redirecionamento
+          const savedRoute = getPersistedRoute();
+          if (savedRoute && savedRoute.pathname) {
+            console.log("Redirecionando para rota salva:", savedRoute.pathname);
+            navigate(savedRoute.pathname + (savedRoute.search || ''));
+          } else {
+            // Padrão: redirecionar para dashboard se não houver rota salva
+            navigate("/dashboard");
+          }
         } else if (event === "SIGNED_OUT") {
+          // Limpar rota salva ao fazer logout
+          clearPersistedRoute();
           navigate("/login");
         }
       }
@@ -90,6 +134,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Função para logout
   const signOut = async () => {
     try {
+      // Limpar rota salva antes de fazer logout
+      clearPersistedRoute();
+      
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);

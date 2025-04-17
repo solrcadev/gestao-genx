@@ -46,6 +46,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DadosGrafico {
   data: string;
@@ -76,6 +79,7 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
     data_alvo: '',
     observacoes: ''
   });
+  const isMobile = useIsMobile();
 
   // Buscar dados da meta
   const { 
@@ -234,6 +238,17 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
     }));
   };
 
+  // Função para obter as iniciais de um nome
+  const getInitials = (name: string): string => {
+    if (!name) return '';
+    
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   if (carregandoMeta) {
     return (
       <div className="flex justify-center items-center h-40">
@@ -278,45 +293,125 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
   return (
     <div>
       {/* Cabeçalho */}
-      <div className="flex items-center mb-6">
-        <Button variant="outline" onClick={onVoltar} className="mr-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-        </Button>
-        
-        <div className="flex-grow">
-          <h2 className="text-2xl font-bold">{meta.titulo}</h2>
-          <p className="text-muted-foreground">{meta.nome_atleta}</p>
-        </div>
-        
-        <div className="flex space-x-2">
-          <AlertDialog open={modalExcluirAberto} onOpenChange={setModalExcluirAberto}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon">
-                <Trash2 size={16} />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir Meta</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tem certeza que deseja excluir esta meta? Esta ação não pode ser desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleExcluirMeta}>Excluir</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={() => setModoEdicao(!modoEdicao)}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="touch-feedback"
+            onClick={onVoltar}
           >
-            <Edit size={16} />
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
           </Button>
+          
+          <div className="flex items-center gap-2">
+            <AlertDialog open={modalExcluirAberto} onOpenChange={setModalExcluirAberto}>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-destructive hover:text-destructive touch-feedback"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir esta meta? Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                  <AlertDialogCancel className="mt-0">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleExcluirMeta}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    Sim, excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setModoEdicao(true)}
+              className="touch-feedback"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+          </div>
         </div>
+        
+        <h2 className="text-2xl font-bold mb-1 break-words">{meta?.titulo}</h2>
+        
+        <div className="text-muted-foreground break-words">
+          {meta?.descricao}
+        </div>
+      </div>
+      
+      {/* Detalhes da Meta */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Status da Meta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium">Progresso Atual</span>
+                  <span className="text-sm">{meta?.progresso}%</span>
+                </div>
+                <Progress value={meta?.progresso} className="h-2" />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground mb-0.5">Data Alvo</span>
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon size={14} className="text-muted-foreground" />
+                    <span className="text-sm">
+                      {meta?.data_alvo ? format(new Date(meta.data_alvo), "dd/MM/yyyy", { locale: ptBR }) : '-'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground mb-0.5">Status</span>
+                  <div className="flex items-center gap-1">
+                    {statusIcon}
+                    <span className={cn("text-sm", statusClass)}>
+                      {statusText}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Atleta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>{meta?.nome_atleta ? getInitials(meta.nome_atleta) : 'NA'}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h4 className="font-medium">{meta?.nome_atleta}</h4>
+                <p className="text-sm text-muted-foreground">{meta?.posicao_atleta}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Conteúdo Principal */}
@@ -516,28 +611,52 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
               </p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dadosGrafico}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="data" />
-                <YAxis domain={[0, 100]} />
-                <Tooltip
-                  formatter={(value, name) => {
-                    if (name === 'progresso') return [`${value}%`, 'Progresso'];
-                    return [value, name];
-                  }}
-                  labelFormatter={(label) => `Data: ${label}`}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="progresso"
-                  stroke="#1d4ed8"
-                  strokeWidth={2}
-                  dot={{ r: 6 }}
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="chart-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={dadosGrafico}
+                  margin={{ top: 10, right: 10, bottom: 20, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="data" 
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => {
+                      // Em telas menores, simplifica a data
+                      if (window.innerWidth < 640) {
+                        return value.split(' ')[0]; // Retorna apenas o dia
+                      }
+                      return value;
+                    }}
+                    angle={-25}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis 
+                    domain={[0, 100]} 
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `${value}%`}
+                    width={40}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      if (name === 'progresso') return [`${value}%`, 'Progresso'];
+                      return [value, name];
+                    }}
+                    labelFormatter={(label) => `Data: ${label}`}
+                    contentStyle={{ fontSize: '12px', padding: '8px' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="progresso"
+                    stroke="#1d4ed8"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>

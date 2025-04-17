@@ -81,35 +81,44 @@ export const deleteAthlete = async (id: string) => {
   return true;
 };
 
-export const uploadAthletePhoto = async (file: File) => {
+export const uploadAthletePhoto = async (file: File, athleteId?: string) => {
   try {
-    // Gerar um nome de arquivo único baseado em timestamp e valor aleatório
-    const fileExt = file.name.split('.').pop();
-    const timestamp = new Date().getTime();
-    const fileName = `athlete_${timestamp}_${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
-    const filePath = `athletes/${fileName}`;
+    // Validar o tipo do arquivo
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+      throw new Error('Formato de arquivo inválido. Por favor, use JPG, PNG, GIF ou WebP.');
+    }
     
     // Verificar tamanho do arquivo (limitado a 2MB)
     if (file.size > 2 * 1024 * 1024) {
       throw new Error('O arquivo deve ter no máximo 2MB');
     }
     
-    // Upload do arquivo para o bucket 'avatars'
+    // Gerar um nome de arquivo baseado no ID do atleta (se disponível) e timestamp
+    const fileExt = file.name.split('.').pop();
+    const timestamp = new Date().getTime();
+    const fileName = athleteId
+      ? `athlete_${athleteId}_${timestamp}.${fileExt}`
+      : `athlete_${timestamp}_${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
+    
+    const filePath = `athletes/${fileName}`;
+    
+    // Upload do arquivo para o bucket 'athletes-images'
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from('athletes-images')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: true // Permite substituir se já existir
       });
     
     if (uploadError) {
-      console.error('Error uploading photo:', uploadError);
+      console.error('Erro no upload da foto:', uploadError);
       throw uploadError;
     }
     
     // Obter a URL pública
     const { data } = supabase.storage
-      .from('avatars')
+      .from('athletes-images')
       .getPublicUrl(filePath);
     
     if (!data || !data.publicUrl) {
@@ -118,7 +127,7 @@ export const uploadAthletePhoto = async (file: File) => {
     
     return data.publicUrl;
   } catch (error) {
-    console.error('Error uploading photo:', error);
+    console.error('Erro no upload da foto:', error);
     throw error;
   }
 };
