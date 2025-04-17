@@ -25,7 +25,6 @@ const TeamPerformanceStats: React.FC<TeamPerformanceStatsProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Atleta em Destaque */}
       {stats.destaqueAtleta && (
         <Card>
           <CardContent className="pt-6">
@@ -43,7 +42,6 @@ const TeamPerformanceStats: React.FC<TeamPerformanceStatsProps> = ({
         </Card>
       )}
 
-      {/* Alerta de Fundamento */}
       {stats.piorFundamento && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
