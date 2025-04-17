@@ -1,13 +1,13 @@
-
 import { useEffect, useState } from 'react';
 import { Card, Tabs, Progress } from 'antd';
 import { 
   getStudentPerformance, 
   getTrainingHistory, 
-  getStudentGoals,
-  TrainingHistory,
+  getStudentGoals, 
+  PerformanceData, 
+  TrainingHistory, 
   Goal,
-  StudentPerformance 
+  StudentPerformance
 } from '@/services/performanceService';
 
 interface PerformanceTabProps {

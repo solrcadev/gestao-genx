@@ -1,12 +1,36 @@
+/**
+ * StudentPerformance.tsx
+ * 
+ * Componente para exibição detalhada do desempenho de um atleta/estudante.
+ * 
+ * Características:
+ * - Exibe indicadores gerais de desempenho (frequência, evolução, treinos concluídos)
+ * - Visualiza estatísticas por fundamento técnico (saque, recepção, etc.)
+ * - Mostra histórico de treinos e participação
+ * - Exibe metas do atleta
+ * - Permite registrar novas avaliações de desempenho por fundamento
+ * - Visualização gráfica da evolução do atleta ao longo do tempo
+ * 
+ * O componente utiliza React com Ant Design para a interface e Recharts para
+ * visualização de dados. Dados são obtidos através dos serviços de performance.
+ */
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Progress, Table, Tag, Spin, Tabs, Form, Input, Select, InputNumber, Button as AntButton, message } from 'antd';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useParams, Link } from 'react-router-dom';
-import { getAthletePerformance, registrarAvaliacaoDesempenho, getTrainingHistory, getStudentGoals, TrainingHistoryItem } from '@/services/performanceService';
+import { getAthletePerformance, getTrainingHistory, getStudentGoals, registrarAvaliacaoDesempenho } from '../services/performanceService';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { AthletePerformance } from '@/types';
 import HistoricoTreinosAtleta from '@/components/performance/HistoricoTreinosAtleta';
+
+interface TrainingHistoryItem {
+  id: string;
+  date: string;
+  type: string;
+  duration: number;
+  status: 'completed' | 'incomplete';
+}
 
 interface Goal {
   id: string;
@@ -33,22 +57,13 @@ const StudentPerformance: React.FC = () => {
       if (studentId) {
         try {
           setLoading(true);
+          const [performanceData, historyData, goalsData] = await Promise.all([
+            getAthletePerformance(studentId),
+            getTrainingHistory(studentId),
+            getStudentGoals(studentId)
+          ]);
           
-          // Using a sample date range
-          const startDate = new Date();
-          startDate.setMonth(startDate.getMonth() - 3); // 3 months ago
-          const endDate = new Date(); // today
-          
-          const performanceData = await getAthletePerformance(studentId, startDate, endDate);
-          const historyData = await getTrainingHistory(studentId);
-          const goalsData = await getStudentGoals(studentId);
-          
-          if (performanceData && performanceData.length > 0) {
-            setPerformance(performanceData[0]);
-          } else {
-            console.error('No performance data returned');
-          }
-          
+          setPerformance(performanceData);
           setHistory(historyData);
           setGoals(goalsData);
         } catch (error) {
@@ -104,14 +119,8 @@ const StudentPerformance: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={
-          status === 'completed' ? 'green' : 
-          status === 'missed' ? 'red' : 
-          'orange'
-        }>
-          {status === 'completed' ? 'Concluído' : 
-           status === 'missed' ? 'Ausente' : 
-           'Incompleto'}
+        <Tag color={status === 'completed' ? 'green' : 'red'}>
+          {status === 'completed' ? 'Concluído' : 'Incompleto'}
         </Tag>
       ),
     },
@@ -547,7 +556,7 @@ const StudentPerformance: React.FC = () => {
                 detalhes dos fundamentos avaliados naquele treino.
               </p>
               
-              {studentId && <HistoricoTreinosAtleta atletaId={studentId} />}
+              {studentId && <HistoricoTreinosAtleta athleteId={studentId} />}
             </Card>
           </TabPane>
         </Tabs>
@@ -556,4 +565,4 @@ const StudentPerformance: React.FC = () => {
   );
 };
 
-export default StudentPerformance;
+export default StudentPerformance; 
