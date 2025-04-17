@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart2, Search, X, Users, User } from 'lucide-react';
+import { BarChart2, Search, X, Users, User, Medal } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
@@ -14,6 +14,7 @@ import TeamPerformanceSummary from '@/components/performance/TeamPerformanceSumm
 import TopAthletesSection from '@/components/performance/TopAthletesSection';
 import PerformanceAlerts from '@/components/performance/PerformanceAlerts';
 import AthleteAnalysis from '@/components/performance/AthleteAnalysis';
+import Rankings from '@/components/performance/Rankings';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -30,7 +31,7 @@ const Performance = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'equipe' | 'individual'>('equipe');
+  const [activeTab, setActiveTab] = useState<'equipe' | 'individual' | 'ranking'>('equipe');
   const [fundamentoSelecionado, setFundamentoSelecionado] = useState<Fundamento>('saque');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -196,13 +197,16 @@ const Performance = () => {
           )}
         </div>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'equipe' | 'individual')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'equipe' | 'individual' | 'ranking')} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="equipe" className="flex items-center gap-2">
               <Users className="h-4 w-4" /> Equipe
             </TabsTrigger>
             <TabsTrigger value="individual" className="flex items-center gap-2">
               <User className="h-4 w-4" /> Individual
+            </TabsTrigger>
+            <TabsTrigger value="ranking" className="flex items-center gap-2">
+              <Medal className="h-4 w-4" /> Ranking
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -255,7 +259,7 @@ const Performance = () => {
                 onSelectAthlete={handleSelectAthlete}
               />
             </div>
-          ) : (
+          ) : activeTab === 'individual' ? (
             <AthleteAnalysis
               performanceData={performanceData}
               selectedAthleteId={selectedAthleteId}
@@ -265,6 +269,8 @@ const Performance = () => {
               team={team}
               onOpenDetailDrawer={() => setIsDetailOpen(true)}
             />
+          ) : (
+            <Rankings />
           )}
         </>
       )}
