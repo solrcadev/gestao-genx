@@ -66,7 +66,9 @@ export function useNotifications() {
       console.log("Permissão concedida, inscrevendo nas notificações push...");
       
       // Inscrever-se nas notificações push
-      const subscribed = await subscribeToPushNotifications(atletaId);
+      const subscribed = atletaId 
+        ? await subscribeToPushNotifications(atletaId)
+        : await subscribeToPushNotifications();
       
       if (subscribed) {
         toast({

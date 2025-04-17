@@ -68,7 +68,10 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
           posicao: 'Levantador',
           time: teamType,
           idade: 22,
-          altura: 1.85
+          altura: 1.85,
+          created_at: new Date().toISOString(),
+          foto_url: null,
+          imagem_url: null
         },
         presenca: {
           total: 20,
@@ -103,7 +106,10 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
           posicao: 'Ponteiro',
           time: teamType,
           idade: 20,
-          altura: 1.78
+          altura: 1.78,
+          created_at: new Date().toISOString(),
+          foto_url: null,
+          imagem_url: null
         },
         presenca: {
           total: 20,

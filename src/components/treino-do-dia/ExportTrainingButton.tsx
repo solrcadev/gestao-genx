@@ -14,6 +14,7 @@ interface ExportTrainingButtonProps {
   isTreinoDoDia?: boolean;
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
 }
 
 export const ExportTrainingButton: React.FC<ExportTrainingButtonProps> = ({
@@ -21,6 +22,7 @@ export const ExportTrainingButton: React.FC<ExportTrainingButtonProps> = ({
   isTreinoDoDia = false,
   variant = "outline",
   size = "default",
+  className = "",
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -88,7 +90,7 @@ export const ExportTrainingButton: React.FC<ExportTrainingButtonProps> = ({
       variant={variant}
       size={size}
       onClick={handleExportPdf}
-      className="flex items-center gap-1"
+      className={`flex items-center gap-1 ${className}`}
     >
       <FileText className="h-4 w-4" />
       <span>Exportar Relatório</span>

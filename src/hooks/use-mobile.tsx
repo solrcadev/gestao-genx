@@ -43,3 +43,5 @@ export function useMediaQuery(breakpoint: number | string) {
   
   return matches
 }
+
+export default useIsMobile;

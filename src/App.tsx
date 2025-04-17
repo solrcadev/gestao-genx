@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -17,9 +18,10 @@ import CreateExercise from './pages/CreateExercise';
 import EditExercise from './pages/EditExercise';
 import TreinoDosDia from './pages/TreinoDosDia';
 import BottomNavbar from './components/BottomNavbar';
-import { ToastContainer } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 import Performance from './pages/Performance';
 import TrainingReports from './pages/TrainingReports';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -43,11 +45,12 @@ function App() {
               <Route path="/exercises/edit/:id" element={<PrivateRoute><EditExercise /></PrivateRoute>} />
               <Route path="/treino-do-dia" element={<PrivateRoute><TreinoDosDia /></PrivateRoute>} />
               <Route path="/performance/:athleteId" element={<PrivateRoute><Performance /></PrivateRoute>} />
-              <Route path="/training-reports" element={<TrainingReports />} />
+              <Route path="/training-reports" element={<PrivateRoute><TrainingReports /></PrivateRoute>} />
+              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
             </Routes>
           </main>
           <BottomNavbar />
-          <ToastContainer />
+          <Toaster />
         </div>
       </AuthProvider>
     </Router>

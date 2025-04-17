@@ -29,21 +29,25 @@ export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<His
       .select('*')
       .eq('atleta_id', atletaId);
 
-    const historico: HistoricoTreinoPorAtleta[] = (treinosAtleta || []).map(item => ({
-      treinoId: item.treino_id,
-      nomeTreino: item.treinos ? item.treinos.nome : 'Treino sem nome',
-      data: item.treinos ? item.treinos.data : new Date().toISOString().split('T')[0],
-      local: item.treinos ? item.treinos.local : 'Local não especificado',
-      presenca: item.presente,
-      justificativa: item.justificativa_falta,
-      fundamentos: (avaliacoes || [])
-        .filter(av => av.treino_id === item.treino_id)
-        .map(av => ({
-          fundamento: av.fundamento,
-          acertos: av.acertos,
-          erros: av.erros
-        }))
-    }));
+    const historico: HistoricoTreinoPorAtleta[] = (treinosAtleta || []).map(item => {
+      // Safely access treinos object if it exists
+      const treino = item.treinos || {};
+      return {
+        treinoId: item.treino_id,
+        nomeTreino: treino.nome || 'Treino sem nome',
+        data: treino.data || new Date().toISOString().split('T')[0],
+        local: treino.local || 'Local não especificado',
+        presenca: item.presente,
+        justificativa: item.justificativa_falta,
+        fundamentos: (avaliacoes || [])
+          .filter(av => av.treino_id === item.treino_id)
+          .map(av => ({
+            fundamento: av.fundamento,
+            acertos: av.acertos,
+            erros: av.erros
+          }))
+      };
+    });
 
     return historico.length > 0 ? historico : getMockHistoricoTreinos();
   } catch (error) {
