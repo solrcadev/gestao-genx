@@ -1,4 +1,3 @@
-
 // Check if the app is running in standalone mode (installed as PWA)
 export const isRunningAsPWA = () => {
   return window.matchMedia('(display-mode: standalone)').matches || 
@@ -9,6 +8,56 @@ export const isRunningAsPWA = () => {
 // Check if the app can be installed (PWA criteria met + not already installed)
 export const isAppInstallable = () => {
   return !isRunningAsPWA() && 'deferredPrompt' in window;
+};
+
+// Register service worker for PWA functionality
+export const registerServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js', {
+        scope: '/'
+      });
+      
+      console.log('Service Worker registrado com sucesso:', registration.scope);
+      
+      // Verificar se há atualizações
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('Nova versão disponível! Recarregue a página para atualizar.');
+              
+              // Mostrar notificação de atualização disponível
+              if ('Notification' in window && Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then(reg => {
+                  reg.showNotification('Atualização disponível', {
+                    body: 'Uma nova versão do app está disponível. Clique para atualizar.',
+                    icon: '/logo192.png'
+                  });
+                });
+              }
+            }
+          });
+        }
+      });
+      
+      // Verificar atualizações a cada hora
+      setInterval(() => {
+        registration.update();
+        console.log('Verificando atualizações do Service Worker');
+      }, 1000 * 60 * 60);
+      
+      return registration;
+    } catch (error) {
+      console.error('Falha ao registrar o Service Worker:', error);
+      return null;
+    }
+  } else {
+    console.warn('Service Worker não é suportado neste navegador');
+    return null;
+  }
 };
 
 // Function to register event listeners for PWA install prompt

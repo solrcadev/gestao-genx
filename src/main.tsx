@@ -1,14 +1,24 @@
-
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
-import { registerPWAInstallListener, registerNetworkStatusListeners } from './services/pwaService';
+import { registerPWAInstallListener, registerNetworkStatusListeners, registerServiceWorker } from './services/pwaService';
 
 // Create a client for React Query
 const queryClient = new QueryClient();
+
+// Register Service Worker for PWA features
+registerServiceWorker()
+  .then(registration => {
+    if (registration) {
+      console.log('Service Worker registrado com sucesso!');
+    }
+  })
+  .catch(error => {
+    console.error('Erro ao registrar Service Worker:', error);
+  });
 
 // Register PWA event listeners
 registerPWAInstallListener();

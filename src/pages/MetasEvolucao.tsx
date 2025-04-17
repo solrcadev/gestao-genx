@@ -41,6 +41,7 @@ import { CalendarIcon, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
+import { sendGoalNotification } from '@/services/notificationService';
 
 const MetasEvolucao = () => {
   const { toast } = useToast();
@@ -194,7 +195,20 @@ const MetasEvolucao = () => {
       }
 
       // Criar meta
-      await criarMeta(novaMetaForm);
+      const novaMeta = await criarMeta(novaMetaForm);
+
+      // Enviar notificação
+      try {
+        await sendGoalNotification(
+          novaMetaForm.atleta_id,
+          novaMetaForm.titulo,
+          novaMetaForm.descricao
+        );
+        console.log('Notificação de meta enviada com sucesso');
+      } catch (notificationError) {
+        console.error('Erro ao enviar notificação de meta:', notificationError);
+        // Continuar com o fluxo mesmo se a notificação falhar
+      }
 
       // Fechar modal e resetar formulário
       setModalNovaMetaAberto(false);

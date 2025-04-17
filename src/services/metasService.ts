@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { sendGoalNotification } from '@/services/notificationService';
 
 export interface Meta {
   id: string;
@@ -244,6 +245,19 @@ export async function criarMeta(meta: MetaInput) {
     if (error) {
       console.error('Erro ao criar meta:', error);
       throw error;
+    }
+
+    // Tenta enviar notificação (não bloqueia se falhar)
+    try {
+      await sendGoalNotification(
+        meta.atleta_id,
+        meta.titulo,
+        meta.descricao
+      );
+      console.log('Notificação de meta enviada com sucesso do serviço');
+    } catch (notificationError) {
+      console.error('Erro ao enviar notificação de meta do serviço:', notificationError);
+      // Não interrompe o fluxo se a notificação falhar
     }
 
     return data;
