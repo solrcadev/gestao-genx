@@ -1,104 +1,51 @@
 
-import { supabase } from '@/lib/supabase';
-import { HistoricoTreinoPorAtleta } from '@/services/performanceService';
+import { supabase } from "@/lib/supabase";
+import { HistoricoTreinoPorAtleta } from "@/types";
 
-export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<HistoricoTreinoPorAtleta[]> {
+export const getHistoricoTreinoPorAtleta = async (atletaId: string): Promise<HistoricoTreinoPorAtleta[]> => {
   try {
-    const { data: treinosAtleta, error: treinosError } = await supabase
-      .from('treinos_atletas')
+    // Busca registros de presença para o atleta específico
+    const { data: presencasData, error: presencasError } = await supabase
+      .from('treinos_presencas')
       .select(`
-        id,
-        presente,
-        justificativa_falta,
-        observacoes,
-        treino_id,
-        treinos:treino_id (
-          id, 
-          nome, 
-          data,
-          local
+        *,
+        treino_do_dia:treino_do_dia_id(
+          *,
+          treino:treino_id(*)
         )
       `)
       .eq('atleta_id', atletaId)
       .order('created_at', { ascending: false });
 
-    if (treinosError) throw treinosError;
+    if (presencasError) {
+      throw new Error(`Erro ao buscar presenças: ${presencasError.message}`);
+    }
 
-    const { data: avaliacoes } = await supabase
-      .from('avaliacoes_fundamento')
-      .select('*')
-      .eq('atleta_id', atletaId);
+    // Se não há dados de presença, retornar array vazio
+    if (!presencasData || presencasData.length === 0) {
+      return [];
+    }
 
-    const historico: HistoricoTreinoPorAtleta[] = (treinosAtleta || []).map(item => {
-      // Safely access treinos object if it exists
-      const treino = item.treinos || {};
+    // Mapear os dados de presença para o formato esperado
+    const historico = presencasData.map(presenca => {
+      // Certifique-se que treino existe e possui os campos esperados
+      const treino = presenca.treino_do_dia?.treino || {};
+      
       return {
-        treinoId: item.treino_id,
-        nomeTreino: treino.nome || 'Treino sem nome',
+        id: presenca.id,
         data: treino.data || new Date().toISOString().split('T')[0],
-        local: treino.local || 'Local não especificado',
-        presenca: item.presente,
-        justificativa: item.justificativa_falta,
-        fundamentos: (avaliacoes || [])
-          .filter(av => av.treino_id === item.treino_id)
-          .map(av => ({
-            fundamento: av.fundamento,
-            acertos: av.acertos,
-            erros: av.erros
-          }))
+        nome_treino: treino.nome || "Treino sem nome",
+        local: treino.local || "Local não especificado",
+        presente: presenca.presente,
+        justificativa: presenca.justificativa || null,
+        treino_id: treino.id || null,
+        treino_do_dia_id: presenca.treino_do_dia_id,
       };
     });
 
-    return historico.length > 0 ? historico : getMockHistoricoTreinos();
+    return historico;
   } catch (error) {
-    console.error('Error fetching training history:', error);
-    return getMockHistoricoTreinos();
+    console.error('Erro ao buscar histórico de treinos:', error);
+    throw error;
   }
-}
-
-function getMockHistoricoTreinos(): HistoricoTreinoPorAtleta[] {
-  return [
-    {
-      treinoId: '1',
-      nomeTreino: 'Treino Tático #1',
-      data: '2023-04-10',
-      local: 'Ginásio Principal',
-      presenca: true,
-      fundamentos: [
-        { fundamento: 'saque', acertos: 8, erros: 2 },
-        { fundamento: 'recepção', acertos: 12, erros: 3 }
-      ]
-    },
-    {
-      treinoId: '2',
-      nomeTreino: 'Treino Físico',
-      data: '2023-04-07',
-      local: 'Quadra Externa',
-      presenca: true,
-      fundamentos: [
-        { fundamento: 'bloqueio', acertos: 5, erros: 5 }
-      ]
-    },
-    {
-      treinoId: '3',
-      nomeTreino: 'Treino Técnico',
-      data: '2023-04-05',
-      local: 'Academia',
-      presenca: false,
-      justificativa: 'Consulta médica agendada',
-      fundamentos: []
-    },
-    {
-      treinoId: '4',
-      nomeTreino: 'Amistoso',
-      data: '2023-04-01',
-      local: 'Ginásio Visitante',
-      presenca: true,
-      fundamentos: [
-        { fundamento: 'ataque', acertos: 15, erros: 4 },
-        { fundamento: 'defesa', acertos: 7, erros: 3 },
-        { fundamento: 'levantamento', acertos: 22, erros: 1 }
-      ]
-    }
-  ];
-}
+};

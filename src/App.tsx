@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -25,35 +24,31 @@ import Settings from './pages/Settings';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              <Route path="/athletes" element={<PrivateRoute><Athletes /></PrivateRoute>} />
-              <Route path="/athletes/create" element={<PrivateRoute><CreateAthlete /></PrivateRoute>} />
-              <Route path="/athletes/edit/:id" element={<PrivateRoute><EditAthlete /></PrivateRoute>} />
-              <Route path="/trainings" element={<PrivateRoute><Trainings /></PrivateRoute>} />
-              <Route path="/trainings/create" element={<PrivateRoute><CreateTraining /></PrivateRoute>} />
-              <Route path="/trainings/edit/:id" element={<PrivateRoute><EditTraining /></PrivateRoute>} />
-              <Route path="/exercises" element={<PrivateRoute><Exercises /></PrivateRoute>} />
-              <Route path="/exercises/create" element={<PrivateRoute><CreateExercise /></PrivateRoute>} />
-              <Route path="/exercises/edit/:id" element={<PrivateRoute><EditExercise /></PrivateRoute>} />
-              <Route path="/treino-do-dia" element={<PrivateRoute><TreinoDosDia /></PrivateRoute>} />
-              <Route path="/performance/:athleteId" element={<PrivateRoute><Performance /></PrivateRoute>} />
-              <Route path="/training-reports" element={<PrivateRoute><TrainingReports /></PrivateRoute>} />
-              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-            </Routes>
-          </main>
-          <BottomNavbar />
-          <Toaster />
-        </div>
-      </AuthProvider>
-    </Router>
+    <div className="flex flex-col min-h-screen">
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/athletes" element={<PrivateRoute><Athletes /></PrivateRoute>} />
+          <Route path="/athletes/create" element={<PrivateRoute><CreateAthlete /></PrivateRoute>} />
+          <Route path="/athletes/edit/:id" element={<PrivateRoute><EditAthlete /></PrivateRoute>} />
+          <Route path="/trainings" element={<PrivateRoute><Trainings /></PrivateRoute>} />
+          <Route path="/trainings/create" element={<PrivateRoute><CreateTraining /></PrivateRoute>} />
+          <Route path="/trainings/edit/:id" element={<PrivateRoute><EditTraining /></PrivateRoute>} />
+          <Route path="/exercises" element={<PrivateRoute><Exercises /></PrivateRoute>} />
+          <Route path="/exercises/create" element={<PrivateRoute><CreateExercise /></PrivateRoute>} />
+          <Route path="/exercises/edit/:id" element={<PrivateRoute><EditExercise /></PrivateRoute>} />
+          <Route path="/treino-do-dia" element={<PrivateRoute><TreinoDosDia /></PrivateRoute>} />
+          <Route path="/performance/:athleteId" element={<PrivateRoute><Performance /></PrivateRoute>} />
+          <Route path="/training-reports" element={<PrivateRoute><TrainingReports /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+        </Routes>
+      </main>
+      <BottomNavbar />
+      <Toaster />
+    </div>
   );
 }
 

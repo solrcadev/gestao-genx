@@ -19,7 +19,7 @@ export function useIsMobile() {
   return !!isMobile
 }
 
-// Add useMediaQuery as an alias for useIsMobile or as a more flexible version
+// Export useMediaQuery separately to fix the import issue
 export function useMediaQuery(breakpoint: number | string) {
   const [matches, setMatches] = React.useState<boolean>(false)
   
