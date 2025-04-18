@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Medal, Calendar, Share2, Download, BarChart2, Trophy, AlertTriangle } from 'lucide-react';
+import { Medal, Calendar, Share2, Download, BarChart2, Trophy, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +12,9 @@ import './ranking-styles.css';
 const html2canvasPromise = import('html2canvas').then((module) => module.default);
 const jsPDFPromise = import('jspdf').then((module) => module.default);
 
+// Tipo para período do ranking
+type PeriodoRanking = '7dias' | '30dias' | 'personalizado';
+
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
 
@@ -22,9 +25,6 @@ interface RankingAtleta {
   percentual: number;
   totalExecucoes: number;
 }
-
-// Período para o ranking
-type PeriodoRanking = '7dias' | '30dias' | 'personalizado';
 
 interface AthleteRankingProps {
   performanceData: AthletePerformance[];
@@ -154,7 +154,7 @@ const AthleteRanking: React.FC<AthleteRankingProps> = ({ performanceData, team }
   const obterPiorFundamento = () => {
     if (!performanceData || performanceData.length === 0) return null;
     
-    const fundamentos: { [key: string]: { soma: number, count: number } } = {
+    const fundamentos: { [key in Fundamento]: { soma: number, count: number } } = {
       'saque': { soma: 0, count: 0 },
       'recepção': { soma: 0, count: 0 },
       'levantamento': { soma: 0, count: 0 },
@@ -168,21 +168,21 @@ const AthleteRanking: React.FC<AthleteRankingProps> = ({ performanceData, team }
       const avaliacoesFiltradas = filtrarAvaliacoesPorPeriodo(athlete);
       
       Object.entries(avaliacoesFiltradas.porFundamento).forEach(([nome, avaliacao]) => {
-        if (fundamentos[nome] && avaliacao.total > 0) {
-          fundamentos[nome].soma += avaliacao.percentualAcerto;
-          fundamentos[nome].count += 1;
+        if (fundamentos[nome as Fundamento] && avaliacao.total > 0) {
+          fundamentos[nome as Fundamento].soma += avaliacao.percentualAcerto;
+          fundamentos[nome as Fundamento].count += 1;
         }
       });
     });
     
     // Calcular as médias e encontrar o menor
-    let piorFundamento: { nome: string, media: number } | null = null;
+    let piorFundamento: { nome: Fundamento, media: number } | null = null;
     
     Object.entries(fundamentos).forEach(([nome, { soma, count }]) => {
       if (count > 0) {
         const media = soma / count;
         if (piorFundamento === null || media < piorFundamento.media) {
-          piorFundamento = { nome, media };
+          piorFundamento = { nome: nome as Fundamento, media };
         }
       }
     });
@@ -197,9 +197,9 @@ const AthleteRanking: React.FC<AthleteRankingProps> = ({ performanceData, team }
     return topAtletas.length > 0 ? topAtletas[0] : null;
   };
   
-  // Função para traduzir o nome do fundamento
-  const traduzirFundamento = (fundamento: string) => {
-    const traducoes: { [key: string]: string } = {
+  // Função para traduzir o fundamento
+  const traduzirFundamento = (fundamento: Fundamento): string => {
+    const traducoes: Record<Fundamento, string> = {
       'saque': 'Saque',
       'recepção': 'Recepção',
       'levantamento': 'Levantamento',
@@ -208,7 +208,7 @@ const AthleteRanking: React.FC<AthleteRankingProps> = ({ performanceData, team }
       'defesa': 'Defesa'
     };
     
-    return traducoes[fundamento] || fundamento;
+    return traducoes[fundamento as Fundamento] || fundamento;
   };
   
   // Exportar ranking para PDF
@@ -315,7 +315,11 @@ const AthleteRanking: React.FC<AthleteRankingProps> = ({ performanceData, team }
           <Trophy className="h-5 w-5 text-primary" /> Ranking de Atletas
         </h2>
         <Button variant="outline" size="sm" onClick={toggleFullscreen}>
-          {isFullscreen ? 'Sair da Tela Cheia' : 'Tela Cheia'}
+          {isFullscreen ? (
+            <><Minimize2 className="h-4 w-4 mr-1" /> Sair da Tela Cheia</>
+          ) : (
+            <><Maximize2 className="h-4 w-4 mr-1" /> Tela Cheia</>
+          )}
         </Button>
       </div>
       
@@ -338,41 +342,48 @@ const AthleteRanking: React.FC<AthleteRankingProps> = ({ performanceData, team }
         </div>
         
         {showDatePicker && (
-          <div className="flex gap-2 items-center">
-            <div className="flex-1">
-              <label className="text-xs mb-1 block">Data início</label>
-              <input 
-                type="date" 
-                value={dataInicio} 
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col flex-1">
+              <label htmlFor="data-inicio" className="text-sm mb-1">Data Inicial</label>
+              <input
+                type="date"
+                id="data-inicio"
+                value={dataInicio}
                 onChange={(e) => setDataInicio(e.target.value)}
-                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
-            <div className="flex-1">
-              <label className="text-xs mb-1 block">Data fim</label>
-              <input 
-                type="date" 
-                value={dataFim} 
+            <div className="flex flex-col flex-1">
+              <label htmlFor="data-fim" className="text-sm mb-1">Data Final</label>
+              <input
+                type="date"
+                id="data-fim"
+                value={dataFim}
                 onChange={(e) => setDataFim(e.target.value)}
-                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
           </div>
         )}
         
-        <Select value={fundamento} onValueChange={(value) => setFundamento(value as Fundamento)}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione um fundamento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="saque">Saque</SelectItem>
-            <SelectItem value="recepção">Recepção</SelectItem>
-            <SelectItem value="levantamento">Levantamento</SelectItem>
-            <SelectItem value="ataque">Ataque</SelectItem>
-            <SelectItem value="bloqueio">Bloqueio</SelectItem>
-            <SelectItem value="defesa">Defesa</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex mt-2">
+          <Select
+            value={fundamento}
+            onValueChange={(value) => setFundamento(value as Fundamento)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um fundamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="saque">Saque</SelectItem>
+              <SelectItem value="recepção">Recepção</SelectItem>
+              <SelectItem value="levantamento">Levantamento</SelectItem>
+              <SelectItem value="ataque">Ataque</SelectItem>
+              <SelectItem value="bloqueio">Bloqueio</SelectItem>
+              <SelectItem value="defesa">Defesa</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
       {/* Atleta Destaque e Pior Fundamento */}

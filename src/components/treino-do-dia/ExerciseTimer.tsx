@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { concluirExercicio } from "@/services/treinosDoDiaService";
 import { Button } from "../ui/button";
@@ -8,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { cn } from "@/lib/utils";
 import { RealTimeEvaluation } from "./evaluation/RealTimeEvaluation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface ExerciseTimerProps {
   exerciseData: any;
@@ -88,8 +88,32 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
 
   // Handle evaluation data update
   const handleEvaluationUpdate = (data) => {
+    console.log("Dados de avaliação atualizados:", data);
     setEvaluationData(data);
+    
+    // Também podemos salvar no localStorage como backup
+    try {
+      localStorage.setItem(`evaluation_backup_${treinoDoDiaId}_${exerciseData.id}`, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Não foi possível fazer backup da avaliação:", e);
+    }
   };
+
+  // Tentar carregar dados salvos do localStorage ao iniciar
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem(`evaluation_backup_${treinoDoDiaId}_${exerciseData.id}`);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        if (parsedData && Object.keys(parsedData).length > 0) {
+          console.log("Carregando dados de avaliação do backup:", parsedData);
+          setEvaluationData(parsedData);
+        }
+      }
+    } catch (e) {
+      console.warn("Erro ao carregar backup de avaliação:", e);
+    }
+  }, [treinoDoDiaId, exerciseData.id]);
 
   // Calculate progress percentage for the timer bar
   const progressPercentage = Math.min((elapsedTime / (estimatedTime * 60)) * 100, 100);
@@ -156,12 +180,24 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
         </TabsContent>
 
         <TabsContent value="evaluation" className="mt-4">
-          <RealTimeEvaluation
-            exercise={exerciseData}
-            treinoDoDiaId={treinoDoDiaId}
-            onComplete={handleEvaluationUpdate}
-            onBack={() => setActiveTab("timer")}
-          />
+          <ErrorBoundary fallback={
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground mb-4">
+                Ocorreu um erro ao carregar a avaliação.
+              </p>
+              <Button onClick={() => setActiveTab("timer")} variant="outline">
+                Voltar ao cronômetro
+              </Button>
+            </div>
+          }>
+            <RealTimeEvaluation
+              exercise={exerciseData}
+              treinoDoDiaId={treinoDoDiaId}
+              onComplete={handleEvaluationUpdate}
+              onBack={() => setActiveTab("timer")}
+              initialData={evaluationData}
+            />
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
 

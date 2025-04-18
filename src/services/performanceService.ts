@@ -120,19 +120,53 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
     let avaliacoesError = null;
     
     try {
+      console.log("Buscando avaliações do banco de dados");
       const result = await supabase
         .from('avaliacoes_exercicios')
-        .select('*')
-        .in('atleta_id', atletas.map(a => a.id));
+        .select('*');
       
       avaliacoes = result.data || [];
       avaliacoesError = result.error;
+      
+      console.log(`Encontradas ${avaliacoes.length} avaliações na tabela avaliacoes_exercicios`);
+      
+      // Verificar se temos avaliações e quais campos existem
+      if (avaliacoes.length > 0) {
+        const primeirasAvaliacoes = avaliacoes.slice(0, 3);
+        console.log("Primeiras avaliações para análise de campos:", primeirasAvaliacoes);
+        
+        // Se as avaliações têm apenas 'nota' mas não 'acertos'/'erros', converter
+        const precisaConverter = primeirasAvaliacoes.some(av => 
+          av.nota !== undefined && (av.acertos === undefined || av.erros === undefined)
+        );
+        
+        if (precisaConverter) {
+          console.log("Convertendo campo 'nota' para 'acertos'/'erros'");
+          avaliacoes = avaliacoes.map(av => ({
+            ...av,
+            acertos: av.acertos !== undefined ? av.acertos : av.nota || 0,
+            erros: av.erros !== undefined ? av.erros : 0
+          }));
+        }
+      }
     } catch (error: any) {
       // Se a tabela não existir, vamos usar um array vazio
       if (error?.code === '42P01' || (avaliacoesError && avaliacoesError.code === '42P01')) {
-        console.log('Tabela avaliacoes_exercicios não existe, usando array vazio');
-        avaliacoes = [];
-        avaliacoesError = null;
+        console.log('Tabela avaliacoes_exercicios não existe, tentando tabela alternativa');
+        // Tentar a tabela avaliacoes_fundamento
+        try {
+          const alternativeResult = await supabase
+            .from('avaliacoes_fundamento')
+            .select('*');
+          
+          avaliacoes = alternativeResult.data || [];
+          avaliacoesError = alternativeResult.error;
+          
+          console.log(`Encontradas ${avaliacoes.length} avaliações na tabela avaliacoes_fundamento`);
+        } catch (altError) {
+          console.error('Erro ao buscar avaliações na tabela alternativa:', altError);
+          avaliacoes = [];
+        }
       } else {
         console.error('Erro ao buscar avaliações:', error);
         avaliacoesError = error;
@@ -144,33 +178,154 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
       throw avaliacoesError;
     }
     
-    console.log(`Avaliações encontradas: ${avaliacoes?.length || 0}`);
+    console.log(`Total de avaliações recuperadas do banco: ${avaliacoes.length}`);
     
     // 3.1 Complementar com avaliações do localStorage (caso existam)
     const localAvaliacoes = getLocalStorageAvaliacoes();
+    console.log(`Avaliações do localStorage: ${localAvaliacoes.length}`);
+    
+    // Combinando todas as avaliações (banco de dados + localStorage)
+    const todasAvaliacoes = [...avaliacoes];
+    
     if (localAvaliacoes.length > 0) {
-      console.log(`Encontradas ${localAvaliacoes.length} avaliações no localStorage`);
-      // Filtrar apenas avaliações dos atletas do time atual
-      const atletaIds = atletas.map(a => a.id);
-      const filteredLocalAvaliacoes = localAvaliacoes.filter(a => atletaIds.includes(a.atleta_id));
-      console.log(`${filteredLocalAvaliacoes.length} avaliações no localStorage são para atletas deste time`);
+      // Filtrar apenas avaliações deste atleta
+      const filteredLocalAvaliacoes = localAvaliacoes.filter(a => a.atleta_id === atletas[0].id);
+      console.log(`Avaliações locais para este atleta: ${filteredLocalAvaliacoes.length}`);
       
-      // Adicionar ao array de avaliações do banco de dados
-      avaliacoes = [...avaliacoes, ...filteredLocalAvaliacoes];
+      // Adicionar ao array (apenas as que não existem no banco)
+      for (const localAval of filteredLocalAvaliacoes) {
+        if (!todasAvaliacoes.some(a => a.id === localAval.id)) {
+          todasAvaliacoes.push(localAval);
+        }
+      }
     }
     
-    // 4. Processar os dados para o formato esperado pelos componentes
+    console.log(`Total geral de avaliações (banco + local): ${todasAvaliacoes.length}`);
+    
+    // Filtrar avaliações deste atleta
+    const atletaAvaliacoes = todasAvaliacoes.filter(a => a.atleta_id === atletas[0].id);
+    console.log(`Avaliações filtradas para o atleta ${atletas[0].id}: ${atletaAvaliacoes.length}`);
+    
+    // Processar avaliações por fundamento
+    const avaliacoesPorFundamento: Record<string, {
+      acertos: number;
+      erros: number;
+      total: number;
+      percentualAcerto: number;
+      ultimaData?: string;
+    }> = {};
+    
+    // Processar cada avaliação
+    atletaAvaliacoes.forEach(avaliacao => {
+      const fundamento = avaliacao.fundamento.toLowerCase();
+      
+      if (!avaliacoesPorFundamento[fundamento]) {
+        avaliacoesPorFundamento[fundamento] = {
+          acertos: 0,
+          erros: 0,
+          total: 0,
+          percentualAcerto: 0,
+          ultimaData: avaliacao.timestamp
+        };
+      }
+      
+      // Adicionar dados da avaliação
+      avaliacoesPorFundamento[fundamento].acertos += avaliacao.acertos;
+      avaliacoesPorFundamento[fundamento].erros += avaliacao.erros;
+      avaliacoesPorFundamento[fundamento].total += (avaliacao.acertos + avaliacao.erros);
+      
+      // Atualizar data mais recente
+      if (avaliacao.timestamp && avaliacoesPorFundamento[fundamento].ultimaData) {
+        try {
+          const avaliacaoDate = new Date(avaliacao.timestamp);
+          const ultimaDate = new Date(avaliacoesPorFundamento[fundamento].ultimaData);
+          
+          if (avaliacaoDate > ultimaDate) {
+            avaliacoesPorFundamento[fundamento].ultimaData = avaliacao.timestamp;
+          }
+        } catch (dateError) {
+          console.error('Erro ao processar datas:', dateError);
+          // Em caso de erro, manter a data atual
+        }
+      }
+    });
+    
+    // Não vamos mais criar fundamentos simulados se não existirem, apenas mostrar os que temos
+    
+    // Calcular percentuais de acerto para cada fundamento
+    Object.keys(avaliacoesPorFundamento).forEach(fundamento => {
+      const { acertos, total } = avaliacoesPorFundamento[fundamento];
+      avaliacoesPorFundamento[fundamento].percentualAcerto = total > 0 
+        ? (acertos / total) * 100 
+        : 0;
+    });
+    
+    // Calcular média geral de avaliações
+    const totalAvaliacoes = atletaAvaliacoes.length;
+    let somaPercentuais = 0;
+    
+    Object.values(avaliacoesPorFundamento).forEach(avaliacao => {
+      somaPercentuais += avaliacao.percentualAcerto;
+    });
+    
+    const mediaGeral = Object.keys(avaliacoesPorFundamento).length > 0
+      ? somaPercentuais / Object.keys(avaliacoesPorFundamento).length
+      : 0;
+    
+    // Formatar datas para exibição
+    Object.keys(avaliacoesPorFundamento).forEach(fundamento => {
+      try {
+        const dataOriginal = avaliacoesPorFundamento[fundamento].ultimaData;
+        if (dataOriginal) {
+          const data = new Date(dataOriginal);
+          avaliacoesPorFundamento[fundamento].ultimaData = data.toLocaleDateString('pt-BR');
+        } else {
+          avaliacoesPorFundamento[fundamento].ultimaData = 'N/A';
+        }
+      } catch (dateError) {
+        console.error('Erro ao formatar data:', dateError);
+        avaliacoesPorFundamento[fundamento].ultimaData = 'N/A';
+      }
+    });
+    
+    // Coletar últimas avaliações para histórico
+    let ultimasAvaliacoes = [];
+    try {
+      if (atletaAvaliacoes && atletaAvaliacoes.length > 0) {
+        ultimasAvaliacoes = atletaAvaliacoes
+          .sort((a, b) => {
+            // Verificar se timestamp existe antes de tentar converter
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return timeB - timeA;
+          })
+          .slice(0, 5)
+          .map(av => ({
+            data: av.timestamp ? new Date(av.timestamp).toLocaleDateString('pt-BR') : 'N/A',
+            treino: av.treino_id || 'Desconhecido',
+            fundamento: av.fundamento || 'Desconhecido',
+            acertos: av.acertos || 0,
+            erros: av.erros || 0
+          }));
+      }
+    } catch (evalError) {
+      console.error('Erro ao processar últimas avaliações:', evalError);
+      // Em caso de erro, retornar array vazio
+      ultimasAvaliacoes = [];
+    }
+    
+    // Retornar objeto com dados de performance do atleta
     const performanceData: AthletePerformance[] = atletas.map(atleta => {
       // Calcular dados de presença
-      const atletaPresencas = presencas?.filter(p => p.atleta_id === atleta.id) || [];
-      const totalPresencas = atletaPresencas.length;
-      const presencasConfirmadas = atletaPresencas.filter(p => p.presente).length;
+      const presencasAtleta = presencas.filter(p => p.atleta_id === atleta.id);
+      const totalPresencas = presencasAtleta.length;
+      const presencasConfirmadas = presencasAtleta.filter(p => p.presente === true).length;
       const percentualPresenca = totalPresencas > 0 
         ? (presencasConfirmadas / totalPresencas) * 100 
         : 0;
       
       // Processar avaliações por fundamento
-      const atletaAvaliacoes = avaliacoes?.filter(a => a.atleta_id === atleta.id) || [];
+      const avaliacoesDoAtleta = todasAvaliacoes.filter(a => a.atleta_id === atleta.id);
       
       // Agrupar avaliações por fundamento
       const avaliacoesPorFundamento: Record<string, {
@@ -178,11 +333,11 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
         erros: number;
         total: number;
         percentualAcerto: number;
-        ultimaData: string;
+        ultimaData?: string;
       }> = {};
       
       // Processar cada avaliação
-      atletaAvaliacoes.forEach(avaliacao => {
+      avaliacoesDoAtleta.forEach(avaliacao => {
         const fundamento = avaliacao.fundamento.toLowerCase();
         
         if (!avaliacoesPorFundamento[fundamento]) {
@@ -227,7 +382,7 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
       });
       
       // Calcular média geral de avaliações
-      const totalAvaliacoes = atletaAvaliacoes.length;
+      const totalAvaliacoes = avaliacoesDoAtleta.length;
       let somaPercentuais = 0;
       
       Object.values(avaliacoesPorFundamento).forEach(avaliacao => {
@@ -257,8 +412,8 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
       // Coletar últimas avaliações para histórico
       let ultimasAvaliacoes = [];
       try {
-        if (atletaAvaliacoes.length > 0) {
-          ultimasAvaliacoes = atletaAvaliacoes
+        if (avaliacoesDoAtleta && avaliacoesDoAtleta.length > 0) {
+          ultimasAvaliacoes = avaliacoesDoAtleta
             .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
             .slice(0, 5)
             .map(av => ({
@@ -296,7 +451,7 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
           mediaNota: mediaGeral,
           porFundamento: avaliacoesPorFundamento
         },
-        ultimasAvaliacoes
+        ultimasAvaliacoes: ultimasAvaliacoes || []
       };
     });
     
@@ -395,51 +550,91 @@ export async function getAthletePerformance(atletaId: string): Promise<AthletePe
     let avaliacoesError = null;
     
     try {
+      console.log("Buscando avaliações do banco de dados");
       const result = await supabase
         .from('avaliacoes_exercicios')
-        .select('*')
-        .eq('atleta_id', atletaId);
+        .select('*');
       
       avaliacoes = result.data || [];
       avaliacoesError = result.error;
+      
+      console.log(`Encontradas ${avaliacoes.length} avaliações na tabela avaliacoes_exercicios`);
+      
+      // Verificar se temos avaliações e quais campos existem
+      if (avaliacoes.length > 0) {
+        const primeirasAvaliacoes = avaliacoes.slice(0, 3);
+        console.log("Primeiras avaliações para análise de campos:", primeirasAvaliacoes);
+        
+        // Se as avaliações têm apenas 'nota' mas não 'acertos'/'erros', converter
+        const precisaConverter = primeirasAvaliacoes.some(av => 
+          av.nota !== undefined && (av.acertos === undefined || av.erros === undefined)
+        );
+        
+        if (precisaConverter) {
+          console.log("Convertendo campo 'nota' para 'acertos'/'erros'");
+          avaliacoes = avaliacoes.map(av => ({
+            ...av,
+            acertos: av.acertos !== undefined ? av.acertos : av.nota || 0,
+            erros: av.erros !== undefined ? av.erros : 0
+          }));
+        }
+      }
     } catch (error: any) {
       // Se a tabela não existir, vamos usar um array vazio
       if (error?.code === '42P01' || (avaliacoesError && avaliacoesError.code === '42P01')) {
-        console.log('Tabela avaliacoes_exercicios não existe, usando array vazio para atleta específico');
-        avaliacoes = [];
-        avaliacoesError = null;
+        console.log('Tabela avaliacoes_exercicios não existe, tentando tabela alternativa');
+        // Tentar a tabela avaliacoes_fundamento
+        try {
+          const alternativeResult = await supabase
+            .from('avaliacoes_fundamento')
+            .select('*');
+          
+          avaliacoes = alternativeResult.data || [];
+          avaliacoesError = alternativeResult.error;
+          
+          console.log(`Encontradas ${avaliacoes.length} avaliações na tabela avaliacoes_fundamento`);
+        } catch (altError) {
+          console.error('Erro ao buscar avaliações na tabela alternativa:', altError);
+          avaliacoes = [];
+        }
       } else {
-        console.error('Erro ao buscar avaliações para atleta específico:', error);
+        console.error('Erro ao buscar avaliações:', error);
         avaliacoesError = error;
       }
     }
     
     if (avaliacoesError && avaliacoesError.code !== '42P01') {
-      console.error('Erro ao buscar avaliações para atleta específico:', avaliacoesError);
+      console.error('Erro ao buscar avaliações:', avaliacoesError);
       throw avaliacoesError;
     }
     
-    console.log(`Avaliações encontradas para atleta específico: ${avaliacoes?.length || 0}`);
+    console.log(`Total de avaliações recuperadas do banco: ${avaliacoes.length}`);
     
     // 3.1 Complementar com avaliações do localStorage (caso existam)
     const localAvaliacoes = getLocalStorageAvaliacoes();
+    console.log(`Avaliações do localStorage: ${localAvaliacoes.length}`);
+    
+    // Combinando todas as avaliações (banco de dados + localStorage)
+    const todasAvaliacoes = [...avaliacoes];
+    
     if (localAvaliacoes.length > 0) {
       // Filtrar apenas avaliações deste atleta
       const filteredLocalAvaliacoes = localAvaliacoes.filter(a => a.atleta_id === atletaId);
-      console.log(`Encontradas ${filteredLocalAvaliacoes.length} avaliações no localStorage para este atleta`);
+      console.log(`Avaliações locais para este atleta: ${filteredLocalAvaliacoes.length}`);
       
-      // Adicionar ao array de avaliações do banco de dados
-      avaliacoes = [...avaliacoes, ...filteredLocalAvaliacoes];
+      // Adicionar ao array (apenas as que não existem no banco)
+      for (const localAval of filteredLocalAvaliacoes) {
+        if (!todasAvaliacoes.some(a => a.id === localAval.id)) {
+          todasAvaliacoes.push(localAval);
+        }
+      }
     }
     
-    // Calcular dados de presença ajustando para diferentes nomes de campos
-    const totalPresencas = presencas?.length || 0;
-    const presencasConfirmadas = presencas?.filter(p => {
-      return p.presente === true || p.status === 'presente';
-    }).length || 0;
-    const percentualPresenca = totalPresencas > 0 
-      ? (presencasConfirmadas / totalPresencas) * 100 
-      : 0;
+    console.log(`Total geral de avaliações (banco + local): ${todasAvaliacoes.length}`);
+    
+    // Filtrar avaliações deste atleta
+    const atletaAvaliacoes = todasAvaliacoes.filter(a => a.atleta_id === atletaId);
+    console.log(`Avaliações filtradas para o atleta ${atletaId}: ${atletaAvaliacoes.length}`);
     
     // Processar avaliações por fundamento
     const avaliacoesPorFundamento: Record<string, {
@@ -447,11 +642,11 @@ export async function getAthletePerformance(atletaId: string): Promise<AthletePe
       erros: number;
       total: number;
       percentualAcerto: number;
-      ultimaData: string;
+      ultimaData?: string;
     }> = {};
     
     // Processar cada avaliação
-    avaliacoes?.forEach(avaliacao => {
+    atletaAvaliacoes.forEach(avaliacao => {
       const fundamento = avaliacao.fundamento.toLowerCase();
       
       if (!avaliacoesPorFundamento[fundamento]) {
@@ -496,7 +691,7 @@ export async function getAthletePerformance(atletaId: string): Promise<AthletePe
     });
     
     // Calcular média geral de avaliações
-    const totalAvaliacoes = avaliacoes?.length || 0;
+    const totalAvaliacoes = atletaAvaliacoes.length;
     let somaPercentuais = 0;
     
     Object.values(avaliacoesPorFundamento).forEach(avaliacao => {
@@ -526,8 +721,8 @@ export async function getAthletePerformance(atletaId: string): Promise<AthletePe
     // Coletar últimas avaliações para histórico
     let ultimasAvaliacoes = [];
     try {
-      if (avaliacoes.length > 0) {
-        ultimasAvaliacoes = avaliacoes
+      if (atletaAvaliacoes.length > 0) {
+        ultimasAvaliacoes = atletaAvaliacoes
           .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
           .slice(0, 5)
           .map(av => ({
@@ -558,16 +753,16 @@ export async function getAthletePerformance(atletaId: string): Promise<AthletePe
         altura: atleta.altura
       },
       presenca: {
-        total: totalPresencas,
-        presentes: presencasConfirmadas,
-        percentual: percentualPresenca
+        total: presencas?.length || 0,
+        presentes: presencas?.filter(p => p.presente).length || 0,
+        percentual: presencas?.length > 0 ? ((presencas.filter(p => p.presente).length) / presencas.length) * 100 : 0
       },
       avaliacoes: {
         total: totalAvaliacoes,
         mediaNota: mediaGeral,
         porFundamento: avaliacoesPorFundamento
       },
-      ultimasAvaliacoes
+      ultimasAvaliacoes: ultimasAvaliacoes || []
     };
   } catch (error) {
     console.error('Erro ao buscar desempenho do atleta:', error);
@@ -959,11 +1154,42 @@ export async function getStudentGoals(studentId: string): Promise<any[]> {
 // Função para buscar avaliações salvas no localStorage
 function getLocalStorageAvaliacoes(): any[] {
   try {
+    console.log("Buscando avaliações salvas no localStorage");
+    
     // Tentar buscar da tabela avaliacoes_exercicios (formato compatível com este serviço)
     const avaliacoesExercicios = JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
+    console.log(`Encontradas ${avaliacoesExercicios.length} avaliações em avaliacoes_exercicios no localStorage`);
+    
+    // Adaptar os dados de avaliacoes_exercicios para garantir que tenham campos acertos e erros
+    const adaptedAvaliacoesExercicios = avaliacoesExercicios.map((avaliacao: any) => {
+      console.log("Processando avaliação do localStorage:", avaliacao);
+      
+      // Verificar se tem os campos acertos e erros
+      if (avaliacao.acertos === undefined || avaliacao.erros === undefined) {
+        // Se não tiver, mas tiver o campo nota, usá-lo para derivar acertos (considerando nota como acertos)
+        if (avaliacao.nota !== undefined) {
+          console.log(`Avaliação sem acertos/erros, mas com nota=${avaliacao.nota}. Convertendo.`);
+          return {
+            ...avaliacao,
+            acertos: avaliacao.nota,
+            erros: 0, // Como não temos erros, definimos como 0
+            timestamp: avaliacao.timestamp || new Date().toISOString()
+          };
+        }
+      }
+      
+      // Se já tiver os campos necessários, apenas garantir o timestamp
+      return {
+        ...avaliacao,
+        acertos: avaliacao.acertos || 0,
+        erros: avaliacao.erros || 0,
+        timestamp: avaliacao.timestamp || new Date().toISOString()
+      };
+    });
     
     // Tentar buscar também da tabela avaliacoes_fundamento (onde as avaliações são salvas originalmente)
     const avaliacoesFundamento = JSON.parse(localStorage.getItem('avaliacoes_fundamento') || '[]');
+    console.log(`Encontradas ${avaliacoesFundamento.length} avaliações em avaliacoes_fundamento no localStorage`);
     
     // Se encontrou dados em avaliacoes_fundamento, converter para o formato esperado por este serviço
     let convertedAvaliacoes: any[] = [];
@@ -971,13 +1197,15 @@ function getLocalStorageAvaliacoes(): any[] {
       convertedAvaliacoes = avaliacoesFundamento.map((avaliacao: any) => {
         return {
           ...avaliacao,
+          acertos: avaliacao.acertos || 0,
+          erros: avaliacao.erros || 0,
           timestamp: avaliacao.timestamp || new Date().toISOString() // Garantir que há timestamp
         };
       });
     }
     
     // Combinar as avaliações, removendo duplicatas por ID
-    const allAvaliacoes = [...avaliacoesExercicios];
+    const allAvaliacoes = [...adaptedAvaliacoesExercicios];
     
     // Adicionar apenas as avaliações de avaliacoes_fundamento que não existem em avaliacoes_exercicios
     for (const avaliacao of convertedAvaliacoes) {
@@ -986,6 +1214,7 @@ function getLocalStorageAvaliacoes(): any[] {
       }
     }
     
+    console.log(`Total de ${allAvaliacoes.length} avaliações recuperadas do localStorage`);
     return allAvaliacoes;
   } catch (error) {
     console.error('Erro ao buscar avaliações do localStorage:', error);

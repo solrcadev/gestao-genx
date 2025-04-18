@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,7 @@ export const RealTimeEvaluation = ({
       [fundamento: string]: { acertos: number; erros: number };
     };
   }>(initialData);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const { toast } = useToast();
 
@@ -67,9 +67,17 @@ export const RealTimeEvaluation = ({
 
   // Initialize data structure for each athlete if coming from initialData
   useEffect(() => {
+    // Evitar inicialização repetida para prevenir loops infinitos
+    if (isInitialized) {
+      return;
+    }
+    
     if (Object.keys(initialData).length > 0) {
+      console.log("Inicializando dados de avaliação a partir do initialData");
       setEvaluationData(initialData);
-    } else {
+      setIsInitialized(true);
+    } else if (athletesWithAttendance.length > 0) {
+      console.log("Inicializando dados de avaliação para atletas presentes");
       const presentAthletes = athletesWithAttendance.filter(a => a.presente).map(a => a.atleta.id);
       
       // Initialize empty evaluation data for all present athletes
@@ -82,40 +90,92 @@ export const RealTimeEvaluation = ({
       }, {} as { [atletaId: string]: { [fundamento: string]: { acertos: number; erros: number } } });
       
       setEvaluationData(initialEvalData);
+      setIsInitialized(true);
     }
-  }, [athletesWithAttendance, fundamentos, initialData]);
+  }, [athletesWithAttendance, fundamentos, initialData, isInitialized]);
 
   // Handle score updates
   const handleUpdateScore = (atletaId: string, isAcerto: boolean) => {
+    // Armazenar valores anteriores para caso de erro
+    const prevAthleteData = evaluationData[atletaId] || {};
+    const prevFundamentoData = prevAthleteData[activeFundamento] || { acertos: 0, erros: 0 };
+    
+    // Calcular novos valores
+    const newAcertos = isAcerto 
+      ? prevFundamentoData.acertos + 1 
+      : prevFundamentoData.acertos;
+    
+    const newErros = isAcerto 
+      ? prevFundamentoData.erros 
+      : prevFundamentoData.erros + 1;
+      
+    // Criar objeto de atualização
+    const updatedFundamentoData = {
+      acertos: newAcertos,
+      erros: newErros
+    };
+    
+    // Primeiro atualizamos o estado local para feedback imediato ao usuário
     setEvaluationData(prev => {
       const athleteData = prev[atletaId] || {};
-      const fundamentoData = athleteData[activeFundamento] || { acertos: 0, erros: 0 };
       
-      const updatedData = {
+      return {
         ...prev,
         [atletaId]: {
           ...athleteData,
-          [activeFundamento]: isAcerto
-            ? { ...fundamentoData, acertos: fundamentoData.acertos + 1 }
-            : { ...fundamentoData, erros: fundamentoData.erros + 1 }
+          [activeFundamento]: updatedFundamentoData
         }
       };
-      
-      // Auto-save to the database in real-time
-      saveEvaluationMutation.mutate({
-        treinoDoDiaId,
-        exercicioId: exercise.id,
-        atletaId,
-        fundamento: activeFundamento,
-        acertos: updatedData[atletaId][activeFundamento].acertos,
-        erros: updatedData[atletaId][activeFundamento].erros
-      });
-      
-      return updatedData;
+    });
+    
+    // Em seguida, fazemos a mutação para o banco de dados
+    console.log(`Enviando avaliação para o servidor: ${atletaId}, ${activeFundamento}, acertos=${newAcertos}, erros=${newErros}`);
+    
+    saveEvaluationMutation.mutate({
+      treinoDoDiaId,
+      exercicioId: exercise.id,
+      atletaId,
+      fundamento: activeFundamento,
+      acertos: newAcertos,
+      erros: newErros
+    }, {
+      onSuccess: () => {
+        // Confirmação visual de que a ação foi bem-sucedida
+        toast({
+          title: "Avaliação registrada",
+          description: isAcerto ? "Acerto registrado com sucesso" : "Erro registrado com sucesso",
+          duration: 1000
+        });
+      },
+      onError: (error) => {
+        // Se ocorrer erro, revertemos o estado local para o valor original
+        toast({
+          title: "Erro ao salvar avaliação",
+          description: `Não foi possível registrar a avaliação. ${error.message || ''}`,
+          variant: "destructive"
+        });
+        
+        // Revertendo o estado para os valores anteriores
+        setEvaluationData(prev => {
+          const athleteData = prev[atletaId] || {};
+          return {
+            ...prev,
+            [atletaId]: {
+              ...athleteData,
+              [activeFundamento]: prevFundamentoData
+            }
+          };
+        });
+      }
     });
   };
 
   const handleResetScore = (atletaId: string) => {
+    // Armazenar valores anteriores para caso de erro
+    const prevAthleteData = evaluationData[atletaId] || {};
+    const prevFundamentoData = prevAthleteData[activeFundamento] || { acertos: 0, erros: 0 };
+    
+    // Primeiro atualizamos o estado local para feedback imediato
     setEvaluationData(prev => {
       const athleteData = prev[atletaId] || {};
       
@@ -127,17 +187,44 @@ export const RealTimeEvaluation = ({
         }
       };
       
-      // Reset in database
-      saveEvaluationMutation.mutate({
-        treinoDoDiaId,
-        exercicioId: exercise.id,
-        atletaId,
-        fundamento: activeFundamento,
-        acertos: 0,
-        erros: 0
-      });
-      
       return updatedData;
+    });
+    
+    // Reset in database
+    saveEvaluationMutation.mutate({
+      treinoDoDiaId,
+      exercicioId: exercise.id,
+      atletaId,
+      fundamento: activeFundamento,
+      acertos: 0,
+      erros: 0
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Contagem zerada",
+          description: "Os valores foram redefinidos com sucesso",
+          duration: 1000
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Erro ao redefinir contagem",
+          description: `Não foi possível zerar os valores. ${error.message || ''}`,
+          variant: "destructive"
+        });
+        
+        // Se ocorrer erro, revertemos ao estado anterior
+        setEvaluationData(prev => {
+          const athleteData = prev[atletaId] || {};
+          return {
+            ...prev,
+            [atletaId]: {
+              ...athleteData,
+              [activeFundamento]: prevFundamentoData
+            }
+          };
+        });
+      }
     });
   };
 

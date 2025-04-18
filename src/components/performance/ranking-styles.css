@@ -120,14 +120,19 @@
 }
 
 /* Ícones medalha */
+.medal-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .medal-gold {
-  color: #eab308;
+  color: #f59e0b;
 }
 
 .medal-silver {
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .medal-bronze {
-  color: #d97706;
+  color: #b45309;
 } 
