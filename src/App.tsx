@@ -1,4 +1,6 @@
-import React, { Suspense } from 'react';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Athletes from "./pages/Athletes";
 import Trainings from "./pages/Trainings";
@@ -20,31 +22,20 @@ import AthleteDetails from './pages/AthleteDetails';
 import MetasEvolucao from './pages/MetasEvolucao';
 import RouterPersistence from "./components/RouterPersistence";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { TooltipProvider } from "@/components/ui/tooltip";
-
-// Importação com lazy loading para evitar problemas de dependência circular
-const Toaster = React.lazy(() => import("@/components/ui/toaster").then(module => ({ default: module.Toaster })));
-const Sonner = React.lazy(() => import("@/components/ui/sonner").then(module => ({ default: module.Toaster })));
-
-// Componente de fallback para carregamento
-const LoadingFallback = () => <div></div>;
 
 const App = () => {
   return (
     <ErrorBoundary>
-      {/* Lazy loading para os componentes Toaster com Suspense para capturar erros */}
-      <Suspense fallback={<LoadingFallback />}>
-        <Toaster />
-      </Suspense>
-      <Suspense fallback={<LoadingFallback />}>
-        <Sonner />
-      </Suspense>
-      
-      <ErrorBoundary>
-        <AuthProvider>
-          <RouterPersistence>
-            <TooltipProvider>
-              <div className="bg-background min-h-screen">
+      {/* 
+        A ordem dos providers importa muito! 
+        Os toast providers devem vir depois dos providers de contexto
+        para evitar erros de hook
+      */}
+      <AuthProvider>
+        <RouterPersistence>
+          <TooltipProvider>
+            <div className="bg-background min-h-screen">
+              <ErrorBoundary>
                 <Routes>
                   {/* Rotas públicas */}
                   <Route path="/login" element={<LoginPage />} />
@@ -112,9 +103,7 @@ const App = () => {
                     path="/desempenho" 
                     element={
                       <ProtectedRoute>
-                        <ErrorBoundary>
-                          <Performance />
-                        </ErrorBoundary>
+                        <Performance />
                       </ProtectedRoute>
                     } 
                   />
@@ -165,13 +154,6 @@ const App = () => {
                     }
                   />
                   
-                  {/* Nova rota para gestão de presenças */}
-                  <Route path="/presencas" element={
-                    <ProtectedRoute>
-                      <AttendanceManagement />
-                    </ProtectedRoute>
-                  } />
-                  
                   {/* Rota 404 */}
                   <Route path="*" element={
                     <ProtectedRoute>
@@ -182,11 +164,16 @@ const App = () => {
                 
                 {/* BottomNavbar apenas em rotas autenticadas */}
                 <AuthNavbarWrapper />
-              </div>
-            </TooltipProvider>
-          </RouterPersistence>
-        </AuthProvider>
-      </ErrorBoundary>
+              </ErrorBoundary>
+              
+              {/* Os componentes Toaster devem estar fora dos Routes 
+                  mas dentro dos outros providers */}
+              <Toaster />
+              <Sonner />
+            </div>
+          </TooltipProvider>
+        </RouterPersistence>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
-import { Clipboard, Play, Clock, CheckCircle2, BarChart3, AlertTriangle } from "lucide-react";
+import { Clipboard, Play, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "../ui/use-toast";
 import { ExerciseTimer } from "./ExerciseTimer";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/lib/supabase";
-import ToggleExerciseStatus from "./ToggleExerciseStatus";
-import ExercisePerformanceData from "./ExercisePerformanceData";
 
 interface ExerciseListProps {
   treinoDoDiaId: string;
@@ -19,7 +16,6 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   const [exercicios, setExercicios] = useState([]);
   const [activeExercise, setActiveExercise] = useState(null);
   const [isTimerActive, setIsTimerActive] = useState(false);
-  const [exerciciosComAvaliacao, setExerciciosComAvaliacao] = useState({});
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -30,32 +26,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
     try {
       setLoading(true);
       const treinoAtual = await fetchTreinoAtual(treinoDoDiaId);
-      
-      // Verificar quais exercícios já têm avaliações
-      const exerciciosIds = (treinoAtual.exercicios || []).map(ex => ex.id);
-      
-      if (exerciciosIds.length > 0) {
-        const { data: avaliacoes } = await supabase
-          .from('avaliacoes_fundamento')
-          .select('exercicio_id')
-          .in('exercicio_id', exerciciosIds);
-        
-        // Criar um mapa de exercícios com avaliações
-        const exerciciosAvaliadosMap = {};
-        (avaliacoes || []).forEach(av => {
-          exerciciosAvaliadosMap[av.exercicio_id] = true;
-        });
-        
-        setExerciciosComAvaliacao(exerciciosAvaliadosMap);
-      }
-      
-      // Adicionar propriedade hasEvaluations para cada exercício
-      const exerciciosProcessados = (treinoAtual.exercicios || []).map(exercicio => ({
-        ...exercicio,
-        hasEvaluations: exerciciosComAvaliacao[exercicio.id] || false
-      }));
-      
-      setExercicios(exerciciosProcessados);
+      setExercicios(treinoAtual.exercicios || []);
     } catch (error) {
       console.error("Error loading exercises:", error);
       toast({
@@ -65,75 +36,6 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleToggleStatus = async (exerciseId: string, completed: boolean) => {
-    try {
-      // Se estiver desmarcando, verificar primeiro se tem avaliações
-      if (!completed) {
-        const { data: avaliacoes, error } = await supabase
-          .from('avaliacoes_fundamento')
-          .select('id')
-          .eq('exercicio_id', exerciseId);
-        
-        const temAvaliacoes = avaliacoes && avaliacoes.length > 0;
-        
-        // Atualizar o estado local para exibir a mensagem
-        if (temAvaliacoes) {
-          setExerciciosComAvaliacao(prev => ({
-            ...prev,
-            [exerciseId]: true
-          }));
-          
-          // Exibir toast de aviso para informar sobre as avaliações
-          toast({
-            title: "Avaliações preservadas",
-            description: "Os dados de avaliação serão mantidos e estarão disponíveis quando o exercício for marcado como concluído novamente.",
-            duration: 5000,
-          });
-        }
-      }
-      
-      // Atualizar o status do exercício no banco de dados
-      const { error } = await supabase
-        .from('treinos_exercicios')
-        .update({ concluido: completed })
-        .eq('id', exerciseId);
-
-      if (error) throw error;
-      
-      // Atualizar a lista de exercícios localmente
-      setExercicios(prev => prev.map(ex => {
-        if (ex.id === exerciseId) {
-          return {
-            ...ex,
-            concluido: completed,
-            hasEvaluations: exerciciosComAvaliacao[exerciseId] || false
-          };
-        }
-        return ex;
-      }));
-      
-      // Exibir toast de confirmação
-      toast({
-        title: completed ? "Exercício concluído" : "Exercício desmarcado",
-        description: "O status do exercício foi atualizado com sucesso.",
-        duration: 3000,
-      });
-      
-    } catch (error) {
-      console.error("Error toggling exercise status:", error);
-      
-      // Exibir toast de erro
-      toast({
-        title: "Erro ao atualizar status",
-        description: "Não foi possível atualizar o status do exercício. Tente novamente.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      
-      throw error;
     }
   };
 
@@ -221,36 +123,20 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
                   )}
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  <ToggleExerciseStatus
-                    exerciseId={exercicio.id}
-                    isCompleted={exercicio.concluido}
-                    onStatusChange={(completed) => handleToggleStatus(exercicio.id, completed)}
-                  />
-                  
-                  {!exercicio.concluido && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleStartExercise(exercicio)}
-                    >
-                      <Play className="h-4 w-4 mr-1" /> Iniciar
-                    </Button>
-                  )}
-                </div>
+                {exercicio.concluido ? (
+                  <div className="flex items-center text-green-500">
+                    <CheckCircle2 className="h-5 w-5 mr-1" />
+                    <span className="text-sm font-medium">Concluído</span>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleStartExercise(exercicio)}
+                  >
+                    <Play className="h-4 w-4 mr-1" /> Iniciar
+                  </Button>
+                )}
               </div>
-              
-              {/* Exibir dados de desempenho apenas quando concluído */}
-              {exercicio.concluido ? (
-                <ExercisePerformanceData 
-                  exerciseId={exercicio.id} 
-                  treinoDoDiaId={treinoDoDiaId} 
-                />
-              ) : exercicio.hasEvaluations || exerciciosComAvaliacao[exercicio.id] ? (
-                <div className="mt-3 p-2 bg-amber-50 text-amber-700 rounded-md text-sm flex items-center">
-                  <AlertTriangle className="h-4 w-4 mr-1 flex-shrink-0" /> 
-                  <span>Existem dados de avaliação salvos que serão exibidos quando o exercício for marcado como concluído.</span>
-                </div>
-              ) : null}
             </div>
           </div>
         ))}

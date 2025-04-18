@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React from "react"
+import * as React from "react"
 
 import type {
   ToastActionElement,
@@ -169,35 +168,23 @@ function toast({ ...props }: Toast) {
   }
 }
 
-// Função segura para inicializar o estado do toast, mesmo que React.useState esteja com problema
 function useToast() {
-  // Fallback para quando o React não carrega corretamente
-  try {
-    const [state, setState] = React.useState<State>(memoryState)
+  const [state, setState] = React.useState<State>(memoryState)
 
-    React.useEffect(() => {
-      listeners.push(setState)
-      return () => {
-        const index = listeners.indexOf(setState)
-        if (index > -1) {
-          listeners.splice(index, 1)
-        }
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
       }
-    }, [state])
+    }
+  }, [state])
 
-    return {
-      ...state,
-      toast,
-      dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    }
-  } catch (e) {
-    // Fallback quando React hooks não funcionam
-    console.warn("Toast hooks failed, using fallback", e)
-    return {
-      toasts: [],
-      toast,
-      dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    }
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 
