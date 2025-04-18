@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,12 +9,15 @@ import {
   Calendar, 
   BarChart3, 
   LogOut,
-  Plus
+  Plus,
+  Bell
 } from "lucide-react";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isSupported, isPermissionGranted, isLoading, setupNotifications } = useNotifications();
 
   const quickLinks = [
     {
@@ -43,6 +45,10 @@ const Dashboard: React.FC = () => {
       color: "bg-purple-500/10 text-purple-500",
     },
   ];
+
+  const handleEnableNotifications = async () => {
+    await setupNotifications();
+  };
 
   return (
     <div className="mobile-container py-6 pb-20">
@@ -94,6 +100,17 @@ const Dashboard: React.FC = () => {
             <Calendar className="h-4 w-4 mr-2" />
             Treino do dia
           </Button>
+          {isSupported && !isPermissionGranted && (
+            <Button 
+              className="justify-start" 
+              variant="outline"
+              onClick={handleEnableNotifications}
+              disabled={isLoading}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              {isLoading ? "Ativando notificações..." : "Ativar notificações"}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

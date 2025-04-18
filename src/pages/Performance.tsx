@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart2, Search, X, Users, User } from 'lucide-react';
+import { BarChart2, Search, X, Users, User, Trophy } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
@@ -14,6 +14,7 @@ import TeamPerformanceSummary from '@/components/performance/TeamPerformanceSumm
 import TopAthletesSection from '@/components/performance/TopAthletesSection';
 import PerformanceAlerts from '@/components/performance/PerformanceAlerts';
 import AthleteAnalysis from '@/components/performance/AthleteAnalysis';
+import AthleteRanking from '@/components/performance/AthleteRanking';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -25,12 +26,15 @@ interface FundamentoMedia {
   totalExecucoes: number;
 }
 
+// Tipo para abas de análise
+type AnalysisTab = 'equipe' | 'individual' | 'ranking';
+
 const Performance = () => {
   const [team, setTeam] = useState<TeamType>("Masculino");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'equipe' | 'individual'>('equipe');
+  const [activeTab, setActiveTab] = useState<AnalysisTab>('equipe');
   const [fundamentoSelecionado, setFundamentoSelecionado] = useState<Fundamento>('saque');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -160,6 +164,10 @@ const Performance = () => {
     ));
   };
 
+  useEffect(() => {
+    console.log('Active tab:', activeTab);
+  }, [activeTab]);
+
   return (
     <div className="mobile-container pb-20">
       <header className="flex items-center justify-between mb-6">
@@ -167,6 +175,16 @@ const Performance = () => {
           <BarChart2 className="mr-2 h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">Desempenho</h1>
         </div>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center gap-1"
+          onClick={() => setActiveTab('ranking')}
+        >
+          <Trophy className="h-4 w-4" /> 
+          <span>Ver Ranking</span>
+        </Button>
       </header>
       
       {/* Filtros - Fixos no topo */}
@@ -196,16 +214,36 @@ const Performance = () => {
           )}
         </div>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'equipe' | 'individual')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="equipe" className="flex items-center gap-2">
-              <Users className="h-4 w-4" /> Equipe
-            </TabsTrigger>
-            <TabsTrigger value="individual" className="flex items-center gap-2">
-              <User className="h-4 w-4" /> Individual
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Navegação simplificada */}
+        <div className="flex w-full rounded-md border p-1">
+          <button
+            className={`flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === 'equipe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('equipe')}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <Users className="h-4 w-4" /> 
+              <span>Equipe</span>
+            </div>
+          </button>
+          <button
+            className={`flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === 'individual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('individual')}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <User className="h-4 w-4" /> 
+              <span>Individual</span>
+            </div>
+          </button>
+          <button
+            className={`flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === 'ranking' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('ranking')}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <Trophy className="h-4 w-4" /> 
+              <span>Ranking</span>
+            </div>
+          </button>
+        </div>
       </div>
       
       {/* Conteúdo principal */}
@@ -255,7 +293,7 @@ const Performance = () => {
                 onSelectAthlete={handleSelectAthlete}
               />
             </div>
-          ) : (
+          ) : activeTab === 'individual' ? (
             <AthleteAnalysis
               performanceData={performanceData}
               selectedAthleteId={selectedAthleteId}
@@ -264,6 +302,11 @@ const Performance = () => {
               mediasFundamentos={mediasFundamentos}
               team={team}
               onOpenDetailDrawer={() => setIsDetailOpen(true)}
+            />
+          ) : (
+            <AthleteRanking 
+              performanceData={performanceData}
+              team={team}
             />
           )}
         </>

@@ -1,0 +1,133 @@
+/* Estilos específicos para o componente AthleteRanking */
+
+.ranking-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.ranking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ranking-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.ranking-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(240 5.9% 90%);
+  background-color: white;
+}
+
+.ranking-position {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+}
+
+.position-1 {
+  background-color: #fef9c3;
+  color: #ca8a04;
+}
+
+.position-2 {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.position-3 {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.ranking-info {
+  flex: 1;
+}
+
+.ranking-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.ranking-score {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: hsl(240 5.9% 10%);
+}
+
+.ranking-progress {
+  width: 100%;
+  height: 0.625rem;
+  background-color: hsl(240 5.9% 90%);
+  border-radius: 9999px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.ranking-progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  background-color: hsl(220.9 39.3% 11%);
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 640px) {
+  .ranking-card {
+    padding: 0.75rem;
+  }
+  
+  .ranking-position {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .ranking-name {
+    font-size: 0.875rem;
+  }
+  
+  .ranking-score {
+    font-size: 1rem;
+  }
+}
+
+/* Fullscreen */
+.ranking-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  background-color: white;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+/* Ícones medalha */
+.medal-gold {
+  color: #eab308;
+}
+
+.medal-silver {
+  color: #6b7280;
+}
+
+.medal-bronze {
+  color: #d97706;
+} 
