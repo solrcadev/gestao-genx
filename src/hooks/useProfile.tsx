@@ -1,58 +1,28 @@
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { Profile } from "@/types";
 
-// Define a Profile type since it's not exported from @/types
-interface Profile {
-  id: string;
-  user_id: string;
-  role: string;
-  name?: string;
-  avatar_url?: string;
-  updated_at?: string;
-  created_at?: string;
-}
-
-export const useProfile = () => {
+export function useProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
+  const { data: profile, isLoading: loading } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: async (): Promise<Profile | null> => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
 
-        if (error) {
-          throw error;
-        }
-
-        setProfile(data);
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
-
-  return { profile, loading, error };
-};
-
-export default useProfile;
+  return { profile, loading };
+}

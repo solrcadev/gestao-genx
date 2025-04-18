@@ -1,135 +1,111 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from './use-toast';
+import { 
+  isPushNotificationSupported, 
+  requestNotificationPermission, 
+  subscribeToPushNotifications,
+  showLocalNotification
+} from '@/services/notificationService';
 
-export interface UseNotificationsReturn {
-  isSupported: boolean;
-  isPermissionGranted: boolean;
-  isLoading: boolean;
-  setupNotifications: () => Promise<boolean>;
-  error: Error | null;
-}
-
-export const useNotifications = (): UseNotificationsReturn => {
+export function useNotifications() {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [isSupported, setIsSupported] = useState<boolean>(false);
   const [isPermissionGranted, setIsPermissionGranted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  // Check if notifications are supported and permission status
+  
+  // Verificar se as notificações são suportadas
   useEffect(() => {
-    const checkSupport = async () => {
-      // Check if the browser supports notifications
-      if (!('Notification' in window)) {
-        setIsSupported(false);
-        return;
-      }
-
-      setIsSupported(true);
-
-      // Check if service worker is registered and available
-      if (!('serviceWorker' in navigator)) {
-        console.warn('Service Worker not supported in this browser');
-        return;
-      }
-
-      // Check current permission status
+    const supported = isPushNotificationSupported();
+    setIsSupported(supported);
+    
+    // Verificar o status da permissão
+    if (supported) {
       setIsPermissionGranted(Notification.permission === 'granted');
-    };
-
-    checkSupport();
-  }, []);
-
-  // Function to setup notifications
-  const setupNotifications = useCallback(async (): Promise<boolean> => {
-    if (!isSupported || !user) return false;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Request permission
-      const permission = await Notification.requestPermission();
-      const granted = permission === 'granted';
-      setIsPermissionGranted(granted);
-
-      if (!granted) {
-        toast({
-          title: "Permissão negada",
-          description: "Você precisa permitir as notificações para receber alertas.",
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Get push subscription
-      let subscription = await registration.pushManager.getSubscription();
-
-      // If no subscription exists, create one
-      if (!subscription) {
-        try {
-          // Get VAPID public key from the server
-          const response = await fetch('/api/notifications/vapid-public-key');
-          const { publicKey } = await response.json();
-
-          // Subscribe the user
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: publicKey
-          });
-        } catch (error) {
-          console.error('Error during push subscription:', error);
-          throw new Error('Falha ao configurar a assinatura de notificações.');
-        }
-      }
-
-      // Save subscription to database
-      const { error: saveError } = await supabase
-        .from('push_subscriptions')
-        .upsert({
-          user_id: user.id,
-          subscription: JSON.stringify(subscription),
-          created_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
-
-      if (saveError) {
-        throw new Error('Erro ao salvar assinatura no banco de dados.');
-      }
-
-      toast({
-        title: "Notificações ativadas",
-        description: "Você receberá notificações de eventos importantes.",
+    }
+    
+    // Registrar o service worker se ainda não estiver registrado
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        console.log('Service Worker está pronto:', registration);
       });
-
-      return true;
-    } catch (err) {
-      console.error('Error setting up notifications:', err);
-      setError(err instanceof Error ? err : new Error('Erro ao configurar notificações'));
-      
+    }
+  }, []);
+  
+  // Função para solicitar permissão e se inscrever nas notificações
+  const setupNotifications = async (atletaId?: string) => {
+    if (!isPushNotificationSupported()) {
       toast({
-        title: "Erro na configuração",
-        description: err instanceof Error ? err.message : "Falha ao configurar notificações",
+        title: "Notificações não suportadas",
+        description: "Seu navegador não suporta notificações push.",
         variant: "destructive",
       });
-      
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [isSupported, user, toast]);
-
+    
+    setIsLoading(true);
+    
+    try {
+      // Solicitar permissão
+      console.log("Solicitando permissão para notificações...");
+      const permissionGranted = await requestNotificationPermission();
+      setIsPermissionGranted(permissionGranted);
+      
+      if (!permissionGranted) {
+        toast({
+          title: "Permissão negada",
+          description: "Você não permitiu notificações para este app.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return false;
+      }
+      
+      console.log("Permissão concedida, inscrevendo nas notificações push...");
+      
+      // Inscrever-se nas notificações push
+      const subscribed = await subscribeToPushNotifications(atletaId);
+      
+      if (subscribed) {
+        toast({
+          title: "Notificações ativadas",
+          description: "Você receberá notificações sobre novas metas, atletas e treinos.",
+        });
+        
+        // Mostrar uma notificação de teste
+        console.log("Mostrando notificação de teste...");
+        showLocalNotification(
+          "🏐 Notificações Ativadas!", 
+          "Você receberá atualizações sobre novas metas, atletas cadastrados e treinos do dia."
+        );
+      } else {
+        toast({
+          title: "Erro ao ativar notificações",
+          description: "Não foi possível configurar as notificações. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+      
+      setIsLoading(false);
+      return subscribed;
+    } catch (error) {
+      console.error("Error setting up notifications:", error);
+      toast({
+        title: "Erro ao configurar notificações",
+        description: "Ocorreu um problema ao configurar as notificações.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return false;
+    }
+  };
+  
   return {
     isSupported,
     isPermissionGranted,
     isLoading,
     setupNotifications,
-    error
   };
-};
+}

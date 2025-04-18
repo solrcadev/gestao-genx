@@ -53,36 +53,30 @@ export type Database = {
       }
       avaliacoes_exercicios: {
         Row: {
-          acertos: number
           atleta_id: string
           created_at: string | null
-          erros: number
-          exercicio_id: string | null
+          exercicio_id: string
           fundamento: string
           id: string
-          timestamp: string | null
+          nota: number
           treino_id: string
         }
         Insert: {
-          acertos: number
           atleta_id: string
           created_at?: string | null
-          erros: number
-          exercicio_id?: string | null
+          exercicio_id: string
           fundamento: string
           id?: string
-          timestamp?: string | null
+          nota: number
           treino_id: string
         }
         Update: {
-          acertos?: number
           atleta_id?: string
           created_at?: string | null
-          erros?: number
-          exercicio_id?: string | null
+          exercicio_id?: string
           fundamento?: string
           id?: string
-          timestamp?: string | null
+          nota?: number
           treino_id?: string
         }
         Relationships: [
@@ -118,7 +112,6 @@ export type Database = {
           exercicio_id: string
           fundamento: string
           id: string
-          timestamp: string | null
           treino_id: string
         }
         Insert: {
@@ -129,7 +122,6 @@ export type Database = {
           exercicio_id: string
           fundamento: string
           id?: string
-          timestamp?: string | null
           treino_id: string
         }
         Update: {
@@ -140,7 +132,6 @@ export type Database = {
           exercicio_id?: string
           fundamento?: string
           id?: string
-          timestamp?: string | null
           treino_id?: string
         }
         Relationships: [
@@ -1312,27 +1303,7 @@ export type Database = {
       }
     }
     Views: {
-      vw_avaliacoes: {
-        Row: {
-          acertos: number | null
-          atleta_id: string | null
-          atleta_nome: string | null
-          erros: number | null
-          fundamento: string | null
-          id: string | null
-          nota_calculada: number | null
-          timestamp: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "avaliacoes_exercicios_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       cleanup_old_subscriptions: {
