@@ -44,10 +44,10 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
   const [activeTab, setActiveTab] = useState("overview");
 
   // Prepare data for the radar chart
-  const radarData = Object.entries(performance.avaliacoes.porFundamento).map(
+  const radarData = Object.entries(performance?.avaliacoes?.porFundamento || {}).map(
     ([fundamento, dados]) => ({
       fundamento,
-      taxa: Number((dados.percentualAcerto).toFixed(0)),
+      taxa: Number(((dados?.percentualAcerto || 0)).toFixed(0)),
     })
   );
 
@@ -55,12 +55,12 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
   const pieData = [
     {
       name: "Presente",
-      value: performance.presenca.presentes,
+      value: performance?.presenca?.presentes || 0,
       color: "#22c55e",
     },
     {
       name: "Ausente",
-      value: performance.presenca.total - performance.presenca.presentes,
+      value: (performance?.presenca?.total || 0) - (performance?.presenca?.presentes || 0),
       color: "#ef4444",
     },
   ];
@@ -88,15 +88,15 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
     }
   };
 
-  // Last evaluations for bar chart
-  const lastEvaluations = performance.ultimasAvaliacoes
+  // Last evaluations for bar chart - com verificações adicionais de segurança
+  const lastEvaluations = Array.isArray(performance.ultimasAvaliacoes) && performance.ultimasAvaliacoes.length > 0
     ? performance.ultimasAvaliacoes
         .slice(0, 5)
         .map((avaliacao) => ({
-          name: avaliacao.fundamento,
-          acertos: avaliacao.acertos,
-          erros: avaliacao.erros,
-          data: formatarDataSegura(avaliacao.data),
+          name: avaliacao.fundamento || "Desconhecido",
+          acertos: avaliacao.acertos || 0,
+          erros: avaliacao.erros || 0,
+          data: avaliacao.data ? formatarDataSegura(avaliacao.data) : "Data inválida",
           treino: avaliacao.treino || "Avaliação",
         }))
     : [];
@@ -123,11 +123,11 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
                 <div className="mt-1 flex items-center justify-center gap-1">
                   <CircleCheck className="h-4 w-4 text-green-500" />
                   <p className="text-2xl font-bold">
-                    {performance.presenca.percentual.toFixed(0)}%
+                    {(performance?.presenca?.percentual || 0).toFixed(0)}%
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {performance.presenca.presentes} de {performance.presenca.total} treinos
+                  {performance?.presenca?.presentes || 0} de {performance?.presenca?.total || 0} treinos
                 </p>
               </CardContent>
             </Card>
@@ -136,10 +136,10 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
               <CardContent className="p-4 text-center">
                 <p className="text-sm text-muted-foreground">Nota Média</p>
                 <p className="text-2xl font-bold mt-1">
-                  {performance.avaliacoes.mediaNota.toFixed(1)}
+                  {(performance?.avaliacoes?.mediaNota || 0).toFixed(1)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {performance.avaliacoes.total} avaliações
+                  {performance?.avaliacoes?.total || 0} avaliações
                 </p>
               </CardContent>
             </Card>
@@ -213,32 +213,32 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
             </CardContent>
           </Card>
 
-          {Object.entries(performance.avaliacoes.porFundamento).length > 0 ? (
+          {Object.entries(performance?.avaliacoes?.porFundamento || {}).length > 0 ? (
             <div className="space-y-3">
-              {Object.entries(performance.avaliacoes.porFundamento).map(
+              {Object.entries(performance?.avaliacoes?.porFundamento || {}).map(
                 ([fundamento, dados]) => (
                   <Card key={fundamento}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="text-sm font-medium">{fundamento}</h4>
                         <Badge
-                          variant={dados.percentualAcerto > 60 ? "default" : "outline"}
+                          variant={(dados?.percentualAcerto || 0) > 60 ? "default" : "outline"}
                           className={
-                            dados.percentualAcerto > 60 ? "bg-green-500" : "text-amber-500"
+                            (dados?.percentualAcerto || 0) > 60 ? "bg-green-500" : "text-amber-500"
                           }
                         >
-                          {(dados.percentualAcerto).toFixed(0)}% eficiência
+                          {(dados?.percentualAcerto || 0).toFixed(0)}% eficiência
                         </Badge>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <p>
-                          Acertos: <span className="font-medium text-green-600">{dados.acertos}</span>
+                          Acertos: <span className="font-medium text-green-600">{dados?.acertos || 0}</span>
                         </p>
                         <p>
-                          Erros: <span className="font-medium text-red-600">{dados.erros}</span>
+                          Erros: <span className="font-medium text-red-600">{dados?.erros || 0}</span>
                         </p>
                         <p>
-                          Total: <span className="font-medium">{dados.total}</span>
+                          Total: <span className="font-medium">{dados?.total || 0}</span>
                         </p>
                       </div>
                     </CardContent>
@@ -300,13 +300,13 @@ const AthletePerformanceDetail = ({ performance }: AthletePerformanceDetailProps
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-medium">Histórico de Presenças</h3>
                 <Badge variant="outline">
-                  {performance.presenca.percentual.toFixed(0)}% presença
+                  {(performance?.presenca?.percentual || 0).toFixed(0)}% presença
                 </Badge>
               </div>
 
               {/* We would need more data for a detailed presence history */}
               <p className="text-center py-4 text-muted-foreground">
-                Presença em {performance.presenca.presentes} de {performance.presenca.total} treinos
+                Presença em {performance?.presenca?.presentes || 0} de {performance?.presenca?.total || 0} treinos
               </p>
             </CardContent>
           </Card>

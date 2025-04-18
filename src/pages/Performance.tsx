@@ -1,24 +1,15 @@
-<<<<<<< HEAD
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Search, X, Users, User, Trophy } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-=======
-
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { BarChart2 } from 'lucide-react';
->>>>>>> 3030df7b55e2be586ac00a987a265a96ea22c1aa
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TeamType } from '@/types';
+import { Skeleton, CardSkeleton } from '@/components/ui/skeleton';
 import { getAthletesPerformance } from '@/services/performanceService';
-import { PerformanceFilters } from '@/components/performance/filters/PerformanceFilters';
-import { PerformanceContent } from '@/components/performance/content/PerformanceContent';
+import { TeamType, AthletePerformance } from '@/types';
 import AthletePerformanceDetail from '@/components/performance/AthletePerformanceDetail';
-<<<<<<< HEAD
 import TeamPerformanceSummary from '@/components/performance/TeamPerformanceSummary';
 import TopAthletesSection from '@/components/performance/TopAthletesSection';
 import PerformanceAlerts from '@/components/performance/PerformanceAlerts';
@@ -34,8 +25,6 @@ interface FundamentoMedia {
   media: number;
   totalExecucoes: number;
 }
-=======
->>>>>>> 3030df7b55e2be586ac00a987a265a96ea22c1aa
 
 // Tipo para abas de análise
 type AnalysisTab = 'equipe' | 'individual' | 'ranking';
@@ -45,18 +34,15 @@ const Performance = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-<<<<<<< HEAD
   const [activeTab, setActiveTab] = useState<AnalysisTab>('equipe');
   const [fundamentoSelecionado, setFundamentoSelecionado] = useState<Fundamento>('saque');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-=======
-  const [activeTab, setActiveTab] = useState<'equipe' | 'individual' | 'ranking'>('equipe');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(new Date().setDate(new Date().getDate() - 7)),
     to: new Date()
   });
->>>>>>> 3030df7b55e2be586ac00a987a265a96ea22c1aa
 
+  // Buscar dados de desempenho dos atletas
   const { data: performanceData, isLoading, error, refetch } = useQuery({
     queryKey: ['athletePerformance', team],
     queryFn: async () => {
@@ -64,13 +50,16 @@ const Performance = () => {
         console.log('Iniciando consulta de desempenho');
         const data = await getAthletesPerformance(team);
         console.log(`Dados recuperados: ${data?.length || 0} atletas`);
+        setErrorMessage(null);
         return data;
       } catch (error) {
         console.error('Erro na consulta de desempenho:', error);
         if (error instanceof Error) {
-          throw error;
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage('Erro ao buscar dados de desempenho');
         }
-        throw new Error('Erro ao buscar dados de desempenho');
+        throw error;
       }
     },
   });
@@ -80,10 +69,104 @@ const Performance = () => {
     performance.atleta.nome.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Lidar com a seleção de um atleta
+  const handleSelectAthlete = (athleteId: string) => {
+    setSelectedAthleteId(athleteId);
+    setActiveTab('individual');
+  };
+
   // Encontrar o atleta selecionado
   const selectedAthlete = performanceData?.find(
     performance => performance.atleta.id === selectedAthleteId
   );
+  
+  // Calcular médias de fundamentos do time
+  const mediasFundamentos = (() => {
+    if (!performanceData) return [];
+    
+    const fundamentos: FundamentoMedia[] = [
+      { nome: 'saque' as Fundamento, media: 0, totalExecucoes: 0 },
+      { nome: 'recepção' as Fundamento, media: 0, totalExecucoes: 0 },
+      { nome: 'levantamento' as Fundamento, media: 0, totalExecucoes: 0 },
+      { nome: 'ataque' as Fundamento, media: 0, totalExecucoes: 0 },
+      { nome: 'bloqueio' as Fundamento, media: 0, totalExecucoes: 0 },
+      { nome: 'defesa' as Fundamento, media: 0, totalExecucoes: 0 }
+    ];
+    
+    // Calcular a média de cada fundamento
+    fundamentos.forEach(fundamento => {
+      let somaPercentuais = 0;
+      let somaExecucoes = 0;
+      let atletasComFundamento = 0;
+      
+      performanceData.forEach(performance => {
+        const avaliacaoFundamento = performance.avaliacoes.porFundamento[fundamento.nome];
+        if (avaliacaoFundamento) {
+          somaPercentuais += avaliacaoFundamento.percentualAcerto;
+          somaExecucoes += avaliacaoFundamento.total;
+          atletasComFundamento++;
+        }
+      });
+      
+      fundamento.media = atletasComFundamento > 0 ? somaPercentuais / atletasComFundamento : 0;
+      fundamento.totalExecucoes = somaExecucoes;
+    });
+    
+    return fundamentos;
+  })();
+  
+  // Obter top 3 atletas por fundamento selecionado
+  const topAtletas = (() => {
+    if (!performanceData) return [];
+    
+    const atletasPorFundamento = performanceData
+      .filter(performance => performance.avaliacoes.porFundamento[fundamentoSelecionado])
+      .map(performance => ({
+        id: performance.atleta.id,
+        nome: performance.atleta.nome,
+        percentual: performance.avaliacoes.porFundamento[fundamentoSelecionado].percentualAcerto,
+        totalExecucoes: performance.avaliacoes.porFundamento[fundamentoSelecionado].total,
+        ultimaData: performance.avaliacoes.porFundamento[fundamentoSelecionado].ultimaData || '-'
+      }))
+      .sort((a, b) => b.percentual - a.percentual)
+      .slice(0, 3);
+      
+    return atletasPorFundamento;
+  })();
+  
+  // Obter alertas de baixo desempenho (abaixo de 60%)
+  const alertas = (() => {
+    if (!performanceData || !mediasFundamentos) return [];
+    
+    const alertasArray = [];
+    
+    performanceData.forEach(performance => {
+      Object.entries(performance.avaliacoes.porFundamento).forEach(([fundamento, avaliacao]) => {
+        const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento)?.media || 0;
+        
+        if (avaliacao.percentualAcerto < 60) {
+          alertasArray.push({
+            atletaId: performance.atleta.id,
+            nome: performance.atleta.nome,
+            fundamento: fundamento as Fundamento,
+            percentual: avaliacao.percentualAcerto,
+            mediaEquipe
+          });
+        }
+      });
+    });
+    
+    return alertasArray.slice(0, 5); // Limitando a 5 alertas
+  })();
+  
+  // Renderizar skeletons durante o carregamento
+  const renderSkeletons = () => {
+    return Array(6).fill(0).map((_, index) => (
+      <div key={`skeleton-${index}`} className="w-full">
+        <CardSkeleton />
+      </div>
+    ));
+  };
 
   useEffect(() => {
     console.log('Active tab:', activeTab);
@@ -108,7 +191,6 @@ const Performance = () => {
         </Button>
       </header>
       
-<<<<<<< HEAD
       {/* Filtros - Fixos no topo */}
       <div className="sticky top-0 z-10 bg-background pt-2 pb-4 space-y-4 mb-6 shadow-sm">
         <Tabs defaultValue="Masculino" onValueChange={(value) => setTeam(value as TeamType)} className="w-full">
@@ -233,34 +315,6 @@ const Performance = () => {
           )}
         </>
       )}
-=======
-      <PerformanceFilters
-        team={team}
-        setTeam={setTeam}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        dateRange={dateRange}
-        setDateRange={setDateRange}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
-      
-      <PerformanceContent
-        isLoading={isLoading}
-        error={error instanceof Error ? error : null}
-        errorMessage={error instanceof Error ? error.message : null}
-        refetch={refetch}
-        performanceData={filteredAthletes}
-        activeTab={activeTab}
-        team={team}
-        dateRange={dateRange}
-        selectedAthleteId={selectedAthleteId}
-        setSelectedAthleteId={setSelectedAthleteId}
-        selectedAthlete={selectedAthlete}
-        isDetailOpen={isDetailOpen}
-        setIsDetailOpen={setIsDetailOpen}
-      />
->>>>>>> 3030df7b55e2be586ac00a987a265a96ea22c1aa
       
       <Drawer open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DrawerContent className="max-h-[90vh]">

@@ -21,150 +21,160 @@ import AttendanceManagement from './pages/AttendanceManagement';
 import AthleteDetails from './pages/AthleteDetails';
 import MetasEvolucao from './pages/MetasEvolucao';
 import RouterPersistence from "./components/RouterPersistence";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const App = () => {
   return (
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+    <ErrorBoundary>
+      {/* 
+        A ordem dos providers importa muito! 
+        Os toast providers devem vir depois dos providers de contexto
+        para evitar erros de hook
+      */}
       <AuthProvider>
         <RouterPersistence>
-          <div className="bg-background min-h-screen">
-            <Routes>
-              {/* Rotas públicas */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <TooltipProvider>
+            <div className="bg-background min-h-screen">
+              <ErrorBoundary>
+                <Routes>
+                  {/* Rotas públicas */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                  
+                  {/* Rotas protegidas */}
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/atletas" 
+                    element={
+                      <ProtectedRoute>
+                        <Athletes />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/atleta/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <AthleteDetails />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/treinos" 
+                    element={
+                      <ProtectedRoute>
+                        <Trainings />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/exercicios" 
+                    element={
+                      <ProtectedRoute>
+                        <Exercises />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/montar-treino" 
+                    element={
+                      <ProtectedRoute>
+                        <TrainingAssembly />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/montagem-treino" 
+                    element={
+                      <ProtectedRoute>
+                        <TrainingAssembly />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/desempenho" 
+                    element={
+                      <ProtectedRoute>
+                        <Performance />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/mais" 
+                    element={
+                      <ProtectedRoute>
+                        <More />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/treino-do-dia/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <TreinoDoDia />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/treino-do-dia" 
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <TreinoDoDia />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/aluno/:studentId/performance" element={
+                    <ProtectedRoute>
+                      <StudentPerformance />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/presencas" element={
+                    <ProtectedRoute>
+                      <AttendanceManagement />
+                    </ProtectedRoute>
+                  } />
+                  <Route
+                    path="/metas-evolucao"
+                    element={
+                      <ProtectedRoute>
+                        <MetasEvolucao />
+                      </ProtectedRoute>
+                    }
+                  />
+                  
+                  {/* Rota 404 */}
+                  <Route path="*" element={
+                    <ProtectedRoute>
+                      <NotFound />
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+                
+                {/* BottomNavbar apenas em rotas autenticadas */}
+                <AuthNavbarWrapper />
+              </ErrorBoundary>
               
-              {/* Rotas protegidas */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/atletas" 
-                element={
-                  <ProtectedRoute>
-                    <Athletes />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/atleta/:id" 
-                element={
-                  <ProtectedRoute>
-                    <AthleteDetails />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/treinos" 
-                element={
-                  <ProtectedRoute>
-                    <Trainings />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/exercicios" 
-                element={
-                  <ProtectedRoute>
-                    <Exercises />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/montar-treino" 
-                element={
-                  <ProtectedRoute>
-                    <TrainingAssembly />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/montagem-treino" 
-                element={
-                  <ProtectedRoute>
-                    <TrainingAssembly />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/desempenho" 
-                element={
-                  <ProtectedRoute>
-                    <Performance />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/mais" 
-                element={
-                  <ProtectedRoute>
-                    <More />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/treino-do-dia/:id" 
-                element={
-                  <ProtectedRoute>
-                    <TreinoDoDia />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/treino-do-dia" 
-                element={
-                  <ProtectedRoute>
-                    <TreinoDoDia />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="/aluno/:studentId/performance" element={
-                <ProtectedRoute>
-                  <StudentPerformance />
-                </ProtectedRoute>
-              } />
-              <Route path="/presencas" element={
-                <ProtectedRoute>
-                  <AttendanceManagement />
-                </ProtectedRoute>
-              } />
-              <Route
-                path="/metas-evolucao"
-                element={
-                  <ProtectedRoute>
-                    <MetasEvolucao />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* Nova rota para gestão de presenças */}
-              <Route path="/presencas" element={
-                <ProtectedRoute>
-                  <AttendanceManagement />
-                </ProtectedRoute>
-              } />
-              
-              {/* Rota 404 */}
-              <Route path="*" element={
-                <ProtectedRoute>
-                  <NotFound />
-                </ProtectedRoute>
-              } />
-            </Routes>
-            
-            {/* BottomNavbar apenas em rotas autenticadas */}
-            <AuthNavbarWrapper />
-          </div>
+              {/* Os componentes Toaster devem estar fora dos Routes 
+                  mas dentro dos outros providers */}
+              <Toaster />
+              <Sonner />
+            </div>
+          </TooltipProvider>
         </RouterPersistence>
       </AuthProvider>
-    </TooltipProvider>
+    </ErrorBoundary>
   );
 };
 
