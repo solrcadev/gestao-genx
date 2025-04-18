@@ -47,7 +47,7 @@ const LoginPage: React.FC = () => {
   // Função para recuperar a rota de redirecionamento após login
   const getRedirectRoute = (): string => {
     // Primeiro verificar se há uma rota tentada (quando o usuário tentou acessar uma página protegida)
-    const attemptedRoute = getRoute(ATTEMPTED_ROUTE_KEY, true); // true = limpar após leitura
+    const attemptedRoute = getRoute(ATTEMPTED_ROUTE_KEY);
     if (attemptedRoute) {
       console.log("Redirecionando para rota tentada:", attemptedRoute.pathname);
       return attemptedRoute.pathname + (attemptedRoute.search || '');

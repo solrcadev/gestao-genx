@@ -4,7 +4,9 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useProfile } from "@/hooks/useProfile";
-import { UserRole } from "@/types";
+
+// Define UserRole type since it's not exported from @/types
+type UserRole = 'admin' | 'coach' | 'athlete' | 'user';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -26,7 +28,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  if (!profile || !allowedRoles.includes(profile.role)) {
+  if (!profile || !allowedRoles.includes(profile.role as UserRole)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

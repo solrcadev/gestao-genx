@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,22 +24,16 @@ import AthleteDetails from './pages/AthleteDetails';
 import MetasEvolucao from './pages/MetasEvolucao';
 import RouterPersistence from "./components/RouterPersistence";
 import ErrorBoundary from "./components/ErrorBoundary";
-import React from "react";
 
-const App = () => {
+const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      {/* 
-        A ordem dos providers importa muito! 
-        Os toast providers devem vir depois dos providers de contexto
-        para evitar erros de hook
-      */}
-      <AuthProvider>
-        <RouterPersistence>
-          <React.StrictMode>
-            <TooltipProvider>
-              <div className="bg-background min-h-screen">
-                <ErrorBoundary>
+      <React.StrictMode>
+        <AuthProvider>
+          <RouterPersistence>
+            <div className="bg-background min-h-screen">
+              <ErrorBoundary>
+                <TooltipProvider>
                   <Routes>
                     {/* Rotas públicas */}
                     <Route path="/login" element={<LoginPage />} />
@@ -167,17 +162,17 @@ const App = () => {
                   
                   {/* BottomNavbar apenas em rotas autenticadas */}
                   <AuthNavbarWrapper />
-                </ErrorBoundary>
-                
-                {/* Os componentes Toaster devem estar fora dos Routes 
-                    mas dentro dos outros providers */}
-                <Toaster />
-                <Sonner />
-              </div>
-            </TooltipProvider>
-          </React.StrictMode>
-        </RouterPersistence>
-      </AuthProvider>
+                </TooltipProvider>
+              </ErrorBoundary>
+              
+              {/* Os componentes Toaster devem estar fora dos Routes 
+                  mas dentro dos outros providers */}
+              <Toaster />
+              <Sonner />
+            </div>
+          </RouterPersistence>
+        </AuthProvider>
+      </React.StrictMode>
     </ErrorBoundary>
   );
 };
