@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 
-=======
->>>>>>> dev
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Search, X, Users, User, Trophy } from 'lucide-react';
@@ -14,13 +11,12 @@ import { Skeleton, CardSkeleton } from '@/components/ui/skeleton';
 import { getAthletesPerformance } from '@/services/performanceService';
 import { TeamType, AthletePerformance } from '@/types';
 import AthletePerformanceDetail from '@/components/performance/AthletePerformanceDetail';
-<<<<<<< HEAD
-=======
 import TeamPerformanceSummary from '@/components/performance/TeamPerformanceSummary';
 import TopAthletesSection from '@/components/performance/TopAthletesSection';
 import PerformanceAlerts from '@/components/performance/PerformanceAlerts';
 import AthleteAnalysis from '@/components/performance/AthleteAnalysis';
 import AthleteRanking from '@/components/performance/AthleteRanking';
+import { PerformanceContent } from '@/components/performance/content/PerformanceContent';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -31,7 +27,6 @@ interface FundamentoMedia {
   media: number;
   totalExecucoes: number;
 }
->>>>>>> dev
 
 // Tipo para abas de análise
 type AnalysisTab = 'equipe' | 'individual' | 'ranking';
@@ -42,11 +37,8 @@ const Performance = () => {
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AnalysisTab>('equipe');
-<<<<<<< HEAD
-=======
   const [fundamentoSelecionado, setFundamentoSelecionado] = useState<Fundamento>('saque');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
->>>>>>> dev
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(new Date().setDate(new Date().getDate() - 7)),
     to: new Date()
@@ -261,70 +253,21 @@ const Performance = () => {
       </div>
       
       {/* Conteúdo principal */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {renderSkeletons()}
-        </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-destructive">Erro ao carregar dados de desempenho</p>
-          {errorMessage && (
-            <p className="text-sm text-muted-foreground mt-2 mb-4 text-center">
-              {errorMessage}
-            </p>
-          )}
-          <div className="space-y-4">
-            <Button onClick={() => refetch()} variant="outline" className="mt-2">
-              Tentar novamente
-            </Button>
-          </div>
-        </div>
-      ) : (!performanceData || performanceData.length === 0) ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-muted-foreground">Não há dados de desempenho disponíveis para este time</p>
-          <p className="text-sm text-muted-foreground mt-2 mb-4">
-            Adicione atletas e registre avaliações para visualizar o desempenho.
-          </p>
-        </div>
-      ) : (
-        <>
-          {activeTab === 'equipe' ? (
-            <div className="space-y-8">
-              {/* Resumo da Equipe */}
-              <TeamPerformanceSummary mediasFundamentos={mediasFundamentos} />
-              
-              {/* Destaques */}
-              <TopAthletesSection
-                fundamentoSelecionado={fundamentoSelecionado}
-                setFundamentoSelecionado={setFundamentoSelecionado}
-                topAtletas={topAtletas}
-                onSelectAthlete={handleSelectAthlete}
-              />
-              
-              {/* Alertas */}
-              <PerformanceAlerts
-                alertas={alertas}
-                onSelectAthlete={handleSelectAthlete}
-              />
-            </div>
-          ) : activeTab === 'individual' ? (
-            <AthleteAnalysis
-              performanceData={performanceData}
-              selectedAthleteId={selectedAthleteId}
-              setSelectedAthleteId={setSelectedAthleteId}
-              selectedAthlete={selectedAthlete}
-              mediasFundamentos={mediasFundamentos}
-              team={team}
-              onOpenDetailDrawer={() => setIsDetailOpen(true)}
-            />
-          ) : (
-            <AthleteRanking 
-              performanceData={performanceData}
-              team={team}
-            />
-          )}
-        </>
-      )}
+      <PerformanceContent
+        isLoading={isLoading}
+        error={error ? error as Error : null}
+        errorMessage={errorMessage}
+        refetch={refetch}
+        performanceData={performanceData}
+        activeTab={activeTab}
+        team={team}
+        dateRange={dateRange}
+        selectedAthleteId={selectedAthleteId}
+        setSelectedAthleteId={setSelectedAthleteId}
+        selectedAthlete={selectedAthlete}
+        isDetailOpen={isDetailOpen}
+        setIsDetailOpen={setIsDetailOpen}
+      />
       
       <Drawer open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DrawerContent className="max-h-[90vh]">

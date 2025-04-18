@@ -91,3 +91,5 @@ const Rankings = () => {
 };
 
 export default Rankings;
+// Also export as a named export to support import { Rankings } syntax
+export { Rankings };

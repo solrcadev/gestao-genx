@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ import AthleteDetails from './pages/AthleteDetails';
 import MetasEvolucao from './pages/MetasEvolucao';
 import RouterPersistence from "./components/RouterPersistence";
 import ErrorBoundary from "./components/ErrorBoundary";
+import React from "react";
 
 const App = () => {
   return (
@@ -33,145 +35,147 @@ const App = () => {
       */}
       <AuthProvider>
         <RouterPersistence>
-          <TooltipProvider>
-            <div className="bg-background min-h-screen">
-              <ErrorBoundary>
-                <Routes>
-                  {/* Rotas públicas */}
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <React.StrictMode>
+            <TooltipProvider>
+              <div className="bg-background min-h-screen">
+                <ErrorBoundary>
+                  <Routes>
+                    {/* Rotas públicas */}
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    
+                    {/* Rotas protegidas */}
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route 
+                      path="/dashboard" 
+                      element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/atletas" 
+                      element={
+                        <ProtectedRoute>
+                          <Athletes />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/atleta/:id" 
+                      element={
+                        <ProtectedRoute>
+                          <AthleteDetails />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/treinos" 
+                      element={
+                        <ProtectedRoute>
+                          <Trainings />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/exercicios" 
+                      element={
+                        <ProtectedRoute>
+                          <Exercises />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/montar-treino" 
+                      element={
+                        <ProtectedRoute>
+                          <TrainingAssembly />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/montagem-treino" 
+                      element={
+                        <ProtectedRoute>
+                          <TrainingAssembly />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/desempenho" 
+                      element={
+                        <ProtectedRoute>
+                          <Performance />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/mais" 
+                      element={
+                        <ProtectedRoute>
+                          <More />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/treino-do-dia/:id" 
+                      element={
+                        <ProtectedRoute>
+                          <ErrorBoundary>
+                            <TreinoDoDia />
+                          </ErrorBoundary>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/treino-do-dia" 
+                      element={
+                        <ProtectedRoute>
+                          <ErrorBoundary>
+                            <TreinoDoDia />
+                          </ErrorBoundary>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route path="/aluno/:studentId/performance" element={
+                      <ProtectedRoute>
+                        <StudentPerformance />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/presencas" element={
+                      <ProtectedRoute>
+                        <AttendanceManagement />
+                      </ProtectedRoute>
+                    } />
+                    <Route
+                      path="/metas-evolucao"
+                      element={
+                        <ProtectedRoute>
+                          <MetasEvolucao />
+                        </ProtectedRoute>
+                      }
+                    />
+                    
+                    {/* Rota 404 */}
+                    <Route path="*" element={
+                      <ProtectedRoute>
+                        <NotFound />
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
                   
-                  {/* Rotas protegidas */}
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/atletas" 
-                    element={
-                      <ProtectedRoute>
-                        <Athletes />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/atleta/:id" 
-                    element={
-                      <ProtectedRoute>
-                        <AthleteDetails />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/treinos" 
-                    element={
-                      <ProtectedRoute>
-                        <Trainings />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/exercicios" 
-                    element={
-                      <ProtectedRoute>
-                        <Exercises />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/montar-treino" 
-                    element={
-                      <ProtectedRoute>
-                        <TrainingAssembly />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/montagem-treino" 
-                    element={
-                      <ProtectedRoute>
-                        <TrainingAssembly />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/desempenho" 
-                    element={
-                      <ProtectedRoute>
-                        <Performance />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/mais" 
-                    element={
-                      <ProtectedRoute>
-                        <More />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/treino-do-dia/:id" 
-                    element={
-                      <ProtectedRoute>
-                        <ErrorBoundary>
-                          <TreinoDoDia />
-                        </ErrorBoundary>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/treino-do-dia" 
-                    element={
-                      <ProtectedRoute>
-                        <ErrorBoundary>
-                          <TreinoDoDia />
-                        </ErrorBoundary>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route path="/aluno/:studentId/performance" element={
-                    <ProtectedRoute>
-                      <StudentPerformance />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/presencas" element={
-                    <ProtectedRoute>
-                      <AttendanceManagement />
-                    </ProtectedRoute>
-                  } />
-                  <Route
-                    path="/metas-evolucao"
-                    element={
-                      <ProtectedRoute>
-                        <MetasEvolucao />
-                      </ProtectedRoute>
-                    }
-                  />
-                  
-                  {/* Rota 404 */}
-                  <Route path="*" element={
-                    <ProtectedRoute>
-                      <NotFound />
-                    </ProtectedRoute>
-                  } />
-                </Routes>
+                  {/* BottomNavbar apenas em rotas autenticadas */}
+                  <AuthNavbarWrapper />
+                </ErrorBoundary>
                 
-                {/* BottomNavbar apenas em rotas autenticadas */}
-                <AuthNavbarWrapper />
-              </ErrorBoundary>
-              
-              {/* Os componentes Toaster devem estar fora dos Routes 
-                  mas dentro dos outros providers */}
-              <Toaster />
-              <Sonner />
-            </div>
-          </TooltipProvider>
+                {/* Os componentes Toaster devem estar fora dos Routes 
+                    mas dentro dos outros providers */}
+                <Toaster />
+                <Sonner />
+              </div>
+            </TooltipProvider>
+          </React.StrictMode>
         </RouterPersistence>
       </AuthProvider>
     </ErrorBoundary>
