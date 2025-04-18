@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Search, X, Users, User, Trophy } from 'lucide-react';
@@ -10,6 +14,8 @@ import { Skeleton, CardSkeleton } from '@/components/ui/skeleton';
 import { getAthletesPerformance } from '@/services/performanceService';
 import { TeamType, AthletePerformance } from '@/types';
 import AthletePerformanceDetail from '@/components/performance/AthletePerformanceDetail';
+<<<<<<< HEAD
+=======
 import TeamPerformanceSummary from '@/components/performance/TeamPerformanceSummary';
 import TopAthletesSection from '@/components/performance/TopAthletesSection';
 import PerformanceAlerts from '@/components/performance/PerformanceAlerts';
@@ -25,6 +31,7 @@ interface FundamentoMedia {
   media: number;
   totalExecucoes: number;
 }
+>>>>>>> dev
 
 // Tipo para abas de análise
 type AnalysisTab = 'equipe' | 'individual' | 'ranking';
@@ -35,8 +42,11 @@ const Performance = () => {
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AnalysisTab>('equipe');
+<<<<<<< HEAD
+=======
   const [fundamentoSelecionado, setFundamentoSelecionado] = useState<Fundamento>('saque');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+>>>>>>> dev
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(new Date().setDate(new Date().getDate() - 7)),
     to: new Date()

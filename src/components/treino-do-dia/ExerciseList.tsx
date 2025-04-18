@@ -3,9 +3,11 @@ import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
 import { Clipboard, Play, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { toast } from "../ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { ExerciseTimer } from "./ExerciseTimer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/lib/supabase";
+import ToggleExerciseStatus from "./ToggleExerciseStatus";
 
 interface ExerciseListProps {
   treinoDoDiaId: string;
@@ -36,6 +38,23 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (exerciseId: string, completed: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('treinos_exercicios')
+        .update({ concluido: completed })
+        .eq('id', exerciseId);
+
+      if (error) throw error;
+      
+      // Refresh the list to show updated status
+      await loadExercicios();
+    } catch (error) {
+      console.error("Error toggling exercise status:", error);
+      throw error;
     }
   };
 
@@ -123,19 +142,22 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
                   )}
                 </div>
 
-                {exercicio.concluido ? (
-                  <div className="flex items-center text-green-500">
-                    <CheckCircle2 className="h-5 w-5 mr-1" />
-                    <span className="text-sm font-medium">Concluído</span>
-                  </div>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => handleStartExercise(exercicio)}
-                  >
-                    <Play className="h-4 w-4 mr-1" /> Iniciar
-                  </Button>
-                )}
+                <div className="flex flex-col items-end gap-2">
+                  <ToggleExerciseStatus
+                    exerciseId={exercicio.id}
+                    isCompleted={exercicio.concluido}
+                    onStatusChange={(completed) => handleToggleStatus(exercicio.id, completed)}
+                  />
+                  
+                  {!exercicio.concluido && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleStartExercise(exercicio)}
+                    >
+                      <Play className="h-4 w-4 mr-1" /> Iniciar
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

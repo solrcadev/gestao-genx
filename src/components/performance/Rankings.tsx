@@ -8,6 +8,7 @@ import { Medal, Download, Expand } from 'lucide-react';
 import AthleteRankingCard from './AthleteRankingCard';
 import { TeamType } from '@/types';
 import TeamPerformanceStats from './TeamPerformanceStats';
+import { DateRange } from 'react-day-picker';
 
 const fundamentos = [
   'Saque',
@@ -29,6 +30,16 @@ const Rankings = () => {
     to: new Date()
   });
 
+  // Handler that correctly handles DateRange from react-day-picker
+  const handleDateChange = (range: DateRange | undefined) => {
+    if (range?.from) {
+      setDateRange({
+        from: range.from,
+        to: range.to || range.from
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -42,7 +53,7 @@ const Rankings = () => {
 
         <DatePickerWithRange 
           date={dateRange}
-          onDateChange={setDateRange}
+          onDateChange={handleDateChange}
         />
       </div>
 

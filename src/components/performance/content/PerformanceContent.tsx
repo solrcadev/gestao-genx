@@ -3,7 +3,7 @@ import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { AthletePerformance, TeamType } from '@/types';
-import { Rankings } from '../Rankings';
+import Rankings from '../Rankings';
 import { TeamView } from './TeamView';
 import { IndividualView } from './IndividualView';
 
