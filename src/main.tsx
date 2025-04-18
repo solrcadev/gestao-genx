@@ -1,12 +1,21 @@
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import App from './App.tsx';
+import SafeAppEntry from './pages/Index';
 import './index.css';
 import { registerPWAInstallListener, registerNetworkStatusListeners, registerServiceWorker } from './services/pwaService';
 
-// Create a client for React Query
-const queryClient = new QueryClient();
+// Create a client for React Query with settings to avoid excessive renders
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    },
+  },
+});
 
 // Register Service Worker for PWA features
 registerServiceWorker()
@@ -59,13 +68,42 @@ registerNetworkStatusListeners(
   }
 );
 
-createRoot(document.getElementById("root")!).render(
-  <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </BrowserRouter>
-);
+const rootElement = document.getElementById('root');
+
+// Verificar se o elemento root existe
+if (!rootElement) {
+  console.error('Elemento root não encontrado!');
+} else {
+  try {
+    const root = createRoot(rootElement);
+    
+    root.render(
+      <BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <SafeAppEntry />
+        </QueryClientProvider>
+      </BrowserRouter>
+    );
+    
+    console.log('Aplicação inicializada com sucesso!');
+  } catch (error) {
+    console.error('Erro ao renderizar a aplicação:', error);
+    
+    // Fallback básico para erro de renderização
+    rootElement.innerHTML = `
+      <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h2 class="error-title">Erro na inicialização</h2>
+        <p class="error-message">
+          Ocorreu um erro ao iniciar a aplicação. Por favor, recarregue a página.
+        </p>
+        <button onclick="window.location.reload()" class="retry-button">
+          Recarregar
+        </button>
+      </div>
+    `;
+  }
+}
 
 // Add offline toast styles
 const style = document.createElement('style');

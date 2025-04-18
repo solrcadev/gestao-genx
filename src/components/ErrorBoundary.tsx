@@ -1,9 +1,10 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Button } from './ui/button';
+import ErrorFallback from './ErrorFallback';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
@@ -14,49 +15,48 @@ interface State {
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { 
+    this.state = {
       hasError: false,
       error: null
     };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    // Atualiza o state para que a próxima renderização mostre a UI alternativa
+    // Atualiza o estado para que a próxima renderização mostre a UI de fallback
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Você também pode registrar o erro em um serviço de relatório de erros
     console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    
+    // Chamar o callback onError, se fornecido
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
   }
 
-  resetError = (): void => {
+  resetErrorBoundary = () => {
     this.setState({ hasError: false, error: null });
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // Renderizar fallback customizado se fornecido
+      // Se um fallback personalizado for fornecido, use-o
       if (this.props.fallback) {
         return this.props.fallback;
       }
-
-      // Fallback padrão
+      
+      // Caso contrário, use o ErrorFallback padrão
       return (
-        <div className="flex items-center justify-center min-h-[200px]">
-          <div className="text-center p-6 max-w-md rounded-lg border shadow-sm">
-            <h2 className="text-xl font-bold mb-4">Algo deu errado</h2>
-            <p className="text-muted-foreground mb-4">
-              Ocorreu um erro na aplicação. Por favor, tente novamente.
-            </p>
-            <p className="text-xs text-destructive mb-6 overflow-auto max-h-32 whitespace-pre-wrap">
-              {this.state.error?.toString() || "Erro desconhecido"}
-            </p>
-            <Button onClick={() => window.location.reload()}>Recarregar página</Button>
-          </div>
-        </div>
+        <ErrorFallback 
+          error={this.state.error || new Error('An unknown error occurred')} 
+          resetErrorBoundary={this.resetErrorBoundary} 
+        />
       );
     }
 
+    // Se não houver erro, renderize os componentes filhos normalmente
     return this.props.children;
   }
 }
