@@ -130,6 +130,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+          {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
@@ -280,6 +287,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "athletes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "destaques_atletas_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
           },
         ]
       }
@@ -655,6 +669,13 @@ export type Database = {
             referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_atleta"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
         ]
       }
       microciclos: {
@@ -818,6 +839,13 @@ export type Database = {
             referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notificacoes_preferencias_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
         ]
       }
       notificacoes_subscriptions: {
@@ -861,6 +889,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "athletes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificacoes_subscriptions_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
           },
         ]
       }
@@ -958,6 +993,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "registro_execucoes_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+          {
             foreignKeyName: "registro_execucoes_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
@@ -1002,6 +1044,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "athletes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
           },
         ]
       }
@@ -1207,6 +1256,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "treinos_atletas_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+          {
             foreignKeyName: "treinos_atletas_treino_id_fkey"
             columns: ["treino_id"]
             isOneToOne: false
@@ -1329,6 +1385,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "treinos_presencas_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+          {
             foreignKeyName: "treinos_presencas_treino_do_dia_id_fkey"
             columns: ["treino_do_dia_id"]
             isOneToOne: false
@@ -1412,6 +1475,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+          {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
@@ -1446,10 +1516,38 @@ export type Database = {
             referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
         ]
+      }
+      vw_fundamentos_ranking: {
+        Row: {
+          atleta_id: string | null
+          atleta_nome: string | null
+          eficiencia: number | null
+          fundamento: string | null
+          posicao: number | null
+          primeira_avaliacao: string | null
+          ranking_score: number | null
+          time: string | null
+          total_acertos: number | null
+          total_erros: number | null
+          total_execucoes: number | null
+          ultima_avaliacao: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
+      calculate_ranking_score: {
+        Args: { acertos: number; erros: number }
+        Returns: number
+      }
       cleanup_old_subscriptions: {
         Args: Record<PropertyKey, never>
         Returns: undefined

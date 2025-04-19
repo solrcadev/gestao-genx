@@ -1,10 +1,72 @@
 
-// Update StudentPerformance interface to match usage
+export type Team = "Masculino" | "Feminino";
+export type TeamType = "Masculino" | "Feminino";
+export type Position = "Levantador" | "Oposto" | "Ponteiro" | "Central" | "Líbero" | "Outro";
+export type UserRole = "admin" | "coach" | "athlete";
+
+export interface Profile {
+  id: string;
+  role: UserRole;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Athlete {
+  id: string;
+  created_at: string;
+  nome: string;
+  idade: number;
+  altura: number;
+  posicao: string;
+  time: Team;
+  foto_url: string | null;
+}
+
+export interface AthletePerformance {
+  atleta: Athlete;
+  presenca: {
+    total: number;
+    presentes: number;
+    percentual: number;
+  };
+  avaliacoes: {
+    total: number;
+    mediaNota: number;
+    porFundamento: {
+      [fundamento: string]: {
+        acertos: number;
+        erros: number;
+        total: number;
+        percentualAcerto: number;
+        ultimaData?: string;
+      };
+    };
+  };
+  ultimasAvaliacoes?: Array<{
+    data: string;
+    treino: string;
+    fundamento: string;
+    acertos: number;
+    erros: number;
+  }>;
+}
+
+export interface RankingItem {
+  posicao: number;
+  atleta_id: string;
+  atleta_nome: string;
+  time: TeamType;
+  fundamento: string;
+  total_acertos: number;
+  total_erros: number;
+  total_execucoes: number;
+  eficiencia: number;
+  ranking_score: number;
+}
+
 export interface StudentPerformance {
   frequency: number;
   evolution: number;
   completedTrainings: number;
-  totalTrainings?: number;
   achievedGoals: number;
-  totalGoals?: number;
 }
