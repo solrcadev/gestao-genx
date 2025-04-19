@@ -1,4 +1,3 @@
-
 export type Team = "Masculino" | "Feminino";
 
 export type TeamType = "Masculino" | "Feminino";

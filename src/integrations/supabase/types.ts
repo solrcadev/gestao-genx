@@ -51,63 +51,41 @@ export type Database = {
         }
         Relationships: []
       }
-      avaliacoes_exercicios: {
+      avaliacoes_exercicios_backup: {
         Row: {
-          acertos: number
-          atleta_id: string
+          acertos: number | null
+          atleta_id: string | null
           created_at: string | null
-          erros: number
+          erros: number | null
           exercicio_id: string | null
-          fundamento: string
-          id: string
+          fundamento: string | null
+          id: string | null
           timestamp: string | null
-          treino_id: string
+          treino_id: string | null
         }
         Insert: {
-          acertos: number
-          atleta_id: string
+          acertos?: number | null
+          atleta_id?: string | null
           created_at?: string | null
-          erros: number
+          erros?: number | null
           exercicio_id?: string | null
-          fundamento: string
-          id?: string
+          fundamento?: string | null
+          id?: string | null
           timestamp?: string | null
-          treino_id: string
+          treino_id?: string | null
         }
         Update: {
-          acertos?: number
-          atleta_id?: string
+          acertos?: number | null
+          atleta_id?: string | null
           created_at?: string | null
-          erros?: number
+          erros?: number | null
           exercicio_id?: string | null
-          fundamento?: string
-          id?: string
+          fundamento?: string | null
+          id?: string | null
           timestamp?: string | null
-          treino_id?: string
+          treino_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "avaliacoes_exercicios_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_exercicios_exercicio_id_fkey"
-            columns: ["exercicio_id"]
-            isOneToOne: false
-            referencedRelation: "exercicios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_exercicios_treino_id_fkey"
-            columns: ["treino_id"]
-            isOneToOne: false
-            referencedRelation: "treinos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       avaliacoes_fundamento: {
         Row: {
@@ -163,6 +141,58 @@ export type Database = {
             columns: ["treino_id"]
             isOneToOne: false
             referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avaliacoes_historico: {
+        Row: {
+          acertos_anterior: number
+          avaliacao_id: string
+          created_at: string
+          data_modificacao: string
+          erros_anterior: number
+          id: string
+          tecnico_id: string
+        }
+        Insert: {
+          acertos_anterior: number
+          avaliacao_id: string
+          created_at?: string
+          data_modificacao?: string
+          erros_anterior: number
+          id?: string
+          tecnico_id: string
+        }
+        Update: {
+          acertos_anterior?: number
+          avaliacao_id?: string
+          created_at?: string
+          data_modificacao?: string
+          erros_anterior?: number
+          id?: string
+          tecnico_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_historico_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes_exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_historico_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes_fundamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_historico_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_avaliacoes"
             referencedColumns: ["id"]
           },
         ]
@@ -252,6 +282,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      exclusoes_log: {
+        Row: {
+          created_at: string
+          data_exclusao: string
+          id: string
+          registro_id: string
+          tabela: string
+          usuario_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_exclusao?: string
+          id?: string
+          registro_id: string
+          tabela: string
+          usuario_id: string
+        }
+        Update: {
+          created_at?: string
+          data_exclusao?: string
+          id?: string
+          registro_id?: string
+          tabela?: string
+          usuario_id?: string
+        }
+        Relationships: []
       }
       exercicio_tag_relacao: {
         Row: {
@@ -1312,6 +1369,64 @@ export type Database = {
       }
     }
     Views: {
+      avaliacoes_exercicios: {
+        Row: {
+          acertos: number | null
+          atleta_id: string | null
+          created_at: string | null
+          erros: number | null
+          exercicio_id: string | null
+          fundamento: string | null
+          id: string | null
+          timestamp: string | null
+          treino_id: string | null
+        }
+        Insert: {
+          acertos?: number | null
+          atleta_id?: string | null
+          created_at?: string | null
+          erros?: number | null
+          exercicio_id?: string | null
+          fundamento?: string | null
+          id?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
+        }
+        Update: {
+          acertos?: number | null
+          atleta_id?: string | null
+          created_at?: string | null
+          erros?: number | null
+          exercicio_id?: string | null
+          fundamento?: string | null
+          id?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_avaliacoes: {
         Row: {
           acertos: number | null
@@ -1325,7 +1440,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "avaliacoes_exercicios_atleta_id_fkey"
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
             referencedRelation: "athletes"

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { AthleteEvaluation } from '@/types';
 
@@ -107,7 +106,7 @@ export async function getEvaluationById(id: string): Promise<AthleteEvaluation |
     return {
       ...data,
       percentual_acerto
-    } as unknown as AthleteEvaluation;
+    } as AthleteEvaluation;
   } catch (error) {
     console.error('Error fetching evaluation details:', error);
     return null;

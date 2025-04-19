@@ -1,6 +1,5 @@
-
 import { supabase } from '@/lib/supabase';
-import { AthletePerformance, TeamType } from '@/types';
+import { AthletePerformance, TeamType, Athlete } from '@/types';
 
 export async function getAthletePerformance(
   athleteId: string,
@@ -55,6 +54,17 @@ export async function getTeamPerformance(
   }
 }
 
+const mapAthleteData = (data: any): Athlete => ({
+  id: data.id,
+  nome: data.nome,
+  posicao: data.posicao,
+  time: data.time,
+  idade: data.idade,
+  altura: data.altura,
+  created_at: data.created_at || new Date().toISOString(),
+  foto_url: data.foto_url || null
+});
+
 // Mock function to get athletes performance - used by Performance.tsx
 export async function getAthletesPerformance(teamType: TeamType): Promise<AthletePerformance[]> {
   try {
@@ -62,14 +72,16 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
     // For now, we'll return mock data
     return [
       {
-        atleta: {
+        atleta: mapAthleteData({
           id: '1',
           nome: 'João Silva',
           posicao: 'Levantador',
           time: teamType,
           idade: 22,
-          altura: 1.85
-        },
+          altura: 1.85,
+          created_at: new Date().toISOString(),
+          foto_url: null
+        }),
         presenca: {
           total: 20,
           presentes: 18,
@@ -94,17 +106,20 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
               ultimaData: '2023-05-02'
             }
           }
-        }
+        },
+        ultimasAvaliacoes: []
       },
       {
-        atleta: {
+        atleta: mapAthleteData({
           id: '2',
           nome: 'Maria Oliveira',
           posicao: 'Ponteiro',
           time: teamType,
           idade: 20,
-          altura: 1.78
-        },
+          altura: 1.78,
+          created_at: new Date().toISOString(),
+          foto_url: null
+        }),
         presenca: {
           total: 20,
           presentes: 16,
@@ -129,7 +144,8 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
               ultimaData: '2023-05-02'
             }
           }
-        }
+        },
+        ultimasAvaliacoes: []
       }
     ];
   } catch (error) {
