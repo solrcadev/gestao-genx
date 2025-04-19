@@ -1,5 +1,9 @@
 
-import { useMediaQuery as useMediaQueryBase } from '@/components/ui/use-media-query';
+import { useMediaQuery } from '@/components/ui/use-media-query';
 
-export const useMediaQuery = useMediaQueryBase;
-export default useMediaQuery;
+export const useIsMobile = () => useMediaQuery('(max-width: 768px)');
+export const useDeviceInfo = () => ({
+  isMobile: useIsMobile()
+});
+
+export default useIsMobile;
