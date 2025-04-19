@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
@@ -6,6 +7,7 @@ import { Button } from "../ui/button";
 import { toast } from "../ui/use-toast";
 import { ExerciseTimer } from "./ExerciseTimer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/lib/supabase";
 
 interface ExerciseListProps {
   treinoDoDiaId: string;
@@ -52,6 +54,31 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   const handleCancelExercise = () => {
     setIsTimerActive(false);
     setActiveExercise(null);
+  };
+
+  const toggleExerciseCompletion = async (exercicioId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('treinos_exercicios')
+        .update({ concluido: !currentStatus })
+        .eq('id', exercicioId);
+
+      if (error) throw error;
+
+      loadExercicios(); // Refresh the list
+      
+      toast({
+        title: !currentStatus ? "Exercício marcado como concluído" : "Exercício desmarcado",
+        description: "Status do exercício atualizado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar status do exercício:", error);
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Não foi possível atualizar o status do exercício.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -105,7 +132,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center mb-1">
-                    <span className="text-sm bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                       #{index + 1}
                     </span>
                     <h3 className="font-medium ml-2">
@@ -123,19 +150,28 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
                   )}
                 </div>
 
-                {exercicio.concluido ? (
-                  <div className="flex items-center text-green-500">
-                    <CheckCircle2 className="h-5 w-5 mr-1" />
-                    <span className="text-sm font-medium">Concluído</span>
-                  </div>
-                ) : (
+                <div className="flex gap-2">
                   <Button
                     size="sm"
-                    onClick={() => handleStartExercise(exercicio)}
+                    variant={exercicio.concluido ? "outline" : "default"}
+                    onClick={() => toggleExerciseCompletion(exercicio.id, exercicio.concluido)}
                   >
-                    <Play className="h-4 w-4 mr-1" /> Iniciar
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    {exercicio.concluido ? 'Desmarcar' : 'Concluído'}
                   </Button>
-                )}
+
+                  {!exercicio.concluido && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStartExercise(exercicio)}
+                      className="border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-600"
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Iniciar
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
