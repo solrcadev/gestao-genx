@@ -1,193 +1,166 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Routes, Route, Navigate } from "react-router-dom";
-import Athletes from "./pages/Athletes";
-import Trainings from "./pages/Trainings";
-import Performance from "./pages/Performance";
-import More from "./pages/More";
-import NotFound from "./pages/NotFound";
-import Exercises from "./pages/Exercises";
-import TrainingAssembly from "./pages/TrainingAssembly";
-import TreinoDoDia from "./pages/TreinoDosDia";
-import LoginPage from "./pages/LoginPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import Dashboard from "./pages/Dashboard";
-import BottomNavbar from "./components/BottomNavbar";
-import { AuthProvider } from "./contexts/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import StudentPerformance from './pages/StudentPerformance';
-import AttendanceManagement from './pages/AttendanceManagement';
-import AthleteDetails from './pages/AthleteDetails';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import BottomNavbar from '@/components/BottomNavbar';
+import RouterPersistence from '@/components/RouterPersistence';
+import NotificationsManager from '@/components/NotificationsManager';
+
+// Context Providers
+import { AuthProvider } from './contexts/AuthContext';
+
+// Pages
+import Index from '@/pages/Index';
+import LoginPage from '@/pages/LoginPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import Dashboard from '@/pages/Dashboard';
+import Athletes from '@/pages/Athletes';
+import AthleteDetails from '@/pages/AthleteDetails';
+import Exercises from '@/pages/Exercises';
+import Trainings from '@/pages/Trainings';
+import TrainingAssembly from '@/pages/TrainingAssembly';
+import TreinoDosDia from '@/pages/TreinoDosDia';
+import AttendanceManagement from '@/pages/AttendanceManagement';
+import Performance from '@/pages/Performance';
+import EvaluationManagement from '@/pages/EvaluationManagement';
+import StudentPerformance from '@/pages/StudentPerformance';
+import NotFound from '@/pages/NotFound';
+import More from '@/pages/More';
+import Ciclos from './pages/Ciclos';
+import NotificationSettings from './pages/NotificationSettings';
 import MetasEvolucao from './pages/MetasEvolucao';
-import RouterPersistence from "./components/RouterPersistence";
-import ErrorBoundary from "./components/ErrorBoundary";
 
-const App = () => {
+// Components
+import ProtectedRoute from '@/components/ProtectedRoute';
+import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+
+const queryClient = new QueryClient();
+
+function App() {
   return (
-    <ErrorBoundary>
-      {/* 
-        A ordem dos providers importa muito! 
-        Os toast providers devem vir depois dos providers de contexto
-        para evitar erros de hook
-      */}
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterPersistence>
-          <TooltipProvider>
-            <div className="bg-background min-h-screen">
-              <ErrorBoundary>
-                <Routes>
-                  {/* Rotas públicas */}
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                  
-                  {/* Rotas protegidas */}
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/atletas" 
-                    element={
-                      <ProtectedRoute>
-                        <Athletes />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/atleta/:id" 
-                    element={
-                      <ProtectedRoute>
-                        <AthleteDetails />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/treinos" 
-                    element={
-                      <ProtectedRoute>
-                        <Trainings />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/exercicios" 
-                    element={
-                      <ProtectedRoute>
-                        <Exercises />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/montar-treino" 
-                    element={
-                      <ProtectedRoute>
-                        <TrainingAssembly />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/montagem-treino" 
-                    element={
-                      <ProtectedRoute>
-                        <TrainingAssembly />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/desempenho" 
-                    element={
-                      <ProtectedRoute>
-                        <Performance />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/mais" 
-                    element={
-                      <ProtectedRoute>
-                        <More />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/treino-do-dia/:id" 
-                    element={
-                      <ProtectedRoute>
-                        <ErrorBoundary>
-                          <TreinoDoDia />
-                        </ErrorBoundary>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/treino-do-dia" 
-                    element={
-                      <ProtectedRoute>
-                        <ErrorBoundary>
-                          <TreinoDoDia />
-                        </ErrorBoundary>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route path="/aluno/:studentId/performance" element={
-                    <ProtectedRoute>
-                      <StudentPerformance />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/presencas" element={
-                    <ProtectedRoute>
-                      <AttendanceManagement />
-                    </ProtectedRoute>
-                  } />
-                  <Route
-                    path="/metas-evolucao"
-                    element={
-                      <ProtectedRoute>
-                        <MetasEvolucao />
-                      </ProtectedRoute>
-                    }
-                  />
-                  
-                  {/* Rota 404 */}
-                  <Route path="*" element={
-                    <ProtectedRoute>
-                      <NotFound />
-                    </ProtectedRoute>
-                  } />
-                </Routes>
-                
-                {/* BottomNavbar apenas em rotas autenticadas */}
-                <AuthNavbarWrapper />
-              </ErrorBoundary>
-              
-              {/* Os componentes Toaster devem estar fora dos Routes 
-                  mas dentro dos outros providers */}
-              <Toaster />
-              <Sonner />
-            </div>
-          </TooltipProvider>
-        </RouterPersistence>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-};
+        <Router>
+          <RouterPersistence>
+            <NotificationsManager />
+            <BottomNavbar />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-// Componente wrapper para mostrar o BottomNavbar apenas em rotas autenticadas
-const AuthNavbarWrapper = () => {
-  const currentPath = window.location.pathname;
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
-  
-  if (publicRoutes.some(route => currentPath.startsWith(route))) {
-    return null;
-  }
-  
-  return <BottomNavbar />;
-};
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/atletas"
+                element={
+                  <ProtectedRoute>
+                    <Athletes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/aluno/:studentId"
+                element={
+                  <ProtectedRoute>
+                    <AthleteDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/aluno/:studentId/performance"
+                element={
+                  <ProtectedRoute>
+                    <StudentPerformance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/exercicios"
+                element={
+                  <ProtectedRoute>
+                    <Exercises />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/treinos"
+                element={
+                  <ProtectedRoute>
+                    <Trainings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/montar-treino"
+                element={
+                  <ProtectedRoute>
+                    <TrainingAssembly />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/treino-do-dia"
+                element={
+                  <ProtectedRoute>
+                    <TreinoDosDia />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/presenca"
+                element={
+                  <ProtectedRoute>
+                    <AttendanceManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/desempenho"
+                element={
+                  <ProtectedRoute>
+                    <Performance />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/gerenciar-avaliacoes"
+                element={
+                  <RoleProtectedRoute allowedRoles={['admin', 'coach']}>
+                    <EvaluationManagement />
+                  </RoleProtectedRoute>
+                }
+              />
+
+              <ProtectedRoute>
+                <Route path="/mais" element={<More />} />
+              </ProtectedRoute>
+              <ProtectedRoute>
+                <Route path="/ciclos" element={<Ciclos />} />
+              </ProtectedRoute>
+              <ProtectedRoute>
+                <Route path="/notificacoes" element={<NotificationSettings />} />
+              </ProtectedRoute>
+              <ProtectedRoute>
+                <Route path="/metas" element={<MetasEvolucao />} />
+              </ProtectedRoute>
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </RouterPersistence>
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

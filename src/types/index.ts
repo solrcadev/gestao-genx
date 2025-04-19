@@ -1,3 +1,4 @@
+
 export type Team = "Masculino" | "Feminino";
 
 export type TeamType = "Masculino" | "Feminino";
@@ -9,6 +10,15 @@ export type Position =
   | "Central" 
   | "Líbero"
   | "Outro";
+
+export type UserRole = "admin" | "coach" | "athlete";
+
+export interface Profile {
+  id: string;
+  role: UserRole;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface Athlete {
   id: string;
@@ -65,4 +75,51 @@ export interface Training {
   created_at?: string;
   updated_at?: string;
   status?: string;
+}
+
+// Interface para avaliações de atletas
+export interface AthleteEvaluation {
+  id: string;
+  atleta_id: string;
+  atleta?: {
+    nome: string;
+    time: TeamType;
+    posicao: string;
+  };
+  exercicio_id: string;
+  exercicio?: {
+    nome: string;
+    fundamento: string;
+  };
+  treino_id: string;
+  treino?: {
+    nome: string;
+    data: string | Date;
+  };
+  fundamento: string;
+  acertos: number;
+  erros: number;
+  percentual_acerto?: number;
+  timestamp: string;
+  created_at: string;
+  tecnico_id?: string;
+  tecnico?: {
+    nome: string;
+  };
+  historico_edicoes?: Array<{
+    data: string;
+    tecnico: string;
+    acertos_anterior: number;
+    erros_anterior: number;
+  }>;
+}
+
+// Interface for student performance
+export interface StudentPerformance {
+  frequency: number;
+  evolution: number;
+  completedTrainings: number;
+  totalTrainings: number;
+  achievedGoals: number;
+  totalGoals: number;
 }

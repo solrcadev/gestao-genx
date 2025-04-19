@@ -8,6 +8,7 @@ import { Medal, Download, Expand } from 'lucide-react';
 import AthleteRankingCard from './AthleteRankingCard';
 import { TeamType } from '@/types';
 import TeamPerformanceStats from './TeamPerformanceStats';
+import { DateRange } from 'react-day-picker';
 
 const fundamentos = [
   'Saque',
@@ -21,10 +22,7 @@ const fundamentos = [
 const Rankings = () => {
   const [team, setTeam] = useState<TeamType>('Masculino');
   const [selectedFundamento, setSelectedFundamento] = useState<string>(fundamentos[0]);
-  const [dateRange, setDateRange] = useState<{
-    from: Date;
-    to: Date;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(new Date().setDate(new Date().getDate() - 7)),
     to: new Date()
   });
@@ -42,14 +40,14 @@ const Rankings = () => {
 
         <DatePickerWithRange 
           date={dateRange}
-          onDateChange={setDateRange}
+          onDateChange={(range) => setDateRange(range || { from: undefined, to: undefined })}
         />
       </div>
 
       {/* Team Stats Overview */}
       <TeamPerformanceStats 
         team={team}
-        dateRange={dateRange}
+        dateRange={dateRange as { from: Date; to: Date }}
       />
 
       {/* Rankings by Fundamento */}
@@ -59,7 +57,7 @@ const Rankings = () => {
             key={fundamento}
             fundamento={fundamento}
             team={team}
-            dateRange={dateRange}
+            dateRange={dateRange as { from: Date; to: Date }}
           />
         ))}
       </div>
