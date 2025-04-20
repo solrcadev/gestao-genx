@@ -46,6 +46,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@supabase/supabase-js": "^2.49.4",
     "@tanstack/react-query": "^5.72.2",
+    "@types/uuid": "^10.0.0",
     "antd": "^5.24.6",
     "axios": "^1.8.4",
     "chart.js": "^4.4.8",

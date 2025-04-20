@@ -1,3 +1,4 @@
+
 export type Team = "Masculino" | "Feminino";
 export type TeamType = "Masculino" | "Feminino";
 export type Position = "Levantador" | "Oposto" | "Ponteiro" | "Central" | "Líbero" | "Outro";
