@@ -1,4 +1,3 @@
-
 export type Team = "Masculino" | "Feminino";
 export type TeamType = "Masculino" | "Feminino";
 export type Position = "Levantador" | "Oposto" | "Ponteiro" | "Central" | "Líbero" | "Outro";
@@ -20,6 +19,9 @@ export interface Athlete {
   posicao: string;
   time: Team;
   foto_url: string | null;
+  email?: string;
+  telefone?: string;
+  observacoes?: string;
 }
 
 export interface AthletePerformance {
@@ -98,6 +100,13 @@ export interface AthleteEvaluation {
     nome: string;
     data: string;
   };
+  historico_edicoes?: Array<{
+    id: string;
+    acertos_anterior: number;
+    erros_anterior: number;
+    tecnico_id: string;
+    data_modificacao: string;
+  }>;
 }
 
 export interface Training {
@@ -110,4 +119,6 @@ export interface Training {
   created_at?: string;
   updated_at?: string;
   user_id: string;
+  descricao?: string;
+  time?: Team;
 }

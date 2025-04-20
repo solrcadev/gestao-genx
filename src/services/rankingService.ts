@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { TeamType } from '@/types';
 
@@ -132,12 +133,15 @@ export async function fetchTeamStats(
       piorFundamento = mediasArray.sort((a, b) => a.media - b.media)[0];
     }
 
+    // Handle destaque properly with type checking
+    const destaqueAtleta = destaque && destaque.atleta && typeof destaque.atleta === 'object' ? {
+      nome: destaque.atleta.nome || 'Desconhecido',
+      fundamento: destaque.fundamento,
+      evolucao: destaque.percentual_evolucao
+    } : undefined;
+
     return {
-      destaqueAtleta: destaque ? {
-        nome: destaque.atleta.nome,
-        fundamento: destaque.fundamento,
-        evolucao: destaque.percentual_evolucao
-      } : undefined,
+      destaqueAtleta,
       piorFundamento
     };
   } catch (error) {

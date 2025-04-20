@@ -25,9 +25,14 @@ export function useMediaQuery(query: string): boolean {
 }
 
 export const useIsMobile = () => useMediaQuery('(max-width: 768px)');
+export const useIsSmallScreen = () => useMediaQuery('(max-width: 640px)');
 
 export const useDeviceInfo = () => ({
-  isMobile: useIsMobile()
+  isMobile: useIsMobile(),
+  isSmallScreen: useIsSmallScreen(),
+  orientation: typeof window !== 'undefined' ? 
+    window.innerHeight > window.innerWidth ? 'portrait' : 'landscape' 
+    : 'portrait'
 });
 
 export default useIsMobile;

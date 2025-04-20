@@ -1,9 +1,10 @@
+
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
 import RouterPersistence from '@/components/RouterPersistence';
-import NotificationsManager from '@/components/NotificationsManager';
+import { NotificationsManager } from '@/components/NotificationsManager';
 
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
@@ -25,7 +26,7 @@ import EvaluationManagement from '@/pages/EvaluationManagement';
 import StudentPerformance from '@/pages/StudentPerformance';
 import NotFound from '@/pages/NotFound';
 import More from '@/pages/More';
-import Ciclos from './pages/Ciclos';
+import { Ciclos } from './pages/Ciclos';
 import NotificationSettings from './pages/NotificationSettings';
 import MetasEvolucao from './pages/MetasEvolucao';
 
