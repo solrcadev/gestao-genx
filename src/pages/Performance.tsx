@@ -157,16 +157,18 @@ const Performance = () => {
     
     performanceData.forEach(performance => {
       Object.entries(performance.avaliacoes.porFundamento).forEach(([fundamento, avaliacao]) => {
-        const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento as Fundamento)?.media || 0;
-        
-        if (avaliacao && avaliacao.percentualAcerto < 60) {
-          alertasArray.push({
-            atletaId: performance.atleta.id,
-            nome: performance.atleta.nome,
-            fundamento: fundamento as Fundamento,
-            percentual: avaliacao.percentualAcerto,
-            mediaEquipe
-          });
+        if (avaliacao && typeof avaliacao === 'object' && 'percentualAcerto' in avaliacao) {
+          const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento as Fundamento)?.media || 0;
+          
+          if (avaliacao.percentualAcerto < 60) {
+            alertasArray.push({
+              atletaId: performance.atleta.id,
+              nome: performance.atleta.nome,
+              fundamento: fundamento as Fundamento,
+              percentual: avaliacao.percentualAcerto,
+              mediaEquipe
+            });
+          }
         }
       });
     });
@@ -199,18 +201,26 @@ const Performance = () => {
               </Button>
             </Link>
           )}
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1"
-            onClick={() => setActiveTab('ranking')}
-          >
-            <Trophy className="h-4 w-4" /> 
-            <span>Ver Ranking</span>
-          </Button>
         </div>
       </header>
+      
+      {/* Main Tab Selector */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AnalysisTab)} className="mb-6">
+        <TabsList className="grid grid-cols-3 w-full">
+          <TabsTrigger value="equipe" className="flex items-center">
+            <Users className="h-4 w-4 mr-2" />
+            <span>Equipe</span>
+          </TabsTrigger>
+          <TabsTrigger value="individual" className="flex items-center">
+            <User className="h-4 w-4 mr-2" />
+            <span>Individual</span>
+          </TabsTrigger>
+          <TabsTrigger value="ranking" className="flex items-center">
+            <Trophy className="h-4 w-4 mr-2" />
+            <span>Ranking</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       
       <PerformanceContent
         isLoading={isLoading}

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -84,9 +85,9 @@ const BottomNavbar = () => {
         </Link>
 
         <Link
-          to="/metas-evolucao"
+          to="/metas"
           className={`flex flex-col items-center p-2 rounded-md transition-colors ${
-            isActive("/metas-evolucao")
+            isActive("/metas")
               ? "text-primary bg-primary/10"
               : "text-muted-foreground hover:text-primary hover:bg-primary/10"
           }`}

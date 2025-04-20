@@ -1,5 +1,4 @@
-
-import { AthleteEvaluation, StudentPerformance, HistoricoTreinoPorAtleta } from '@/types';
+import { AthleteEvaluation, StudentPerformance, HistoricoTreinoPorAtleta, AthletePerformance } from '@/types';
 
 // Mock function to get student performance
 export async function getStudentPerformance(studentId: string): Promise<StudentPerformance> {
