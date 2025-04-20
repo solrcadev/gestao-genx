@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Search, X, Users, User, Trophy, Sliders } from 'lucide-react';
@@ -128,14 +129,20 @@ const Performance = () => {
     if (!performanceData) return [];
     
     const atletasPorFundamento = performanceData
-      .filter(performance => performance.avaliacoes.porFundamento[fundamentoSelecionado])
-      .map(performance => ({
-        id: performance.atleta.id,
-        nome: performance.atleta.nome,
-        percentual: performance.avaliacoes.porFundamento[fundamentoSelecionado].percentualAcerto,
-        totalExecucoes: performance.avaliacoes.porFundamento[fundamentoSelecionado].total,
-        ultimaData: performance.avaliacoes.porFundamento[fundamentoSelecionado].ultimaData || '-'
-      }))
+      .filter(performance => {
+        const fundamento = performance.avaliacoes.porFundamento[fundamentoSelecionado];
+        return fundamento !== undefined;
+      })
+      .map(performance => {
+        const fundamento = performance.avaliacoes.porFundamento[fundamentoSelecionado];
+        return {
+          id: performance.atleta.id,
+          nome: performance.atleta.nome,
+          percentual: fundamento ? fundamento.percentualAcerto : 0,
+          totalExecucoes: fundamento ? fundamento.total : 0,
+          ultimaData: fundamento && fundamento.ultimaData ? fundamento.ultimaData : '-'
+        };
+      })
       .sort((a, b) => b.percentual - a.percentual)
       .slice(0, 3);
       
@@ -150,9 +157,9 @@ const Performance = () => {
     
     performanceData.forEach(performance => {
       Object.entries(performance.avaliacoes.porFundamento).forEach(([fundamento, avaliacao]) => {
-        const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento)?.media || 0;
+        const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento as Fundamento)?.media || 0;
         
-        if (avaliacao.percentualAcerto < 60) {
+        if (avaliacao && avaliacao.percentualAcerto < 60) {
           alertasArray.push({
             atletaId: performance.atleta.id,
             nome: performance.atleta.nome,

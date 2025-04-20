@@ -1,5 +1,5 @@
 
-import { AthleteEvaluation, StudentPerformance } from '@/types';
+import { AthleteEvaluation, StudentPerformance, HistoricoTreinoPorAtleta } from '@/types';
 
 // Mock function to get student performance
 export async function getStudentPerformance(studentId: string): Promise<StudentPerformance> {
@@ -75,17 +75,6 @@ export interface Fundamento {
   erros: number;
 }
 
-// Interface for historical training data per athlete
-export interface HistoricoTreinoPorAtleta {
-  treinoId: string;
-  nomeTreino: string;
-  data: string;
-  local: string;
-  presenca: boolean;
-  justificativa?: string;
-  fundamentos?: Fundamento[];
-}
-
 // Mock function to get historical training data per athlete
 export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<HistoricoTreinoPorAtleta[]> {
   // Mock implementation for demonstration
@@ -135,7 +124,7 @@ export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<His
 }
 
 // Mock function to get athletes performance - used by Performance.tsx
-export async function getAthletesPerformance(teamType: string): Promise<any[]> {
+export async function getAthletesPerformance(teamType: string): Promise<AthletePerformance[]> {
   try {
     // In a real implementation, this would fetch data from the database
     // For now, we'll return mock data
