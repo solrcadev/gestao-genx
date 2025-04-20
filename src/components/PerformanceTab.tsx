@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Card } from 'antd';
 import { 
@@ -63,10 +64,10 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
             <Progress value={performance.evolution} />
           </Card>
           <Card title="Treinos Concluídos">
-            <Progress value={(performance.completedTrainings / performance.totalTrainings) * 100} />
+            <Progress value={(performance.completedTrainings || 0) / (performance.totalTrainings || 1) * 100} />
           </Card>
           <Card title="Metas Alcançadas">
-            <Progress value={(performance.achievedGoals / performance.totalGoals) * 100} />
+            <Progress value={(performance.achievedGoals || 0) / (performance.totalGoals || 1) * 100} />
           </Card>
         </div>
       ),
@@ -150,7 +151,7 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
                      goal.status === 'in_progress' ? 'Em Andamento' : 'Pendente'}
                   </span>
                 </div>
-                <Progress percent={goal.progress} className="mt-4" />
+                <Progress value={goal.progress} className="mt-4" />
               </Card>
             ))}
           </div>

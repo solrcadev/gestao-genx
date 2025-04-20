@@ -1,3 +1,4 @@
+
 export interface StudentPerformance {
   id: string;
   studentId: string;
@@ -12,6 +13,9 @@ export interface StudentPerformance {
     date: string;
     score: number;
   }[];
+  frequency?: number;
+  evolution?: number;
+  completedTrainings?: number;
 }
 
 export interface AthleteEvaluation {
@@ -23,6 +27,8 @@ export interface AthleteEvaluation {
     fundamento: string;
     nota: number;
     observacoes?: string;
+    acertos?: number;
+    erros?: number;
   }[];
   observacoes_gerais?: string;
   historico_edicoes: {
@@ -30,6 +36,9 @@ export interface AthleteEvaluation {
     usuario_id: string;
     nome_usuario?: string;
   }[];
+  timestamp?: string;
+  acertos?: number;
+  erros?: number;
 }
 
 export interface Training {
@@ -52,4 +61,89 @@ export interface Training {
   }[];
   created_at: string;
   updated_at?: string;
+}
+
+// Added missing types
+export type TeamType = 'Masculino' | 'Feminino' | 'Misto';
+
+export type Position = 'Levantador' | 'Oposto' | 'Ponteiro' | 'Central' | 'Líbero' | 'Outro';
+
+export type Team = 'Masculino' | 'Feminino';
+
+export type UserRole = 'admin' | 'coach' | 'assistant' | 'athlete' | 'parent' | 'guest';
+
+export interface Athlete {
+  id: string;
+  nome: string;
+  idade: number;
+  altura: number;
+  posicao: Position;
+  time: Team;
+  foto_url?: string | null;
+  email?: string;
+  telefone?: string;
+  data_nascimento?: string;
+  endereco?: string;
+  responsavel?: string;
+  responsavel_telefone?: string;
+  observacoes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Profile {
+  id: string;
+  role: UserRole;
+  nome?: string;
+  email?: string;
+  foto_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AthletePerformance {
+  atleta: {
+    id: string;
+    nome: string;
+    posicao: string;
+    foto_url?: string;
+  };
+  presenca: {
+    total: number;
+    presentes: number;
+    percentual: number;
+  };
+  avaliacoes: {
+    total: number;
+    mediaNota: number;
+    porFundamento: {
+      [key: string]: {
+        total: number;
+        acertos: number;
+        erros: number;
+        percentualAcerto: number;
+      };
+    };
+  };
+  ultimasAvaliacoes?: {
+    data: string;
+    fundamento: string;
+    acertos: number;
+    erros: number;
+    treino?: string;
+    ultimaData?: string;
+  }[];
+}
+
+export interface RankingItem {
+  posicao: number;
+  atleta_id: string;
+  atleta_nome: string;
+  fundamento: string;
+  time: TeamType;
+  eficiencia: number;
+  total_execucoes: number;
+  ranking_score: number;
+  primeira_avaliacao: string;
+  ultima_avaliacao: string;
 }
