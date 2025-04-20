@@ -1,217 +1,385 @@
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Plus, Calendar, Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { fetchTrainings } from '@/services/trainingService';
-import { Training, Team } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-import { format, isToday, isFuture, isPast } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
+import { Calendar } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { toast } from "@/components/ui/use-toast";
+import { deleteTraining, fetchTrainings, createTraining, updateTraining } from '@/services/trainingService';
+import { Team } from '@/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const Trainings = () => {
+const Trainings: React.FC = () => {
+  const [team, setTeam] = useState<Team>("Masculino");
+  const [open, setOpen] = useState(false);
+  const [trainingIdToDelete, setTrainingIdToDelete] = useState<string | null>(null);
+  const [trainingIdToEdit, setTrainingIdToEdit] = useState<string | null>(null);
+  const [nome, setNome] = useState('');
+  const [data, setData] = useState<Date | undefined>(undefined);
+  const [descricao, setDescricao] = useState('');
+  const [local, setLocal] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<Team>('Masculino');
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [teamFilter, setTeamFilter] = useState<Team | 'all'>('all');
+  const queryClient = useQueryClient();
 
-  const { data: trainings, isLoading, error } = useQuery({
-    queryKey: ['trainings'],
-    queryFn: fetchTrainings,
+  const { isLoading, error, data: trainings } = useQuery({
+    queryKey: ['trainings', team],
+    queryFn: () => fetchTrainings(),
   });
 
-  // Filter trainings based on search term, filter type, and team
-  const filteredTrainings = trainings
-    ? trainings
-        .filter(training => {
-          const searchMatch = training.nome.toLowerCase().includes(searchTerm.toLowerCase());
-          
-          let statusMatch = true;
-          if (filterType === 'upcoming') {
-            statusMatch = training.data && isFuture(new Date(training.data));
-          } else if (filterType === 'past') {
-            statusMatch = training.data && isPast(new Date(training.data)) && !isToday(new Date(training.data));
-          } else if (filterType === 'today') {
-            statusMatch = training.data && isToday(new Date(training.data));
-          }
-          
-          const teamMatch = teamFilter === 'all' || training.time === teamFilter;
-          
-          return searchMatch && statusMatch && teamMatch;
-        })
-        .sort((a, b) => {
-          // Sort by date (descending for past, ascending for upcoming)
-          const dateA = a.data ? new Date(a.data) : new Date();
-          const dateB = b.data ? new Date(b.data) : new Date();
-          return filterType === 'past' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
-        })
-    : [];
-    
-  const handleUpdateTraining = (trainingId: string) => {
-    // Logic to update training
-    navigate(`/montar-treino?id=${trainingId}`);
-  };
-  
-  const handleDuplicateTraining = (trainingId: string) => {
-    // Logic to duplicate training
-    navigate(`/montar-treino?duplicate=${trainingId}`);
+  const { mutate: create, isPending: isCreating } = useMutation({
+    mutationFn: createTraining,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainings', team] });
+      toast({
+        title: "Treino criado",
+        description: "O treino foi criado com sucesso.",
+      });
+      resetForm();
+      setOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao criar",
+        description: error.message || "Ocorreu um erro ao criar o treino.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { mutate: update, isPending: isUpdating } = useMutation({
+    mutationFn: updateTraining,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainings', team] });
+      toast({
+        title: "Treino atualizado",
+        description: "O treino foi atualizado com sucesso.",
+      });
+      resetForm();
+      setOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message || "Ocorreu um erro ao atualizar o treino.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { mutate: remove, isPending: isDeleting } = useMutation({
+    mutationFn: deleteTraining,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainings', team] });
+      toast({
+        title: "Treino excluído",
+        description: "O treino foi excluído com sucesso.",
+      });
+      setTrainingIdToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Ocorreu um erro ao excluir o treino.",
+        variant: "destructive",
+      });
+      setTrainingIdToDelete(null);
+    },
+  });
+
+  useEffect(() => {
+    if (trainingIdToEdit) {
+      const trainingToEdit = trainings?.find(training => training.id === trainingIdToEdit);
+      if (trainingToEdit) {
+        setIsEditMode(true);
+        setNome(trainingToEdit.nome);
+        setData(trainingToEdit.data ? new Date(trainingToEdit.data) : undefined);
+        setDescricao(trainingToEdit.descricao || '');
+        setLocal(trainingToEdit.local || '');
+        setSelectedTeam(trainingToEdit.time as Team);
+        setOpen(true);
+      }
+    } else {
+      setIsEditMode(false);
+    }
+  }, [trainingIdToEdit, trainings]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      nome,
+      data: data ? format(data, 'yyyy-MM-dd') : undefined,
+      descricao,
+      local,
+      time: selectedTeam,
+    };
+
+    if (isEditMode && trainingIdToEdit) {
+      update({ id: trainingIdToEdit, ...payload });
+    } else {
+      create(payload);
+    }
   };
 
-  const handleSetAsTreinoDosDia = (training: Training) => {
-    // Navigate to treino do dia with this training
-    navigate(`/treino-do-dia?training=${training.id}`);
+  const resetForm = () => {
+    setNome('');
+    setData(undefined);
+    setDescricao('');
+    setLocal('');
+    setSelectedTeam('Masculino');
+    setTrainingIdToEdit(null);
+    setIsEditMode(false);
+  };
+
+  const handleDelete = () => {
+    if (trainingIdToDelete) {
+      remove(trainingIdToDelete);
+    }
+  };
+
+  const handleTeamChange = (value: string) => {
+    if (value === 'Masculino' || value === 'Feminino') {
+      setSelectedTeam(value);
+    } else {
+      setSelectedTeam('Masculino'); // Default fallback
+    }
   };
 
   return (
-    <div className="mobile-container pb-20">
-      <header className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Dumbbell className="mr-2 h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Treinos</h1>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/treino-do-dia')}>
-            <Calendar className="h-4 w-4 mr-2" />
-            Treino do Dia
-          </Button>
-          <Button onClick={() => navigate('/montar-treino')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Treino
-          </Button>
-        </div>
-      </header>
-      
-      <div className="space-y-4 mb-6">
-        <Input 
-          placeholder="Buscar treinos..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="mb-2"
-        />
-        
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Tabs defaultValue="all" value={filterType} onValueChange={setFilterType} className="flex-1">
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="today">Hoje</TabsTrigger>
-              <TabsTrigger value="upcoming">Futuros</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <Tabs defaultValue="all" value={teamFilter} onValueChange={(value) => setTeamFilter(value as Team | 'all')} className="flex-1">
-            <TabsList className="grid grid-cols-4 w-full">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="Masculino">Masc</TabsTrigger>
-              <TabsTrigger value="Feminino">Fem</TabsTrigger>
-              <TabsTrigger value="Misto">Misto</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-      
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardContent className="p-0">
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : error ? (
-        <div className="text-center p-6">
-          <p className="text-destructive mb-4">Erro ao carregar treinos</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Tentar novamente
-          </Button>
-        </div>
-      ) : filteredTrainings.length === 0 ? (
-        <div className="text-center p-6">
-          <p className="text-muted-foreground mb-2">Nenhum treino encontrado</p>
-          {searchTerm && <p className="text-sm text-muted-foreground mb-4">Tente outro termo de busca</p>}
-          <Button onClick={() => navigate('/montar-treino')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar novo treino
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredTrainings.map((training) => {
-            const trainingDate = training.data ? new Date(training.data) : null;
-            const isTrainingToday = trainingDate && isToday(trainingDate);
-            
-            return (
-              <Card key={training.id} className={isTrainingToday ? "border-primary border-2" : ""}>
-                <CardContent className="p-0">
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-lg">{training.nome}</h3>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
-                          {trainingDate && (
-                            <span>{format(trainingDate, "dd 'de' MMMM", { locale: ptBR })}</span>
-                          )}
-                          {training.local && (
-                            <>
-                              <span className="text-xs">•</span>
-                              <span>{training.local}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant={training.time === 'Masculino' ? 'default' : 
-                              training.time === 'Feminino' ? 'secondary' : 'outline'}>
-                        {training.time}
-                      </Badge>
+    <div className="container max-w-7xl mx-auto space-y-6 py-6 pb-20">
+      <Card>
+        <CardHeader>
+          <CardTitle>Gerenciar Treinos</CardTitle>
+          <CardDescription>
+            Crie, edite e exclua treinos para sua equipe.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <Label htmlFor="team">Time</Label>
+                <Select value={team} onValueChange={(value) => setTeam(value as Team)}>
+                  <SelectTrigger id="team">
+                    <SelectValue placeholder="Selecione o time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Feminino">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={() => { setOpen(true); resetForm(); }} >
+                Adicionar Treino
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Treinos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableCaption>Lista de treinos do time {team}.</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">Data</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Local</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-4" />
                     </div>
-                    
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleUpdateTraining(training.id)}
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                      
-                      {isTrainingToday ? (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleSetAsTreinoDosDia(training)}
-                        >
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Definir como Treino do Dia
+                  </TableCell>
+                </TableRow>
+              )}
+              {trainings?.map((training) => (
+                <TableRow key={training.id}>
+                  <TableCell className="font-medium">{training.data ? format(new Date(training.data), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data'}</TableCell>
+                  <TableCell>{training.nome}</TableCell>
+                  <TableCell>{training.descricao}</TableCell>
+                  <TableCell>{training.local}</TableCell>
+                  <TableCell>
+                    <Button variant="secondary" size="sm" onClick={() => navigate(`/montar-treino?trainingId=${training.id}`)}>
+                      Ver Exercícios
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setTrainingIdToEdit(training.id)}>
+                      Editar
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          Excluir
                         </Button>
-                      ) : (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleDuplicateTraining(training.id)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Duplicar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação é irreversível. Tem certeza de que deseja excluir este treino?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => setTrainingIdToDelete(training.id)}>{isDeleting ? 'Excluindo...' : 'Excluir'}</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!isLoading && (!trainings || trainings.length === 0) && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    Nenhum treino encontrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={!!trainingIdToDelete} onOpenChange={(open) => { if (!open) setTrainingIdToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível. Tem certeza de que deseja excluir este treino?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>{isDeleting ? 'Excluindo...' : 'Excluir'}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? 'Editar Treino' : 'Adicionar Treino'}</DialogTitle>
+            <DialogDescription>
+              {isEditMode ? 'Edite os detalhes do treino.' : 'Insira os detalhes do novo treino.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                placeholder="Nome do treino"
+                required
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="data">Data</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {data ? format(data, 'PPP', { locale: ptBR }) : <span>Selecione uma data</span>}
+                    <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={data}
+                    onSelect={setData}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="descricao">Descrição</Label>
+              <Input
+                id="descricao"
+                placeholder="Descrição do treino"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="local">Local</Label>
+              <Input
+                id="local"
+                placeholder="Local do treino"
+                value={local}
+                onChange={(e) => setLocal(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="time">Time</Label>
+              <Select value={selectedTeam} onValueChange={handleTeamChange}>
+                <SelectTrigger id="time">
+                  <SelectValue placeholder="Selecione o time" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Masculino">Masculino</SelectItem>
+                  <SelectItem value="Feminino">Feminino</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" disabled={isCreating || isUpdating}>
+              {isEditMode
+                ? (isUpdating ? 'Atualizando...' : 'Atualizar Treino')
+                : (isCreating ? 'Criando...' : 'Adicionar Treino')}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

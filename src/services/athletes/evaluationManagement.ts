@@ -1,5 +1,33 @@
+
 import { supabase } from '@/lib/supabase';
-import { AthleteEvaluation } from '@/types';
+
+// Define the AthleteEvaluation type since it's missing from the imported types
+interface AthleteEvaluation {
+  id: string;
+  atleta_id: string;
+  exercicio_id: string;
+  treino_id: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+  timestamp: string;
+  percentual_acerto?: number;
+  atleta?: {
+    id: string;
+    nome: string;
+    time: string;
+    posicao: string;
+  };
+  exercicio?: {
+    id: string;
+    nome: string;
+  };
+  treino?: {
+    id: string;
+    nome: string;
+    data: string;
+  };
+}
 
 // Interface para filtros de avaliações
 interface EvaluationFilters {
@@ -67,23 +95,8 @@ export async function getAthletesEvaluations(filters: EvaluationFilters = {}, pa
       const total = item.acertos + item.erros;
       const percentual_acerto = total > 0 ? (item.acertos / total) * 100 : 0;
       
-      // Add historico_edicoes if it doesn't exist
-      if (!item.historico_edicoes) {
-        item.historico_edicoes = [];
-      }
-      
-      // Add/update evaluation fields to match the AthleteEvaluation type
       return {
         ...item,
-        athlete_id: item.atleta_id, // For backward compatibility
-        evaluation_date: item.timestamp || new Date().toISOString(),
-        evaluator_id: item.tecnico_id || '',
-        fundamentos: item.fundamentos || [{
-          fundamento: item.fundamento || '',
-          nota: percentual_acerto,
-          acertos: item.acertos,
-          erros: item.erros
-        }],
         percentual_acerto
       };
     });
@@ -119,19 +132,8 @@ export async function getEvaluationById(id: string): Promise<AthleteEvaluation |
     const total = data.acertos + data.erros;
     const percentual_acerto = total > 0 ? (data.acertos / total) * 100 : 0;
     
-    // Add the required fields for AthleteEvaluation
     return {
       ...data,
-      athlete_id: data.atleta_id, // For backward compatibility
-      evaluation_date: data.timestamp || new Date().toISOString(),
-      evaluator_id: data.tecnico_id || '',
-      fundamentos: data.fundamentos || [{
-        fundamento: data.fundamento || '',
-        nota: percentual_acerto,
-        acertos: data.acertos,
-        erros: data.erros
-      }],
-      historico_edicoes: data.historico_edicoes || [],
       percentual_acerto
     } as AthleteEvaluation;
   } catch (error) {

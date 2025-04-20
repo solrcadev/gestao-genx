@@ -20,8 +20,8 @@ export interface StudentPerformance {
 
 export interface AthleteEvaluation {
   id: string;
-  atleta_id: string;
-  athlete_id?: string; // Para compatibilidade com códigos existentes
+  athlete_id: string;
+  atleta_id?: string; // For backward compatibility with existing code
   evaluation_date: string;
   evaluator_id: string;
   fundamentos: {
@@ -60,8 +60,6 @@ export interface AthleteEvaluation {
     nome: string;
     data: string;
   };
-  exercicio_id?: string;
-  treino_id?: string;
 }
 
 export interface Training {

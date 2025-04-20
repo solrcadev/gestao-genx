@@ -12,13 +12,7 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // Try to get the last route the user was on
-        const lastRoute = localStorage.getItem('lastRoute');
-        if (lastRoute && lastRoute !== '/') {
-          navigate(lastRoute);
-        } else {
-          navigate("/dashboard");
-        }
+        navigate("/dashboard");
       } else {
         navigate("/login");
       }

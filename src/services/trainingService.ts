@@ -6,7 +6,7 @@ export interface TrainingInput {
   local: string;
   data: Date | string;
   descricao: string;
-  time: Team; 
+  time: Team; // Changed from "Masculino" | "Feminino" to Team
 }
 
 export interface TrainingUpdateInput {
@@ -15,8 +15,10 @@ export interface TrainingUpdateInput {
   local: string;
   data: Date | string;
   descricao?: string;
-  time: Team;
+  time: Team; // Changed from "Masculino" | "Feminino" to Team
 }
+
+// Existing functions
 
 export const fetchTreinos = async () => {
   try {

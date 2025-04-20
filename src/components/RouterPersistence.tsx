@@ -1,26 +1,30 @@
-
 import React, { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useRoutePersistence } from '@/hooks/use-route-persistence';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RouterPersistenceProps {
   children: React.ReactNode;
 }
 
+/**
+ * Componente que gerencia a persistência da rota do usuário
+ * em toda a aplicação.
+ * 
+ * Este componente deve ser colocado dentro do Router, mas fora
+ * das rotas protegidas para garantir que funcione corretamente.
+ */
 const RouterPersistence: React.FC<RouterPersistenceProps> = ({ children }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const { clearPersistedRoute } = useRoutePersistence(!loading);
   
-  // Save current route to localStorage whenever it changes
+  // Limpar rota salva quando o usuário faz logout
   useEffect(() => {
-    // Only save non-login routes to prevent redirect loops
-    if (location.pathname !== '/login' && 
-        location.pathname !== '/forgot-password' &&
-        location.pathname !== '/register') {
-      localStorage.setItem('lastRoute', location.pathname);
+    if (user === null && !loading) {
+      clearPersistedRoute();
     }
-  }, [location.pathname]);
-
+  }, [user, loading, clearPersistedRoute]);
+  
   return <>{children}</>;
 };
 
-export default RouterPersistence;
+export default RouterPersistence; 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart2, Search, X, Users, User, Trophy, Sliders } from 'lucide-react';
@@ -129,20 +128,14 @@ const Performance = () => {
     if (!performanceData) return [];
     
     const atletasPorFundamento = performanceData
-      .filter(performance => {
-        const fundamento = performance.avaliacoes.porFundamento[fundamentoSelecionado];
-        return fundamento !== undefined;
-      })
-      .map(performance => {
-        const fundamento = performance.avaliacoes.porFundamento[fundamentoSelecionado];
-        return {
-          id: performance.atleta.id,
-          nome: performance.atleta.nome,
-          percentual: fundamento ? fundamento.percentualAcerto : 0,
-          totalExecucoes: fundamento ? fundamento.total : 0,
-          ultimaData: fundamento && fundamento.ultimaData ? fundamento.ultimaData : '-'
-        };
-      })
+      .filter(performance => performance.avaliacoes.porFundamento[fundamentoSelecionado])
+      .map(performance => ({
+        id: performance.atleta.id,
+        nome: performance.atleta.nome,
+        percentual: performance.avaliacoes.porFundamento[fundamentoSelecionado].percentualAcerto,
+        totalExecucoes: performance.avaliacoes.porFundamento[fundamentoSelecionado].total,
+        ultimaData: performance.avaliacoes.porFundamento[fundamentoSelecionado].ultimaData || '-'
+      }))
       .sort((a, b) => b.percentual - a.percentual)
       .slice(0, 3);
       
@@ -157,18 +150,16 @@ const Performance = () => {
     
     performanceData.forEach(performance => {
       Object.entries(performance.avaliacoes.porFundamento).forEach(([fundamento, avaliacao]) => {
-        if (avaliacao && typeof avaliacao === 'object' && 'percentualAcerto' in avaliacao) {
-          const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento as Fundamento)?.media || 0;
-          
-          if (avaliacao.percentualAcerto < 60) {
-            alertasArray.push({
-              atletaId: performance.atleta.id,
-              nome: performance.atleta.nome,
-              fundamento: fundamento as Fundamento,
-              percentual: avaliacao.percentualAcerto,
-              mediaEquipe
-            });
-          }
+        const mediaEquipe = mediasFundamentos.find(f => f.nome === fundamento)?.media || 0;
+        
+        if (avaliacao.percentualAcerto < 60) {
+          alertasArray.push({
+            atletaId: performance.atleta.id,
+            nome: performance.atleta.nome,
+            fundamento: fundamento as Fundamento,
+            percentual: avaliacao.percentualAcerto,
+            mediaEquipe
+          });
         }
       });
     });
@@ -201,26 +192,18 @@ const Performance = () => {
               </Button>
             </Link>
           )}
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={() => setActiveTab('ranking')}
+          >
+            <Trophy className="h-4 w-4" /> 
+            <span>Ver Ranking</span>
+          </Button>
         </div>
       </header>
-      
-      {/* Main Tab Selector */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AnalysisTab)} className="mb-6">
-        <TabsList className="grid grid-cols-3 w-full">
-          <TabsTrigger value="equipe" className="flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            <span>Equipe</span>
-          </TabsTrigger>
-          <TabsTrigger value="individual" className="flex items-center">
-            <User className="h-4 w-4 mr-2" />
-            <span>Individual</span>
-          </TabsTrigger>
-          <TabsTrigger value="ranking" className="flex items-center">
-            <Trophy className="h-4 w-4 mr-2" />
-            <span>Ranking</span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
       
       <PerformanceContent
         isLoading={isLoading}
