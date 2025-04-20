@@ -1,5 +1,33 @@
+
 import { supabase } from '@/lib/supabase';
-import { AthleteEvaluation } from '@/types';
+
+// Define the AthleteEvaluation type since it's missing from the imported types
+interface AthleteEvaluation {
+  id: string;
+  atleta_id: string;
+  exercicio_id: string;
+  treino_id: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+  timestamp: string;
+  percentual_acerto?: number;
+  atleta?: {
+    id: string;
+    nome: string;
+    time: string;
+    posicao: string;
+  };
+  exercicio?: {
+    id: string;
+    nome: string;
+  };
+  treino?: {
+    id: string;
+    nome: string;
+    data: string;
+  };
+}
 
 // Interface para filtros de avaliações
 interface EvaluationFilters {
@@ -62,12 +90,13 @@ export async function getAthletesEvaluations(filters: EvaluationFilters = {}, pa
     if (error) throw error;
     
     // Calcular o percentual de acerto para cada avaliação
-    const evaluationsWithPercent = data.map(eval => {
-      const total = eval.acertos + eval.erros;
-      const percentual_acerto = total > 0 ? (eval.acertos / total) * 100 : 0;
+    // Changed 'eval' to 'item' to avoid using the reserved keyword
+    const evaluationsWithPercent = data.map(item => {
+      const total = item.acertos + item.erros;
+      const percentual_acerto = total > 0 ? (item.acertos / total) * 100 : 0;
       
       return {
-        ...eval,
+        ...item,
         percentual_acerto
       };
     });

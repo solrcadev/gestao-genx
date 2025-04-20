@@ -69,4 +69,45 @@ export interface StudentPerformance {
   evolution: number;
   completedTrainings: number;
   achievedGoals: number;
+  totalTrainings: number;
+  totalGoals: number;
+}
+
+export interface AthleteEvaluation {
+  id: string;
+  atleta_id: string;
+  exercicio_id: string;
+  treino_id: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+  timestamp: string;
+  percentual_acerto?: number;
+  atleta?: {
+    id: string;
+    nome: string;
+    time: string;
+    posicao: string;
+  };
+  exercicio?: {
+    id: string;
+    nome: string;
+  };
+  treino?: {
+    id: string;
+    nome: string;
+    data: string;
+  };
+}
+
+export interface Training {
+  id: string;
+  nome: string;
+  data: string;
+  local: string;
+  status: string;
+  observacoes?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id: string;
 }
