@@ -1,3 +1,4 @@
+
 import { AthleteEvaluation, StudentPerformance } from '@/types';
 
 // Mock function to get student performance
@@ -6,6 +7,7 @@ export async function getStudentPerformance(studentId: string): Promise<StudentP
   return {
     id: '1',
     studentId,
+    name: 'Student Name',
     totalTrainings: 20,
     attendedTrainings: 16,
     attendanceRate: 80,
@@ -64,6 +66,72 @@ export interface Goal {
   targetDate: string;
   status: 'achieved' | 'in_progress' | 'pending';
   progress: number;
+}
+
+// Interface for fundamentos in HistoricoTreinoPorAtleta
+export interface Fundamento {
+  fundamento: string;
+  acertos: number;
+  erros: number;
+}
+
+// Interface for historical training data per athlete
+export interface HistoricoTreinoPorAtleta {
+  treinoId: string;
+  nomeTreino: string;
+  data: string;
+  local: string;
+  presenca: boolean;
+  justificativa?: string;
+  fundamentos?: Fundamento[];
+}
+
+// Mock function to get historical training data per athlete
+export async function getHistoricoTreinoPorAtleta(atletaId: string): Promise<HistoricoTreinoPorAtleta[]> {
+  // Mock implementation for demonstration
+  return [
+    {
+      treinoId: '1',
+      nomeTreino: 'Treino técnico - Saque',
+      data: '2023-05-01T10:00:00Z',
+      local: 'Quadra Principal',
+      presenca: true,
+      fundamentos: [
+        { fundamento: 'saque', acertos: 18, erros: 2 },
+        { fundamento: 'recepção', acertos: 15, erros: 5 }
+      ]
+    },
+    {
+      treinoId: '2',
+      nomeTreino: 'Treino tático - Rotação',
+      data: '2023-05-04T10:00:00Z',
+      local: 'Quadra Principal',
+      presenca: true,
+      fundamentos: [
+        { fundamento: 'levantamento', acertos: 22, erros: 3 },
+        { fundamento: 'ataque', acertos: 12, erros: 8 }
+      ]
+    },
+    {
+      treinoId: '3',
+      nomeTreino: 'Treino físico - Resistência',
+      data: '2023-05-08T10:00:00Z',
+      local: 'Academia',
+      presenca: false,
+      justificativa: 'Atestado médico'
+    },
+    {
+      treinoId: '4',
+      nomeTreino: 'Treino de Conjunto',
+      data: '2023-05-12T10:00:00Z',
+      local: 'Quadra Auxiliar',
+      presenca: true,
+      fundamentos: [
+        { fundamento: 'bloqueio', acertos: 8, erros: 4 },
+        { fundamento: 'defesa', acertos: 14, erros: 6 }
+      ]
+    }
+  ];
 }
 
 // Mock function to get athletes performance - used by Performance.tsx

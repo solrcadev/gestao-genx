@@ -1,5 +1,4 @@
 
-
 export interface StudentPerformance {
   id: string;
   studentId: string;
@@ -173,3 +172,16 @@ export interface RankingItem {
   ultima_avaliacao: string;
 }
 
+export interface HistoricoTreinoPorAtleta {
+  treinoId: string;
+  nomeTreino: string;
+  data: string;
+  local: string;
+  presenca: boolean;
+  justificativa?: string;
+  fundamentos?: {
+    fundamento: string;
+    acertos: number;
+    erros: number;
+  }[];
+}

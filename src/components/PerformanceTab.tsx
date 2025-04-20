@@ -6,10 +6,10 @@ import {
   getTrainingHistory, 
   getStudentGoals,
   TrainingHistory, 
-  Goal,
-  StudentPerformance
+  Goal
 } from '@/services/performanceService';
 import { Progress } from '@/components/ui/progress';
+import { StudentPerformance } from '@/types';
 
 interface PerformanceTabProps {
   studentId: string;

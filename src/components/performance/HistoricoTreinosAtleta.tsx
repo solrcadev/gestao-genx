@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, Calendar, BarChart2 } from 'lucide-react';
-import { getHistoricoTreinoPorAtleta, HistoricoTreinoPorAtleta as HistoricoTreino } from '@/services/performanceService';
+import { getHistoricoTreinoPorAtleta, HistoricoTreinoPorAtleta } from '@/services/performanceService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 
@@ -20,7 +20,7 @@ export const ensureNumber = (value: string | number): number => {
 }
 
 export const HistoricoTreinosAtleta: React.FC<HistoricoTreinosAtletaProps> = ({ atletaId }) => {
-  const [historico, setHistorico] = useState<HistoricoTreino[]>([]);
+  const [historico, setHistorico] = useState<HistoricoTreinoPorAtleta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('todos');
