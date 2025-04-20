@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
-import { toast } from "@/components/ui/use-toast"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { toast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface NotificationPreferences {
   emailNotifications: boolean;
@@ -49,7 +51,7 @@ const NotificationSettings = () => {
       toast({
         title: "Preferências salvas",
         description: "Suas configurações de notificação foram atualizadas com sucesso.",
-        variant: "success"
+        variant: "default"
       });
     } catch (error) {
       console.error('Error saving notification preferences:', error);
@@ -93,13 +95,13 @@ const NotificationSettings = () => {
               onCheckedChange={(checked) => handlePreferenceChange('smsNotifications', checked)}
             />
           </div>
-          <button
+          <Button
             onClick={handleSaveSettings}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="w-full"
             disabled={isLoading}
           >
             {isLoading ? 'Salvando...' : 'Salvar Configurações'}
-          </button>
+          </Button>
         </CardContent>
       </Card>
     </div>

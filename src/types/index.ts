@@ -1,125 +1,55 @@
-
-export type Team = "Masculino" | "Feminino";
-export type TeamType = "Masculino" | "Feminino";
-export type Position = "Levantador" | "Oposto" | "Ponteiro" | "Central" | "Líbero" | "Outro";
-export type UserRole = "admin" | "coach" | "athlete";
-
-export interface Profile {
-  id: string;
-  role: UserRole;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Athlete {
-  id: string;
-  created_at: string;
-  nome: string;
-  idade: number;
-  altura: number;
-  posicao: string;
-  time: Team;
-  foto_url: string | null;
-  email?: string;
-  telefone?: string;
-  observacoes?: string;
-}
-
-export interface AthletePerformance {
-  atleta: Athlete;
-  presenca: {
-    total: number;
-    presentes: number;
-    percentual: number;
-  };
-  avaliacoes: {
-    total: number;
-    mediaNota: number;
-    porFundamento: {
-      [fundamento: string]: {
-        acertos: number;
-        erros: number;
-        total: number;
-        percentualAcerto: number;
-        ultimaData?: string;
-      };
-    };
-  };
-  ultimasAvaliacoes?: Array<{
-    data: string;
-    treino: string;
-    fundamento: string;
-    acertos: number;
-    erros: number;
-  }>;
-}
-
-export interface RankingItem {
-  posicao: number;
-  atleta_id: string;
-  atleta_nome: string;
-  time: TeamType;
-  fundamento: string;
-  total_acertos: number;
-  total_erros: number;
-  total_execucoes: number;
-  eficiencia: number;
-  ranking_score: number;
-}
-
 export interface StudentPerformance {
-  frequency: number;
-  evolution: number;
-  completedTrainings: number;
-  achievedGoals: number;
+  id: string;
+  studentId: string;
+  name?: string;
   totalTrainings: number;
+  attendedTrainings: number;
+  attendanceRate: number;
   totalGoals: number;
+  achievedGoals: number;
+  goalsRate: number;
+  recentPerformance?: {
+    date: string;
+    score: number;
+  }[];
 }
 
 export interface AthleteEvaluation {
   id: string;
-  atleta_id: string;
-  exercicio_id: string;
-  treino_id: string;
-  fundamento: string;
-  acertos: number;
-  erros: number;
-  timestamp: string;
-  percentual_acerto?: number;
-  atleta?: {
-    id: string;
-    nome: string;
-    time: string;
-    posicao: string;
-  };
-  exercicio?: {
-    id: string;
-    nome: string;
-  };
-  treino?: {
-    id: string;
-    nome: string;
+  athlete_id: string;
+  evaluation_date: string;
+  evaluator_id: string;
+  fundamentos: {
+    fundamento: string;
+    nota: number;
+    observacoes?: string;
+  }[];
+  observacoes_gerais?: string;
+  historico_edicoes: {
     data: string;
-  };
-  historico_edicoes?: Array<{
-    id: string;
-    acertos_anterior: number;
-    erros_anterior: number;
-    tecnico_id: string;
-    data_modificacao: string;
-  }>;
+    usuario_id: string;
+    nome_usuario?: string;
+  }[];
 }
 
 export interface Training {
   id: string;
   nome: string;
-  data: string;
-  local: string;
-  status: string;
-  observacoes?: string;
-  created_at?: string;
-  updated_at?: string;
-  user_id: string;
+  data?: string;
   descricao?: string;
-  time?: Team;
+  time?: 'Masculino' | 'Feminino' | 'Misto' | string;
+  local?: string;
+  exercicios: {
+    id: string;
+    exercicio_id: string;
+    nome: string;
+    descricao?: string;
+    series?: number;
+    repeticoes?: number;
+    duracao?: number;
+    objetivos?: string[];
+    imagem_url?: string;
+  }[];
+  created_at: string;
+  updated_at?: string;
 }

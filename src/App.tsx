@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
@@ -38,8 +39,8 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <RouterPersistence>
             <NotificationsManager />
             <BottomNavbar />
@@ -140,25 +141,45 @@ function App() {
                 }
               />
 
-              <ProtectedRoute>
-                <Route path="/mais" element={<More />} />
-              </ProtectedRoute>
-              <ProtectedRoute>
-                <Route path="/ciclos" element={<Ciclos />} />
-              </ProtectedRoute>
-              <ProtectedRoute>
-                <Route path="/notificacoes" element={<NotificationSettings />} />
-              </ProtectedRoute>
-              <ProtectedRoute>
-                <Route path="/metas" element={<MetasEvolucao />} />
-              </ProtectedRoute>
+              <Route 
+                path="/mais" 
+                element={
+                  <ProtectedRoute>
+                    <More />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/ciclos" 
+                element={
+                  <ProtectedRoute>
+                    <Ciclos />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notificacoes" 
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/metas" 
+                element={
+                  <ProtectedRoute>
+                    <MetasEvolucao />
+                  </ProtectedRoute>
+                } 
+              />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
           </RouterPersistence>
-        </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   );
 }
