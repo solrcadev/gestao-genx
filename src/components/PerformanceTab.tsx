@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Card, Tabs, Progress } from 'antd';
+import { Card } from 'antd';
 import { 
   getStudentPerformance, 
   getTrainingHistory, 
-  getStudentGoals, 
-  PerformanceData, 
+  getStudentGoals,
   TrainingHistory, 
   Goal,
   StudentPerformance
 } from '@/services/performanceService';
+import { Progress } from '@/components/ui/progress';
 
 interface PerformanceTabProps {
   studentId: string;
@@ -57,16 +57,16 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
       children: (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card title="Frequência">
-            <Progress percent={performance.frequency} />
+            <Progress value={performance.frequency} />
           </Card>
           <Card title="Evolução">
-            <Progress percent={performance.evolution} />
+            <Progress value={performance.evolution} />
           </Card>
           <Card title="Treinos Concluídos">
-            <Progress percent={(performance.completedTrainings / performance.totalTrainings) * 100} />
+            <Progress value={(performance.completedTrainings / performance.totalTrainings) * 100} />
           </Card>
           <Card title="Metas Alcançadas">
-            <Progress percent={(performance.achievedGoals / performance.totalGoals) * 100} />
+            <Progress value={(performance.achievedGoals / performance.totalGoals) * 100} />
           </Card>
         </div>
       ),
@@ -159,5 +159,5 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
     },
   ];
 
-  return <Tabs defaultActiveKey="1" items={items} />;
+  return <Card>{items[0].children}</Card>;
 }

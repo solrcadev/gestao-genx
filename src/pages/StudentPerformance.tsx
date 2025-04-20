@@ -1,18 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ArrowLeft } from 'lucide-react';
-import { getAthleteDetails } from '@/services/athleteService';
+import { getAthleteById } from '@/services/athleteService';
 import { Athlete } from '@/types';
-import StudentPerformanceSummary from '@/components/student-performance/StudentPerformanceSummary';
-import StudentPerformanceEvolution from '@/components/student-performance/StudentPerformanceEvolution';
-import MetasAtleta from '@/components/student-performance/MetasAtleta';
-import HistoricoTreinosAtleta from '@/components/student-performance/HistoricoTreinosAtleta';
+import HistoricoTreinosAtleta from '@/components/performance/HistoricoTreinosAtleta';
 
 const StudentPerformance: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -21,7 +19,7 @@ const StudentPerformance: React.FC = () => {
 
   const { data: athleteData, isLoading, isError } = useQuery({
     queryKey: ['athleteDetails', studentId],
-    queryFn: () => getAthleteDetails(studentId!),
+    queryFn: () => getAthleteById(studentId!),
     enabled: !!studentId,
   });
 
@@ -71,39 +69,15 @@ const StudentPerformance: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="resumo" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="resumo">Resumo</TabsTrigger>
-          <TabsTrigger value="evolucao">Evolução</TabsTrigger>
-          <TabsTrigger value="metas">Metas</TabsTrigger>
+      <Tabs defaultValue="historico-treinos" className="w-full">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="historico-treinos">Histórico de Treinos</TabsTrigger>
         </TabsList>
-        <TabsContent value="resumo" className="p-0">
-          <Card className="border-0 shadow-none">
-            <CardContent className="p-0">
-              <StudentPerformanceSummary studentId={studentId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="evolucao" className="p-0">
-          <Card className="border-0 shadow-none">
-            <CardContent className="p-0">
-              <StudentPerformanceEvolution studentId={studentId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="metas" className="p-0">
-          <Card className="border-0 shadow-none">
-            <CardContent className="p-0">
-              <MetasAtleta studentId={studentId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
         {/* Histórico de Treinos */}
         <TabsContent value="historico-treinos" className="p-0">
           <Card className="border-0 shadow-none">
             <CardContent className="p-0">
-              <HistoricoTreinosAtleta atletaId={studentId} />
+              <HistoricoTreinosAtleta atletaId={studentId!} />
             </CardContent>
           </Card>
         </TabsContent>
