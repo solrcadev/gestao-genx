@@ -1,4 +1,5 @@
 
+
 export interface StudentPerformance {
   id: string;
   studentId: string;
@@ -21,6 +22,7 @@ export interface StudentPerformance {
 export interface AthleteEvaluation {
   id: string;
   athlete_id: string;
+  atleta_id?: string; // For backward compatibility with existing code
   evaluation_date: string;
   evaluator_id: string;
   fundamentos: {
@@ -35,10 +37,30 @@ export interface AthleteEvaluation {
     data: string;
     usuario_id: string;
     nome_usuario?: string;
+    tecnico?: string;
+    acertos_anterior?: number;
+    erros_anterior?: number;
   }[];
   timestamp?: string;
   acertos?: number;
   erros?: number;
+  percentual_acerto?: number;
+  atleta?: {
+    id: string;
+    nome: string;
+    time: string;
+    posicao: string;
+  };
+  fundamento?: string;
+  exercicio?: {
+    id: string;
+    nome: string;
+  };
+  treino?: {
+    id: string;
+    nome: string;
+    data: string;
+  };
 }
 
 export interface Training {
@@ -108,6 +130,7 @@ export interface AthletePerformance {
     posicao: string;
     time?: string;
     foto_url?: string;
+    created_at?: string;
   };
   presenca: {
     total: number;
@@ -149,3 +172,4 @@ export interface RankingItem {
   primeira_avaliacao: string;
   ultima_avaliacao: string;
 }
+

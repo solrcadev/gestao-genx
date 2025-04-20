@@ -78,7 +78,8 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
           nome: 'João Silva',
           posicao: 'Levantador',
           time: teamType,
-          foto_url: null
+          foto_url: null,
+          created_at: new Date().toISOString()
         },
         presenca: {
           total: 20,
@@ -113,7 +114,8 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
           nome: 'Maria Oliveira',
           posicao: 'Ponteiro',
           time: teamType,
-          foto_url: null
+          foto_url: null,
+          created_at: new Date().toISOString()
         },
         presenca: {
           total: 20,

@@ -1,12 +1,12 @@
 import { supabase } from '@/lib/supabase';
-import { Training } from '@/types';
+import { Training, Team } from '@/types';
 
 export interface TrainingInput {
   nome: string;
   local: string;
   data: Date | string;
   descricao: string;
-  time: "Masculino" | "Feminino";
+  time: Team; // Changed from "Masculino" | "Feminino" to Team
 }
 
 export interface TrainingUpdateInput {
@@ -15,7 +15,7 @@ export interface TrainingUpdateInput {
   local: string;
   data: Date | string;
   descricao?: string;
-  time: "Masculino" | "Feminino";
+  time: Team; // Changed from "Masculino" | "Feminino" to Team
 }
 
 // Existing functions
