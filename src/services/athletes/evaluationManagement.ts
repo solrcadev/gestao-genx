@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { AthleteEvaluation } from '@/types';
 
@@ -62,12 +63,13 @@ export async function getAthletesEvaluations(filters: EvaluationFilters = {}, pa
     if (error) throw error;
     
     // Calcular o percentual de acerto para cada avaliação
-    const evaluationsWithPercent = data.map(eval => {
-      const total = eval.acertos + eval.erros;
-      const percentual_acerto = total > 0 ? (eval.acertos / total) * 100 : 0;
+    // Fixed: Changed 'eval' parameter name to 'evaluation' to avoid reserved word
+    const evaluationsWithPercent = data.map(evaluation => {
+      const total = evaluation.acertos + evaluation.erros;
+      const percentual_acerto = total > 0 ? (evaluation.acertos / total) * 100 : 0;
       
       return {
-        ...eval,
+        ...evaluation,
         percentual_acerto
       };
     });

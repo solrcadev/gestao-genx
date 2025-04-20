@@ -1,7 +1,8 @@
 
-import { useMediaQuery } from '@/components/ui/use-media-query';
+// Use the implementation from use-mobile.tsx that already exists
+import { useIsMobile, useMediaQuery } from './use-mobile.tsx';
 
-export const useIsMobile = () => useMediaQuery('(max-width: 768px)');
+export { useIsMobile, useMediaQuery };
 export const useDeviceInfo = () => ({
   isMobile: useIsMobile()
 });
