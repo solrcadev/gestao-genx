@@ -1,10 +1,9 @@
-
-import { Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
 import RouterPersistence from '@/components/RouterPersistence';
-import { NotificationsManager } from '@/components/NotificationsManager';
+import NotificationsManager from '@/components/NotificationsManager';
 
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
@@ -40,143 +39,125 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterPersistence>
-          <NotificationsManager />
-          <BottomNavbar />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Router>
+          <RouterPersistence>
+            <NotificationsManager />
+            <BottomNavbar />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/atletas"
-              element={
-                <ProtectedRoute>
-                  <Athletes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/aluno/:studentId"
-              element={
-                <ProtectedRoute>
-                  <AthleteDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/aluno/:studentId/performance"
-              element={
-                <ProtectedRoute>
-                  <StudentPerformance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/exercicios"
-              element={
-                <ProtectedRoute>
-                  <Exercises />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/treinos"
-              element={
-                <ProtectedRoute>
-                  <Trainings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/montar-treino"
-              element={
-                <ProtectedRoute>
-                  <TrainingAssembly />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/treino-do-dia"
-              element={
-                <ProtectedRoute>
-                  <TreinoDosDia />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/presenca"
-              element={
-                <ProtectedRoute>
-                  <AttendanceManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/desempenho"
-              element={
-                <ProtectedRoute>
-                  <Performance />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/atletas"
+                element={
+                  <ProtectedRoute>
+                    <Athletes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/aluno/:studentId"
+                element={
+                  <ProtectedRoute>
+                    <AthleteDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/aluno/:studentId/performance"
+                element={
+                  <ProtectedRoute>
+                    <StudentPerformance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/exercicios"
+                element={
+                  <ProtectedRoute>
+                    <Exercises />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/treinos"
+                element={
+                  <ProtectedRoute>
+                    <Trainings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/montar-treino"
+                element={
+                  <ProtectedRoute>
+                    <TrainingAssembly />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/treino-do-dia"
+                element={
+                  <ProtectedRoute>
+                    <TreinoDosDia />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/presenca"
+                element={
+                  <ProtectedRoute>
+                    <AttendanceManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/desempenho"
+                element={
+                  <ProtectedRoute>
+                    <Performance />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/gerenciar-avaliacoes"
-              element={
-                <RoleProtectedRoute allowedRoles={['admin', 'coach']}>
-                  <EvaluationManagement />
-                </RoleProtectedRoute>
-              }
-            />
+              <Route
+                path="/gerenciar-avaliacoes"
+                element={
+                  <RoleProtectedRoute allowedRoles={['admin', 'coach']}>
+                    <EvaluationManagement />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            <Route 
-              path="/mais" 
-              element={
-                <ProtectedRoute>
-                  <More />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/ciclos" 
-              element={
-                <ProtectedRoute>
-                  <Ciclos />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notificacoes" 
-              element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/metas" 
-              element={
-                <ProtectedRoute>
-                  <MetasEvolucao />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </RouterPersistence>
+              <ProtectedRoute>
+                <Route path="/mais" element={<More />} />
+              </ProtectedRoute>
+              <ProtectedRoute>
+                <Route path="/ciclos" element={<Ciclos />} />
+              </ProtectedRoute>
+              <ProtectedRoute>
+                <Route path="/notificacoes" element={<NotificationSettings />} />
+              </ProtectedRoute>
+              <ProtectedRoute>
+                <Route path="/metas" element={<MetasEvolucao />} />
+              </ProtectedRoute>
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </RouterPersistence>
+        </Router>
       </AuthProvider>
     </QueryClientProvider>
   );

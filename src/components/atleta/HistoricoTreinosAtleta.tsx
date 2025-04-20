@@ -521,4 +521,4 @@ const HistoricoTreinosAtleta: React.FC<HistoricoTreinosAtletaProps> = ({ atletaI
   );
 };
 
-export default HistoricoTreinosAtleta;
+export default HistoricoTreinosAtleta; 

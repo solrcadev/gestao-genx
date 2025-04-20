@@ -1,15 +1,14 @@
-
 import { useEffect, useState } from 'react';
-import { Card } from 'antd';
+import { Card, Tabs, Progress } from 'antd';
 import { 
   getStudentPerformance, 
   getTrainingHistory, 
-  getStudentGoals,
+  getStudentGoals, 
+  PerformanceData, 
   TrainingHistory, 
-  Goal
+  Goal,
+  StudentPerformance
 } from '@/services/performanceService';
-import { Progress } from '@/components/ui/progress';
-import { StudentPerformance } from '@/types';
 
 interface PerformanceTabProps {
   studentId: string;
@@ -58,16 +57,16 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
       children: (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card title="Frequência">
-            <Progress value={performance.frequency} />
+            <Progress percent={performance.frequency} />
           </Card>
           <Card title="Evolução">
-            <Progress value={performance.evolution} />
+            <Progress percent={performance.evolution} />
           </Card>
           <Card title="Treinos Concluídos">
-            <Progress value={(performance.completedTrainings || 0) / (performance.totalTrainings || 1) * 100} />
+            <Progress percent={(performance.completedTrainings / performance.totalTrainings) * 100} />
           </Card>
           <Card title="Metas Alcançadas">
-            <Progress value={(performance.achievedGoals || 0) / (performance.totalGoals || 1) * 100} />
+            <Progress percent={(performance.achievedGoals / performance.totalGoals) * 100} />
           </Card>
         </div>
       ),
@@ -151,7 +150,7 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
                      goal.status === 'in_progress' ? 'Em Andamento' : 'Pendente'}
                   </span>
                 </div>
-                <Progress value={goal.progress} className="mt-4" />
+                <Progress percent={goal.progress} className="mt-4" />
               </Card>
             ))}
           </div>
@@ -160,5 +159,5 @@ export function PerformanceTab({ studentId }: PerformanceTabProps) {
     },
   ];
 
-  return <Card>{items[0].children}</Card>;
+  return <Tabs defaultActiveKey="1" items={items} />;
 }

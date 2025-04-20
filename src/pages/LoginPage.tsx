@@ -1,131 +1,220 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
-import { useDeviceInfo } from '@/hooks/use-mobile';
-import { supabase } from '@/lib/supabase';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
+import { syncLocalStorageWithDatabase } from "@/services/syncService";
+import { 
+  getRoute, 
+  ATTEMPTED_ROUTE_KEY, 
+  ROUTE_STORAGE_KEY 
+} from "@/utils/route-persistence";
+
+// Esquema de validação do formulário
+const formSchema = z.object({
+  email: z.string().email({ message: "Digite um email válido" }),
+  password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 const LoginPage: React.FC = () => {
-  const { signIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { isMobile } = useDeviceInfo();
+  const { toast } = useToast();
 
-  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
+  // Função para recuperar a rota de redirecionamento após login
+  const getRedirectRoute = (): string => {
+    // Primeiro verificar se há uma rota tentada (quando o usuário tentou acessar uma página protegida)
+    const attemptedRoute = getRoute(ATTEMPTED_ROUTE_KEY, true); // true = limpar após leitura
+    if (attemptedRoute) {
+      console.log("Redirecionando para rota tentada:", attemptedRoute.pathname);
+      return attemptedRoute.pathname + (attemptedRoute.search || '');
+    }
+    
+    // Se não houver rota tentada, verificar a última rota visitada
+    const lastRoute = getRoute(ROUTE_STORAGE_KEY);
+    if (lastRoute) {
+      console.log("Redirecionando para última rota visitada:", lastRoute.pathname);
+      return lastRoute.pathname + (lastRoute.search || '');
+    }
+    
+    // Se não houver rotas salvas válidas, retornar a rota padrão
+    return "/dashboard";
+  };
+
+  // Function to get evaluations from localStorage
+  const getLocalStorageEvaluations = (): any[] => {
+    try {
+      return JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
+    } catch (error) {
+      console.error('Error parsing local storage evaluations:', error);
+      return [];
+    }
+  };
+
+  // Function to remove evaluation from localStorage
+  const removeFromLocalStorage = (id: string): void => {
+    try {
+      const evaluations = getLocalStorageEvaluations();
+      const filtered = evaluations.filter(ev => ev.id !== id);
+      localStorage.setItem('avaliacoes_exercicios', JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error removing evaluation from localStorage:', error);
+    }
+  };
+
+  const onSubmit = async (values: FormValues) => {
+    setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: values.email,
+        password: values.password,
       });
 
       if (error) {
-        setError(error.message);
         toast({
-          title: "Erro no login",
+          title: "Erro ao fazer login",
           description: error.message,
           variant: "destructive",
         });
-      } else {
+        return;
+      }
+
+      if (data?.user) {
         toast({
-          title: "Login bem-sucedido",
-          description: "Bem-vindo de volta!",
+          title: "Login realizado com sucesso",
+          description: "Você será redirecionado para o dashboard.",
         });
+
+        // Sincronizar avaliações do localStorage com o banco de dados
+        const localEvaluations = getLocalStorageEvaluations();
+        if (localEvaluations.length > 0) {
+          console.log("Sincronizando avaliações do localStorage:", localEvaluations);
+          
+          for (const evaluation of localEvaluations) {
+            try {
+              await syncLocalStorageWithDatabase(evaluation, data.user.id);
+              removeFromLocalStorage(evaluation.id);
+            } catch (syncError) {
+              console.error("Erro ao sincronizar avaliação:", syncError);
+            }
+          }
+        }
+
+        // Redirecionar para a rota adequada
+        const redirectRoute = getRedirectRoute();
+        navigate(redirectRoute);
       }
     } catch (err) {
-      setError('Ocorreu um erro ao fazer login. Tente novamente.');
-      console.error('Login error:', err);
+      console.error("Erro no login:", err);
       toast({
-        title: "Erro no login",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
+        title: "Erro ao fazer login",
+        description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="container relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex items-center text-lg font-medium">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2 h-6 w-6"
-          >
-            <path d="M15 6v12a3 3 0 1 1-6 0V6a3 3 0 1 1 6 0z" />
-          </svg>
-          Volley Manager
+    <div className="flex items-center justify-center min-h-screen bg-background px-4">
+      <div className="w-full max-w-md space-y-8 p-6 bg-card rounded-lg shadow-md">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight">GEN X - Painel de Gestão</h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            Faça login para acessar o painel de gerenciamento
+          </p>
         </div>
-        <div className="relative z-20 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              Gerencie seu time de volei com facilidade.
-            </p>
-            <footer className="text-sm"></footer>
-          </blockquote>
-        </div>
-      </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <div className="flex flex-col space-y-2 text-center">
-            <CardHeader className="space-y-5">
-              <CardTitle className="text-2xl font-semibold">
-                Entre com sua conta
-              </CardTitle>
-            </CardHeader>
-          </div>
-          <Card className="border-0">
-            <CardContent className="grid gap-4">
-              <form onSubmit={handleLogin}>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seuemail@aqui.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2 mt-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full mt-4" disabled={loading}>
-                  {loading ? 'Entrando...' : 'Entrar'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          {error && (
-            <p className="text-center text-sm text-red-500">{error}</p>
-          )}
-        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="seu.email@exemplo.com"
+                      {...field}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="********"
+                      {...field}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
+
+            <div className="text-center">
+              <Button
+                variant="link"
+                className="text-sm text-muted-foreground hover:text-primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Implementar a recuperação de senha
+                  navigate("/forgot-password");
+                }}
+              >
+                Esqueci minha senha
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );

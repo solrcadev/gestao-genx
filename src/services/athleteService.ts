@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { Athlete, Team } from '@/types';
 
@@ -36,9 +35,6 @@ export const getAthleteById = async (id: string) => {
   
   return data as Athlete;
 };
-
-// Add an alias to support the previous import name
-export const getAthleteDetails = getAthleteById;
 
 export const createAthlete = async (athlete: Omit<Athlete, 'id' | 'created_at'>) => {
   const { data, error } = await supabase

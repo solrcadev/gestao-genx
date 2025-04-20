@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { AthletePerformance, TeamType, Athlete } from '@/types';
 
@@ -73,14 +72,16 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
     // For now, we'll return mock data
     return [
       {
-        atleta: {
+        atleta: mapAthleteData({
           id: '1',
           nome: 'João Silva',
           posicao: 'Levantador',
           time: teamType,
-          foto_url: null,
-          created_at: new Date().toISOString()
-        },
+          idade: 22,
+          altura: 1.85,
+          created_at: new Date().toISOString(),
+          foto_url: null
+        }),
         presenca: {
           total: 20,
           presentes: 18,
@@ -109,14 +110,16 @@ export async function getAthletesPerformance(teamType: TeamType): Promise<Athlet
         ultimasAvaliacoes: []
       },
       {
-        atleta: {
+        atleta: mapAthleteData({
           id: '2',
           nome: 'Maria Oliveira',
           posicao: 'Ponteiro',
           time: teamType,
-          foto_url: null,
-          created_at: new Date().toISOString()
-        },
+          idade: 20,
+          altura: 1.78,
+          created_at: new Date().toISOString(),
+          foto_url: null
+        }),
         presenca: {
           total: 20,
           presentes: 16,

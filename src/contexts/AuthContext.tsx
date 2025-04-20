@@ -1,9 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 // Constante da chave de localStorage para manter consistência
 const ROUTE_STORAGE_KEY = 'last_route';
@@ -12,18 +11,19 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signIn: () => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Define o tipo explicitamente para TypeScript
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Função para verificar se há uma rota salva para restaurar
   const getPersistedRoute = () => {
@@ -106,8 +106,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [navigate]);
 
   // Função para login
-  const signIn = async () => {
+  const signIn = async (email: string, password: string) => {
     try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      setSession(data.session);
+      setUser(data.session?.user || null);
+      
+      toast({
+        title: "Login bem-sucedido",
+        description: "Bem-vindo de volta!",
+      });
+      
       return { error: null };
     } catch (error) {
       console.error("Unexpected error during login:", error);

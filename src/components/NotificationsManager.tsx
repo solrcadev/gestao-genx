@@ -18,5 +18,3 @@ export const NotificationsManager: React.FC = () => {
     />
   );
 };
-
-export default NotificationsManager;
