@@ -68,7 +68,7 @@ export type TeamType = 'Masculino' | 'Feminino' | 'Misto';
 
 export type Position = 'Levantador' | 'Oposto' | 'Ponteiro' | 'Central' | 'Líbero' | 'Outro';
 
-export type Team = 'Masculino' | 'Feminino';
+export type Team = 'Masculino' | 'Feminino' | 'Misto';
 
 export type UserRole = 'admin' | 'coach' | 'assistant' | 'athlete' | 'parent' | 'guest';
 
@@ -106,6 +106,7 @@ export interface AthletePerformance {
     id: string;
     nome: string;
     posicao: string;
+    time?: string;
     foto_url?: string;
   };
   presenca: {
@@ -122,6 +123,7 @@ export interface AthletePerformance {
         acertos: number;
         erros: number;
         percentualAcerto: number;
+        ultimaData?: string;
       };
     };
   };

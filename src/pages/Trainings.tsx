@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -31,12 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CalendarDateRangePicker } from "@/components/ui/calendar"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { toast } from "@/components/ui/use-toast";
-import { deleteTraining, getTrainings, createTraining, updateTraining } from '@/services/trainingService';
+import { deleteTraining, fetchTrainings, createTraining, updateTraining } from '@/services/trainingService';
 import { Team } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const Trainings: React.FC = () => {
   const [team, setTeam] = useState<Team>("Masculino");
@@ -54,10 +57,10 @@ const Trainings: React.FC = () => {
 
   const { isLoading, error, data: trainings } = useQuery({
     queryKey: ['trainings', team],
-    queryFn: () => getTrainings(team),
+    queryFn: () => fetchTrainings(),
   });
 
-  const { mutate: create, isLoading: isCreating } = useMutation({
+  const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: createTraining,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainings', team] });
@@ -77,7 +80,7 @@ const Trainings: React.FC = () => {
     },
   });
 
-  const { mutate: update, isLoading: isUpdating } = useMutation({
+  const { mutate: update, isPending: isUpdating } = useMutation({
     mutationFn: updateTraining,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainings', team] });
@@ -97,7 +100,7 @@ const Trainings: React.FC = () => {
     },
   });
 
-  const { mutate: remove, isLoading: isDeleting } = useMutation({
+  const { mutate: remove, isPending: isDeleting } = useMutation({
     mutationFn: deleteTraining,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainings', team] });
@@ -168,9 +171,9 @@ const Trainings: React.FC = () => {
     }
   };
 
-  const handleTeamChange = (team: string) => {
-    if (team === 'Masculino' || team === 'Feminino' || team === 'Misto') {
-      setSelectedTeam(team);
+  const handleTeamChange = (value: string) => {
+    if (value === 'Masculino' || value === 'Feminino') {
+      setSelectedTeam(value);
     } else {
       setSelectedTeam('Masculino'); // Default fallback
     }
@@ -298,14 +301,14 @@ const Trainings: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card open={open} onOpenChange={setOpen}>
-        <CardHeader>
-          <CardTitle>{isEditMode ? 'Editar Treino' : 'Adicionar Treino'}</CardTitle>
-          <CardDescription>
-            {isEditMode ? 'Edite os detalhes do treino.' : 'Insira os detalhes do novo treino.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? 'Editar Treino' : 'Adicionar Treino'}</DialogTitle>
+            <DialogDescription>
+              {isEditMode ? 'Edite os detalhes do treino.' : 'Insira os detalhes do novo treino.'}
+            </DialogDescription>
+          </DialogHeader>
           <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Nome</Label>
@@ -319,7 +322,25 @@ const Trainings: React.FC = () => {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="data">Data</Label>
-              <CalendarDateRangePicker value={data} onValueChange={setData} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {data ? format(data, 'PPP', { locale: ptBR }) : <span>Selecione uma data</span>}
+                    <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={data}
+                    onSelect={setData}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="descricao">Descrição</Label>
@@ -357,8 +378,8 @@ const Trainings: React.FC = () => {
                 : (isCreating ? 'Criando...' : 'Adicionar Treino')}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
