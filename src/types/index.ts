@@ -67,7 +67,7 @@ export interface Training {
   nome: string;
   data?: string;
   descricao?: string;
-  time?: 'Masculino' | 'Feminino' | 'Misto' | string;
+  time?: TeamType | string;
   local?: string;
   exercicios: {
     id: string;
