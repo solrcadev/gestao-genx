@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -8,11 +7,22 @@ import { Link } from 'react-router-dom';
 import { AthletePerformance, TeamType } from '@/types';
 import AthleteAnalysis from '../AthleteAnalysis';
 
+// Tipo para os fundamentos
+type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
+
+// Interface para as médias dos fundamentos
+interface FundamentoMedia {
+  nome: Fundamento;
+  media: number;
+  totalExecucoes: number;
+}
+
 interface IndividualViewProps {
   performanceData: AthletePerformance[];
   selectedAthleteId: string | null;
   setSelectedAthleteId: (id: string) => void;
   selectedAthlete: AthletePerformance | undefined;
+  mediasFundamentos: FundamentoMedia[];
   team: TeamType;
   onOpenDetailDrawer: () => void;
 }
@@ -22,6 +32,7 @@ export function IndividualView({
   selectedAthleteId,
   setSelectedAthleteId,
   selectedAthlete,
+  mediasFundamentos,
   team,
   onOpenDetailDrawer
 }: IndividualViewProps) {
@@ -52,9 +63,10 @@ export function IndividualView({
             selectedAthleteId={selectedAthleteId}
             setSelectedAthleteId={setSelectedAthleteId}
             selectedAthlete={selectedAthlete}
-            mediasFundamentos={[]}
+            mediasFundamentos={mediasFundamentos}
             team={team}
             onOpenDetailDrawer={onOpenDetailDrawer}
+            hideSelector={true}
           />
           
           <Button 

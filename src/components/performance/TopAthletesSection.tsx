@@ -12,6 +12,7 @@ interface TopAtleta {
   nome: string;
   percentual: number;
   totalExecucoes: number;
+  acertos?: number;
   ultimaData: string;
 }
 
@@ -74,7 +75,7 @@ const TopAthletesSection = ({
                       {atleta.percentual.toFixed(1).replace('.', ',')}%
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {atleta.totalExecucoes} execuções | Última: {atleta.ultimaData}
+                      {atleta.acertos && `${atleta.acertos}/`}{atleta.totalExecucoes} execuções | Última: {atleta.ultimaData}
                     </span>
                   </div>
                 </div>
@@ -89,12 +90,18 @@ const TopAthletesSection = ({
               </div>
             </Card>
           ))}
+          <div className="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded-md">
+            <p>• Eficiência = (Total de Acertos / Total de Tentativas) * 100</p>
+            <p>• Somente atletas com no mínimo 5 tentativas são considerados</p>
+            <p>• Em caso de empate: 1) Maior número de tentativas, 2) Ordem alfabética</p>
+          </div>
         </div>
       ) : (
         <Card className="p-8 text-center">
           <div className="flex flex-col items-center justify-center text-muted-foreground">
             <Trophy className="h-10 w-10 mb-2 opacity-30" />
-            <p>Sem avaliações para este fundamento</p>
+            <p>Sem atletas com tentativas suficientes para este fundamento</p>
+            <p className="text-xs mt-2">São necessárias pelo menos 5 tentativas para entrar no ranking.</p>
           </div>
         </Card>
       )}

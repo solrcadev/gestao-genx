@@ -25,6 +25,7 @@ interface AthleteAnalysisProps {
   mediasFundamentos: FundamentoMedia[];
   team: string;
   onOpenDetailDrawer: () => void;
+  hideSelector?: boolean;
 }
 
 const AthleteAnalysis = ({ 
@@ -34,7 +35,8 @@ const AthleteAnalysis = ({
   selectedAthlete,
   mediasFundamentos,
   team,
-  onOpenDetailDrawer
+  onOpenDetailDrawer,
+  hideSelector = false
 }: AthleteAnalysisProps) => {
   // Função para determinar a cor com base no percentual
   const getColorByPercentage = (value: number) => {
@@ -63,7 +65,8 @@ const AthleteAnalysis = ({
 
   return (
     <div className="space-y-6">
-      {/* Seletor de atleta */}
+      {/* Seletor de atleta - exibido apenas se hideSelector for false */}
+      {!hideSelector && (
       <Card className="p-4">
         <h2 className="text-lg font-semibold mb-4">Selecione um atleta</h2>
         <Select value={selectedAthleteId || ""} onValueChange={setSelectedAthleteId}>
@@ -81,6 +84,7 @@ const AthleteAnalysis = ({
           </SelectContent>
         </Select>
       </Card>
+      )}
       
       {selectedAthlete ? (
         <div className="space-y-6">

@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { toast } from "../ui/use-toast";
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "../ui/tabs";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ExerciseEvaluationProps {
   treinoDoDiaId: string;
@@ -18,7 +18,7 @@ const ExerciseEvaluation = ({ treinoDoDiaId, exercicioId, atletaId, onSaved }: E
   const [fundamento, setFundamento] = useState("Saque");
   const [acertos, setAcertos] = useState(0);
   const [erros, setErros] = useState(0);
-  const isMobile = useMediaQuery(768);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Reset states when exercise changes
@@ -35,6 +35,7 @@ const ExerciseEvaluation = ({ treinoDoDiaId, exercicioId, atletaId, onSaved }: E
         fundamento,
         acertos,
         erros,
+        origem: 'avaliacao_exercicio'
       });
       toast({
         title: "Avaliação salva!",

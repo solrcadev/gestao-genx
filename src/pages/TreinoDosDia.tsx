@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addDays, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,6 +15,7 @@ import AthleteAttendance from "@/components/treino-do-dia/AthleteAttendance";
 import ExerciseList from "@/components/treino-do-dia/ExerciseList";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ExportTrainingButton } from "@/components/treino-do-dia/ExportTrainingButton";
+import PostTrainingEvaluation from "@/components/treino-do-dia/PostTrainingEvaluation";
 
 const TreinoDosDia = () => {
   const [date, setDate] = useState<Date>(new Date());
@@ -148,6 +148,7 @@ const TreinoDosDia = () => {
 
           <AthleteAttendance treinoDoDiaId={treinoDoDia.id} onSaved={loadTreinoDoDia} />
           <ExerciseList treinoDoDiaId={treinoDoDia.id} />
+          <PostTrainingEvaluation treinoDoDiaId={treinoDoDia.id} />
         </div>
       ) : (
         <div className="text-center py-10">

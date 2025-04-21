@@ -1,0 +1,323 @@
+/* Estilos específicos para exportação do ranking */
+.ranking-export-bg {
+  background-color: #1E3A8A !important; /* Azul escuro */
+  color: white !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.ranking-export-bg h2,
+.ranking-export-bg p,
+.ranking-export-bg .text-blue-900,
+.ranking-export-bg .text-blue-700,
+.ranking-export-bg .text-blue-800,
+.ranking-export-bg .text-gray-500 {
+  color: white !important;
+}
+
+.ranking-export-bg .bg-white {
+  background-color: #1E3A8A !important;
+}
+
+.ranking-export-bg .bg-blue-50,
+.ranking-export-bg .bg-blue-50\/50 {
+  background-color: #2C4C9C !important;
+}
+
+.ranking-export-bg .border {
+  border-color: #3B5FBB !important;
+}
+
+.ranking-export-bg .bg-purple-100 {
+  background-color: #7E22CE !important;
+  border-color: #9F5FDD !important;
+  color: white !important;
+}
+
+.ranking-export-bg .text-purple-800 {
+  color: white !important;
+}
+
+.ranking-export-bg table {
+  color: white !important;
+}
+
+.ranking-export-bg .text-gray-500 {
+  color: #CBD5E1 !important;
+}
+
+/* Estilos para medalhas e destaques na exportação */
+.ranking-export-bg .text-yellow-500 {
+  color: #FFD700 !important; /* Ouro mais vibrante */
+}
+
+.ranking-export-bg .text-slate-400 {
+  color: #E2E8F0 !important; /* Prata mais visível */
+}
+
+.ranking-export-bg .text-amber-600 {
+  color: #D97706 !important; /* Bronze mais visível */
+}
+
+.ranking-export-bg .border-purple-200 {
+  border-color: #7E22CE !important;
+}
+
+/* Estilos para as badges no modo exportação */
+.ranking-export-bg .bg-yellow-100 {
+  background-color: #FFD700 !important; 
+  color: #1E3A8A !important;
+  border-color: #EAB308 !important;
+}
+
+.ranking-export-bg .bg-slate-100 {
+  background-color: #E2E8F0 !important;
+  color: #1E3A8A !important;
+  border-color: #94A3B8 !important;
+}
+
+.ranking-export-bg .bg-amber-100 {
+  background-color: #D97706 !important;
+  color: #1E3A8A !important;
+  border-color: #B45309 !important;
+}
+
+.ranking-export-bg .bg-blue-50 {
+  background-color: #93C5FD !important;
+  color: #1E3A8A !important;
+  border-color: #60A5FA !important;
+}
+
+.ranking-export-bg .text-yellow-800,
+.ranking-export-bg .text-slate-800,
+.ranking-export-bg .text-amber-800,
+.ranking-export-bg .text-blue-800 {
+  color: #1E3A8A !important;
+  font-weight: bold;
+}
+
+/* Estilos para o conteúdo do ranking */
+.ranking-top10-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.ranking-content {
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.ranking-content:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Estilos para animação de carregamento */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Novos estilos para o componente de exportação de ranking */
+.ranking-export-container {
+  background-color: #1E3A8A;
+  color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Novo background sólido que substitui o gradiente */
+.ranking-export-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-color: #1E3A8A;
+  z-index: -1;
+}
+
+/* Elementos decorativos com cores sólidas */
+.ranking-export-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  background-color: rgba(168, 85, 247, 0.1);
+  border-radius: 50%;
+}
+
+.ranking-export-background::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 150px;
+  height: 150px;
+  background-color: rgba(139, 92, 246, 0.1);
+  border-radius: 50%;
+}
+
+.ranking-export-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.ranking-export-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.ranking-export-subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+}
+
+.ranking-export-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  background: radial-gradient(ellipse at top right, #A855F7 0%, transparent 70%),
+             radial-gradient(ellipse at bottom left, #8B5CF6 0%, transparent 70%);
+}
+
+.ranking-athlete-card {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ranking-athlete-card:hover {
+  transform: translateY(-2px);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.medal-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.medal-icon-gold {
+  color: #FFD700;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+}
+
+.medal-icon-silver {
+  color: #E2E8F0;
+  filter: drop-shadow(0 0 4px rgba(226, 232, 240, 0.5));
+}
+
+.medal-icon-bronze {
+  color: #D97706;
+  filter: drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
+}
+
+.athlete-info {
+  flex: 1;
+}
+
+.athlete-name {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.athlete-stats {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.progress-container {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-bar-gold {
+  height: 100%;
+  background-color: #FFD700;
+  border-radius: 4px;
+}
+
+.progress-bar-silver {
+  height: 100%;
+  background-color: #E2E8F0;
+  border-radius: 4px;
+}
+
+.progress-bar-bronze {
+  height: 100%;
+  background-color: #D97706;
+  border-radius: 4px;
+}
+
+.athlete-percentage {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+}
+
+.congrats-message {
+  background-color: rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  text-align: center;
+  font-weight: 500;
+  color: white;
+}
+
+.ranking-export-watermark {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+} 

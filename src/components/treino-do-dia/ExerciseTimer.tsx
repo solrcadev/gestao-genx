@@ -56,6 +56,14 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
     };
   }, [isRunning]);
 
+  // Verificação de exercício anteriormente avaliado para não repetir dados incorretos
+  useEffect(() => {
+    // Resetar o elapsed time para zero se o exercício tiver sido desmarcado
+    if (exerciseData.concluido === false && exerciseData.tempo_real !== null) {
+      setElapsedTime(0);
+    }
+  }, [exerciseData]);
+
   // Toggle timer
   const toggleTimer = () => {
     setIsRunning(!isRunning);

@@ -119,7 +119,7 @@ async function syncAvaliacoesExercicios(): Promise<void> {
       try {
         // Verificar se a avaliação já existe no banco
         const { data: existingEval, error: checkError } = await supabase
-          .from('avaliacoes_exercicios')
+          .from('avaliacoes_fundamento')
           .select('id')
           .eq('treino_id', avaliacao.treino_id)
           .eq('exercicio_id', avaliacao.exercicio_id)
@@ -136,10 +136,12 @@ async function syncAvaliacoesExercicios(): Promise<void> {
         if (existingEval && existingEval.length > 0) {
           // Atualizar avaliação existente
           result = await supabase
-            .from('avaliacoes_exercicios')
+            .from('avaliacoes_fundamento')
             .update({
               acertos: avaliacao.acertos,
               erros: avaliacao.erros,
+              origem: avaliacao.origem || 'sync',
+              observacoes: avaliacao.observacoes || '',
               timestamp: avaliacao.timestamp || new Date().toISOString()
             })
             .eq('id', existingEval[0].id);
@@ -152,10 +154,17 @@ async function syncAvaliacoesExercicios(): Promise<void> {
           if (!avaliacaoData.timestamp) {
             avaliacaoData.timestamp = new Date().toISOString();
           }
+
+          // Adicionar campos que podem não existir no localStorage
+          const dadosCompletos = {
+            ...avaliacaoData,
+            origem: avaliacaoData.origem || 'sync',
+            observacoes: avaliacaoData.observacoes || ''
+          };
           
           result = await supabase
-            .from('avaliacoes_exercicios')
-            .insert([avaliacaoData]);
+            .from('avaliacoes_fundamento')
+            .insert([dadosCompletos]);
         }
         
         if (!result.error) {

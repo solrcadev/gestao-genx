@@ -65,6 +65,17 @@ export interface StudentPerformance {
   achievedGoals: number;
 }
 
+// Interface para os dados do ranking de atletas por fundamento
+export interface RankingAtletaFundamento {
+  id: string;
+  nome: string;
+  eficiencia: number;
+  tentativas: number;
+  acertos: number;
+  erros: number;
+  posicao: number;
+}
+
 // Função para obter o desempenho dos atletas por time
 export async function getAthletesPerformance(team: TeamType): Promise<AthletePerformance[]> {
   try {
@@ -467,7 +478,7 @@ export async function getAthletesPerformance(team: TeamType): Promise<AthletePer
 export async function registrarAvaliacaoDesempenho(avaliacao: AvaliacaoRaw) {
   try {
     const { data, error } = await supabase
-      .from('avaliacoes_exercicios')
+      .from('avaliacoes_fundamento')
       .insert([avaliacao]);
     
     if (error) throw error;
@@ -1450,6 +1461,184 @@ function mapearPresencasParaHistorico(presencas: any[], athleteId: string): Hist
     });
   } catch (error) {
     console.error('Erro ao mapear presenças para histórico:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtém o ranking de atletas por fundamento técnico para a última semana
+ * 
+ * Implementa critérios específicos:
+ * - Mínimo de 5 tentativas para um atleta ser incluído
+ * - Ordenação por eficiência, número de tentativas e nome (em caso de empate)
+ * - Retorna no máximo 10 atletas (Top 10)
+ * 
+ * @param time Tipo de time (Masculino/Feminino)
+ * @param fundamento Fundamento técnico a ser avaliado
+ * @returns Array com os dados do ranking de atletas
+ */
+export async function getAthletesRankingByFundamento(
+  time: TeamType,
+  fundamento: string
+): Promise<RankingAtletaFundamento[]> {
+  try {
+    console.log(`Iniciando geração de ranking para time ${time} no fundamento ${fundamento}`);
+    
+    // Definir o período da última semana
+    const dataFim = new Date();
+    const dataInicio = new Date();
+    dataInicio.setDate(dataInicio.getDate() - 7);
+    
+    // Padronizar o formato das datas para ISO
+    const periodoInicio = dataInicio.toISOString();
+    const periodoFim = dataFim.toISOString();
+    
+    console.log(`Período de apuração: ${periodoInicio} até ${periodoFim}`);
+    
+    // 1. Buscar avaliações da tabela avaliacoes_fundamento
+    const { data: avaliacoes, error } = await supabase
+      .from('avaliacoes_fundamento')
+      .select(`
+        id,
+        atleta_id,
+        fundamento,
+        acertos,
+        erros,
+        created_at,
+        treino_id
+      `)
+      .eq('fundamento', fundamento.toLowerCase())
+      .gte('created_at', periodoInicio)
+      .lte('created_at', periodoFim);
+    
+    if (error) {
+      console.error('Erro ao buscar avaliações:', error);
+      return [];
+    }
+    
+    console.log(`Encontradas ${avaliacoes?.length || 0} avaliações para o fundamento ${fundamento}`);
+    
+    // 2. Buscar os atletas do time
+    const { data: atletas, error: atletasError } = await supabase
+      .from('athletes')
+      .select('*')
+      .eq('time', time);
+    
+    if (atletasError) {
+      console.error('Erro ao buscar atletas:', atletasError);
+      return [];
+    }
+    
+    console.log(`Total de atletas no time ${time}: ${atletas?.length || 0}`);
+    
+    // Mapa para agregar dados de avaliações por atleta
+    const dadosPorAtleta: Record<string, {
+      acertos: number;
+      erros: number;
+      tentativas: number;
+      eficiencia: number;
+      atletaObj: any;
+    }> = {};
+    
+    // 3. Processar as avaliações e agrupar por atleta
+    avaliacoes?.forEach(avaliacao => {
+      // Verificar se o atleta pertence ao time selecionado
+      const atletaDoTime = atletas?.find(a => a.id === avaliacao.atleta_id);
+      if (!atletaDoTime) return;
+      
+      if (!dadosPorAtleta[avaliacao.atleta_id]) {
+        dadosPorAtleta[avaliacao.atleta_id] = {
+          acertos: 0,
+          erros: 0,
+          tentativas: 0,
+          eficiencia: 0,
+          atletaObj: atletaDoTime
+        };
+      }
+      
+      // Acumular dados
+      dadosPorAtleta[avaliacao.atleta_id].acertos += avaliacao.acertos || 0;
+      dadosPorAtleta[avaliacao.atleta_id].erros += avaliacao.erros || 0;
+      dadosPorAtleta[avaliacao.atleta_id].tentativas += (avaliacao.acertos || 0) + (avaliacao.erros || 0);
+    });
+    
+    // 4. Calcular eficiência e filtrar atletas com pelo menos 5 tentativas
+    Object.values(dadosPorAtleta).forEach(dados => {
+      if (dados.tentativas > 0) {
+        dados.eficiencia = (dados.acertos / dados.tentativas) * 100;
+      }
+    });
+    
+    // 5. Converter para array, filtrar e ordenar
+    const rankingArray = Object.entries(dadosPorAtleta)
+      .map(([atletaId, dados]) => ({
+        id: atletaId,
+        nome: dados.atletaObj.nome,
+        eficiencia: dados.eficiencia,
+        tentativas: dados.tentativas,
+        acertos: dados.acertos,
+        erros: dados.erros,
+        posicao: 0 // Será calculado após a ordenação
+      }))
+      .filter(item => item.tentativas >= 5) // Mínimo de 5 tentativas
+      .sort((a, b) => {
+        // Ordenar por eficiência (decrescente)
+        if (b.eficiencia !== a.eficiencia) {
+          return b.eficiencia - a.eficiencia;
+        }
+        
+        // Em caso de empate, ordenar por número de tentativas (decrescente)
+        if (b.tentativas !== a.tentativas) {
+          return b.tentativas - a.tentativas;
+        }
+        
+        // Se ainda empatado, ordenar por nome (alfabético)
+        return a.nome.localeCompare(b.nome);
+      })
+      .slice(0, 10); // Limitar para Top 10
+    
+    // 6. Atribuir posições no ranking
+    rankingArray.forEach((atleta, index) => {
+      atleta.posicao = index + 1;
+    });
+    
+    console.log(`Ranking gerado com ${rankingArray.length} atletas.`);
+    
+    // 7. Salvar o ranking no banco para consultas futuras
+    try {
+      await supabase.from('rankings').insert({
+        fundamento: fundamento.toLowerCase(),
+        time_type: time,
+        periodo_inicio: periodoInicio,
+        periodo_fim: periodoFim,
+        dados: rankingArray,
+        destaques: null // Pode ser implementado posteriormente
+      });
+      
+      console.log('Ranking salvo no banco de dados com sucesso.');
+    } catch (saveError) {
+      console.error('Erro ao salvar ranking no banco:', saveError);
+      // Não falha se o salvamento não funcionar
+    }
+    
+    return rankingArray;
+  } catch (error) {
+    console.error('Erro ao gerar ranking de atletas:', error);
+    return [];
+  }
+}
+
+/**
+ * Carrega os dados de performance necessários para o componente de ranking
+ * 
+ * @param team Tipo do time (Masculino/Feminino)
+ * @returns Array com os dados de performance dos atletas
+ */
+export async function loadPerformanceDataForRanking(team: TeamType): Promise<AthletePerformance[]> {
+  try {
+    return await getAthletesPerformance(team);
+  } catch (error) {
+    console.error('Erro ao carregar dados de performance para ranking:', error);
     return [];
   }
 }

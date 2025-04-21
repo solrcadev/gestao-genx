@@ -30,6 +30,8 @@ export interface ExercicioAvaliacao {
   fundamento: string;
   acertos: number;
   erros: number;
+  origem?: string;
+  observacoes?: string;
   created_at: string;
 }
 
@@ -457,6 +459,26 @@ export const concluirExercicio = async ({
   }
 };
 
+// Unmark a completed exercise
+export const desmarcarExercicio = async ({ 
+  exercicioId 
+}: { 
+  exercicioId: string;
+}): Promise<void> => {
+  const { error } = await supabase
+    .from('treinos_exercicios')
+    .update({
+      concluido: false,
+      tempo_real: null
+    })
+    .eq('id', exercicioId);
+
+  if (error) {
+    console.error('Erro ao desmarcar exercício:', error);
+    throw new Error(error.message);
+  }
+};
+
 // Save exercise evaluation
 export const salvarAvaliacaoExercicio = async ({
   treinoDoDiaId,
@@ -464,7 +486,9 @@ export const salvarAvaliacaoExercicio = async ({
   atletaId,
   fundamento,
   acertos,
-  erros
+  erros,
+  origem = '',
+  observacoes = ''
 }: {
   treinoDoDiaId: string;
   exercicioId: string;
@@ -472,31 +496,39 @@ export const salvarAvaliacaoExercicio = async ({
   fundamento: string;
   acertos: number;
   erros: number;
+  origem?: string;
+  observacoes?: string;
 }): Promise<void> => {
   try {
     // Primeiro, recupera o treino do dia para obter o treino_id
     const treinoDoDia = await fetchTreinoDoDia(treinoDoDiaId);
     console.log("Salvando avaliação para o treino:", treinoDoDiaId, "exercício:", exercicioId, "atleta:", atletaId);
     
-    // Verificar se o exercicioId é uma referência do exercício ou do treino_exercicios
-    // Buscar a referência correta do exercício, se necessário
+    // Verificar se é uma avaliação pós-treino ou uma avaliação de exercício
     let exercicio_id_ref = exercicioId;
     
-    try {
-      // Tentar buscar o registro em treinos_exercicios para ver se existe e obter o exercicio_id correto
-      const { data: treinoExercicio, error: treinoExercicioError } = await supabase
-        .from('treinos_exercicios')
-        .select('exercicio_id')
-        .eq('id', exercicioId)
-        .single();
-      
-      if (!treinoExercicioError && treinoExercicio && treinoExercicio.exercicio_id) {
-        console.log("Encontrada referência ao exercício real:", treinoExercicio.exercicio_id);
-        exercicio_id_ref = treinoExercicio.exercicio_id;
+    // Se for avaliação pós-treino, definir exercicio_id como null
+    if (origem === 'avaliacao_pos_treino') {
+      console.log("Avaliação pós-treino detectada, utilizando NULL para exercicio_id");
+      exercicio_id_ref = null;
+    } else {
+      // Se não for avaliação pós-treino, buscar referência do exercício
+      try {
+        // Tentar buscar o registro em treinos_exercicios para ver se existe e obter o exercicio_id correto
+        const { data: treinoExercicio, error: treinoExercicioError } = await supabase
+          .from('treinos_exercicios')
+          .select('exercicio_id')
+          .eq('id', exercicioId)
+          .single();
+        
+        if (!treinoExercicioError && treinoExercicio && treinoExercicio.exercicio_id) {
+          console.log("Encontrada referência ao exercício real:", treinoExercicio.exercicio_id);
+          exercicio_id_ref = treinoExercicio.exercicio_id;
+        }
+      } catch (refError) {
+        console.warn("Erro ao buscar referência do exercício:", refError);
+        // Continuar com o ID original
       }
-    } catch (refError) {
-      console.warn("Erro ao buscar referência do exercício:", refError);
-      // Continuar com o ID original
     }
     
     // Documentar o que está tentando salvar
@@ -507,57 +539,29 @@ export const salvarAvaliacaoExercicio = async ({
       fundamento,
       acertos,
       erros,
-      timestamp: new Date().toISOString() // Adicionando timestamp para compatibilidade com performanceService
+      origem,
+      observacoes,
+      timestamp: new Date().toISOString()
     };
     
     console.log("Dados da avaliação a serem salvos:", avaliacaoData);
     
-    // Primeiro tenta salvar na tabela original (avaliacoes_fundamento)
-    let savedInOriginalTable = false;
-    const originalResult = await supabase
+    // Salvar na tabela avaliacoes_fundamento
+    let savedInFundamentoTable = false;
+    const result = await supabase
       .from('avaliacoes_fundamento')
       .insert([avaliacaoData]);
       
-    if (!originalResult.error) {
-      savedInOriginalTable = true;
+    if (!result.error) {
+      savedInFundamentoTable = true;
       console.log("Avaliação salva com sucesso na tabela avaliacoes_fundamento");
     } else {
-      console.warn('Erro ao salvar na tabela avaliacoes_fundamento:', originalResult.error);
-    }
-    
-    // Tenta salvar também na tabela usada pelo performanceService (avaliacoes_exercicios)
-    let savedInPerformanceTable = false;
-    
-    // Verificar estrutura da tabela no primeiro uso através do Supabase
-    console.log("Tentando verificar estrutura da tabela avaliacoes_exercicios");
-    
-    // Tentar usar acertos e erros diretamente na segunda tabela também
-    const performanceData = {
-      treino_id: treinoDoDia.treino_id,
-      exercicio_id: exercicio_id_ref,
-      atleta_id: atletaId,
-      fundamento,
-      acertos, // Usando acertos diretamente 
-      erros,   // Usando erros diretamente
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log("Dados para tabela avaliacoes_exercicios:", performanceData);
-    
-    const performanceResult = await supabase
-      .from('avaliacoes_exercicios')
-      .insert([performanceData]);
+      console.error('Erro ao salvar na tabela avaliacoes_fundamento:', result.error);
       
-    if (!performanceResult.error) {
-      savedInPerformanceTable = true;
-      console.log("Avaliação salva com sucesso na tabela avaliacoes_exercicios");
-    } else {
-      console.error('Erro ao salvar na tabela avaliacoes_exercicios:', performanceResult.error);
-      
-      // Se o erro for sobre chave estrangeira (exercicio_id), tentar resolver
-      if (performanceResult.error.message && 
-          (performanceResult.error.message.includes("avaliacoes_exercicios_exercicio_id_fkey") || 
-          performanceResult.error.message.includes("Key is not present in table"))) {
+      // Se o erro for de chave estrangeira e não for avaliação pós-treino, tenta resolver
+      if (!origem.includes('pos_treino') && result.error.message && 
+          (result.error.message.includes("foreign key constraint") || 
+           result.error.message.includes("Key is not present in table"))) {
         
         console.log("Erro de chave estrangeira detectado. Tentando resolver...");
         
@@ -575,18 +579,18 @@ export const salvarAvaliacaoExercicio = async ({
             const firstExercicioId = treinoExercicios[0].exercicio_id;
             
             const fallbackData = {
-              ...performanceData,
+              ...avaliacaoData,
               exercicio_id: firstExercicioId
             };
             
             console.log("Tentando com exercicio_id alternativo:", fallbackData);
             
             const fallbackResult = await supabase
-              .from('avaliacoes_exercicios')
+              .from('avaliacoes_fundamento')
               .insert([fallbackData]);
               
             if (!fallbackResult.error) {
-              savedInPerformanceTable = true;
+              savedInFundamentoTable = true;
               console.log("Avaliação salva com sucesso usando exercicio_id alternativo");
             } else {
               console.error('Erro mesmo usando exercicio_id alternativo:', fallbackResult.error);
@@ -596,62 +600,21 @@ export const salvarAvaliacaoExercicio = async ({
           console.error("Erro ao tentar resolver com exercicio_id alternativo:", fallbackError);
         }
       }
-      
-      // Tentar verificar se o erro é devido à estrutura da tabela (campos acertos/erros vs nota)
-      if (!savedInPerformanceTable && performanceResult.error.message.includes("column") && performanceResult.error.message.includes("does not exist")) {
-        console.log("Possível problema na estrutura da tabela. Tentando formato alternativo...");
-        
-        // Tentar inserir usando o campo nota como fallback
-        const alternativeData = {
-          treino_id: treinoDoDia.treino_id,
-          exercicio_id: exercicio_id_ref,
-          atleta_id: atletaId,
-          fundamento,
-          nota: acertos, // Usar acertos como nota
-          timestamp: new Date().toISOString()
-        };
-        
-        console.log("Tentando formato alternativo:", alternativeData);
-        
-        const alternativeResult = await supabase
-          .from('avaliacoes_exercicios')
-          .insert([alternativeData]);
-          
-        if (!alternativeResult.error) {
-          savedInPerformanceTable = true;
-          console.log("Avaliação salva com sucesso no formato alternativo");
-        } else {
-          console.error('Erro ao salvar mesmo no formato alternativo:', alternativeResult.error);
-        }
-      }
     }
     
-    // Se não conseguiu salvar em nenhuma das tabelas, usa o fallback para localStorage
-    if (!savedInOriginalTable && !savedInPerformanceTable) {
-      console.warn('RLS error saving evaluation, using local storage fallback');
+    // Se não conseguiu salvar na tabela, usa o fallback para localStorage
+    if (!savedInFundamentoTable) {
+      console.warn('Erro ao salvar avaliação no banco de dados, usando localStorage como fallback');
       // Salvar em localStorage como fallback quando autenticação não está disponível
       const tempId = `local_${Date.now()}_${atletaId}_${fundamento}`;
+      
+      // Salvar dados completos no localStorage
       saveEvaluationToLocalStorage({
         id: tempId,
         ...avaliacaoData
       });
       
-      // Também salvar uma cópia no localStorage específico para performance
-      saveEvaluationToLocalStorageForPerformance({
-        id: tempId,
-        treino_id: treinoDoDia.treino_id,
-        exercicio_id: exercicio_id_ref,
-        atleta_id: atletaId,
-        fundamento,
-        acertos,
-        erros,
-        nota: acertos, // Adicionando o campo nota para compatibilidade
-        timestamp: new Date().toISOString()
-      });
-      
-      // Não vamos lançar um erro para não interromper a experiência do usuário
       console.log('Dados salvos localmente devido a erro no banco de dados.');
-      return Promise.resolve();
     }
     
     return Promise.resolve();
@@ -671,26 +634,24 @@ const saveEvaluationToLocalStorage = (evaluation: {
   fundamento: string;
   acertos: number;
   erros: number;
+  origem?: string;
+  observacoes?: string;
   timestamp?: string;
 }) => {
   try {
-    // Buscar avaliações existentes
-    const existingEvals = JSON.parse(localStorage.getItem('avaliacoes_fundamento') || '[]');
+    // Obter avaliações existentes do localStorage
+    const existingEvaluationsStr = localStorage.getItem('offline_avaliacoes_fundamento');
+    const existingEvaluations = existingEvaluationsStr ? JSON.parse(existingEvaluationsStr) : [];
     
-    // Verificar se já existe uma avaliação com este ID
-    const existingIndex = existingEvals.findIndex((e: any) => e.id === evaluation.id);
+    // Adicionar nova avaliação ao array
+    existingEvaluations.push({
+      ...evaluation,
+      timestamp: evaluation.timestamp || new Date().toISOString()
+    });
     
-    if (existingIndex >= 0) {
-      // Atualizar avaliação existente
-      existingEvals[existingIndex] = evaluation;
-    } else {
-      // Adicionar nova avaliação
-      existingEvals.push(evaluation);
-    }
-    
-    // Salvar no localStorage
-    localStorage.setItem('avaliacoes_fundamento', JSON.stringify(existingEvals));
-    console.log('Evaluation saved to localStorage successfully');
+    // Salvar de volta ao localStorage
+    localStorage.setItem('offline_avaliacoes_fundamento', JSON.stringify(existingEvaluations));
+    console.log(`Avaliação salva em localStorage com ID: ${evaluation.id}`);
   } catch (error) {
     console.error('Error saving to localStorage:', error);
   }
@@ -705,27 +666,25 @@ const saveEvaluationToLocalStorageForPerformance = (evaluation: {
   fundamento: string;
   acertos: number;
   erros: number;
+  origem?: string;
+  observacoes?: string;
   nota?: number;
   timestamp?: string;
 }) => {
   try {
-    // Buscar avaliações existentes
-    const existingEvals = JSON.parse(localStorage.getItem('avaliacoes_exercicios') || '[]');
+    // Obter avaliações existentes do localStorage
+    const existingEvaluationsStr = localStorage.getItem('offline_avaliacoes_exercicios');
+    const existingEvaluations = existingEvaluationsStr ? JSON.parse(existingEvaluationsStr) : [];
     
-    // Verificar se já existe uma avaliação com este ID
-    const existingIndex = existingEvals.findIndex((e: any) => e.id === evaluation.id);
+    // Adicionar nova avaliação ao array
+    existingEvaluations.push({
+      ...evaluation,
+      timestamp: evaluation.timestamp || new Date().toISOString()
+    });
     
-    if (existingIndex >= 0) {
-      // Atualizar avaliação existente
-      existingEvals[existingIndex] = evaluation;
-    } else {
-      // Adicionar nova avaliação
-      existingEvals.push(evaluation);
-    }
-    
-    // Salvar no localStorage
-    localStorage.setItem('avaliacoes_exercicios', JSON.stringify(existingEvals));
-    console.log('Evaluation saved to localStorage for performance successfully');
+    // Salvar de volta ao localStorage
+    localStorage.setItem('offline_avaliacoes_exercicios', JSON.stringify(existingEvaluations));
+    console.log(`Avaliação para performance salva em localStorage com ID: ${evaluation.id}`);
   } catch (error) {
     console.error('Error saving to localStorage for performance:', error);
   }
@@ -738,12 +697,23 @@ export const salvarAvaliacoesEmLote = async (avaliacoes: Array<{
   fundamento: string;
   acertos: number;
   erros: number;
+  origem?: string;
+  observacoes?: string;
 }>): Promise<void> => {
   try {
     // Process each evaluation
     for (const avaliacao of avaliacoes) {
-      const { treinoDoDiaId, exercicioId, atletaId, fundamento, acertos, erros } = avaliacao;
-      await salvarAvaliacaoExercicio({ treinoDoDiaId, exercicioId, atletaId, fundamento, acertos, erros });
+      const { treinoDoDiaId, exercicioId, atletaId, fundamento, acertos, erros, origem, observacoes } = avaliacao;
+      await salvarAvaliacaoExercicio({ 
+        treinoDoDiaId, 
+        exercicioId, 
+        atletaId, 
+        fundamento, 
+        acertos, 
+        erros,
+        origem,
+        observacoes
+      });
     }
     
     return Promise.resolve();
