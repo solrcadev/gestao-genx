@@ -131,3 +131,22 @@ export const uploadAthletePhoto = async (file: File, athleteId?: string) => {
     throw error;
   }
 };
+
+export const updateAthleteAccess = async (
+  id: string, 
+  data: { email?: string; access_status: Athlete['access_status'] }
+) => {
+  const { data: athlete, error } = await supabase
+    .from('athletes')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error(`Error updating athlete access with id ${id}:`, error);
+    throw error;
+  }
+  
+  return athlete as Athlete;
+};

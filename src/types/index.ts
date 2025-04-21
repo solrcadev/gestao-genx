@@ -1,15 +1,7 @@
-
 export type Team = "Masculino" | "Feminino";
 export type TeamType = "Masculino" | "Feminino";
 export type Position = "Levantador" | "Oposto" | "Ponteiro" | "Central" | "Líbero" | "Outro";
 export type UserRole = "admin" | "coach" | "athlete";
-
-export interface Profile {
-  id: string;
-  role: UserRole;
-  created_at?: string;
-  updated_at?: string;
-}
 
 export interface Athlete {
   id: string;
@@ -20,6 +12,17 @@ export interface Athlete {
   posicao: string;
   time: Team;
   foto_url: string | null;
+  email: string | null;
+  access_status: 'sem_acesso' | 'convite_enviado' | 'ativo' | 'bloqueado';
+}
+
+export interface Profile {
+  id: string;
+  user_id: string;
+  funcao: UserRole;
+  atleta_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AthletePerformance {
