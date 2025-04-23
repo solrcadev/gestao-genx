@@ -84,9 +84,9 @@ const BottomNavbar = () => {
         </Link>
 
         <Link
-          to="/metas-evolucao"
+          to="/metas"
           className={`flex flex-col items-center p-2 rounded-md transition-colors ${
-            isActive("/metas-evolucao")
+            isActive("/metas") || isActive("/metas-evolucao")
               ? "text-primary bg-primary/10"
               : "text-muted-foreground hover:text-primary hover:bg-primary/10"
           }`}
