@@ -11,8 +11,10 @@ export type Database = {
     Tables: {
       athletes: {
         Row: {
+          access_status: string | null
           altura: number
           created_at: string | null
+          email: string | null
           foto_url: string | null
           id: string
           idade: number
@@ -24,8 +26,10 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          access_status?: string | null
           altura: number
           created_at?: string | null
+          email?: string | null
           foto_url?: string | null
           id?: string
           idade: number
@@ -37,8 +41,10 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          access_status?: string | null
           altura?: number
           created_at?: string | null
+          email?: string | null
           foto_url?: string | null
           id?: string
           idade?: number
@@ -93,9 +99,11 @@ export type Database = {
           atleta_id: string
           created_at: string | null
           erros: number
-          exercicio_id: string
+          exercicio_id: string | null
           fundamento: string
           id: string
+          observacoes: string | null
+          origem: string | null
           timestamp: string | null
           treino_id: string
         }
@@ -104,9 +112,11 @@ export type Database = {
           atleta_id: string
           created_at?: string | null
           erros?: number
-          exercicio_id: string
+          exercicio_id?: string | null
           fundamento: string
           id?: string
+          observacoes?: string | null
+          origem?: string | null
           timestamp?: string | null
           treino_id: string
         }
@@ -115,9 +125,11 @@ export type Database = {
           atleta_id?: string
           created_at?: string | null
           erros?: number
-          exercicio_id?: string
+          exercicio_id?: string | null
           fundamento?: string
           id?: string
+          observacoes?: string | null
+          origem?: string | null
           timestamp?: string | null
           treino_id?: string
         }
@@ -186,6 +198,13 @@ export type Database = {
             columns: ["avaliacao_id"]
             isOneToOne: false
             referencedRelation: "avaliacoes_exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_historico_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes_exercicios_original"
             referencedColumns: ["id"]
           },
           {
@@ -899,6 +918,48 @@ export type Database = {
           },
         ]
       }
+      perfis: {
+        Row: {
+          atleta_id: string | null
+          created_at: string | null
+          funcao: string
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          atleta_id?: string | null
+          created_at?: string | null
+          funcao: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          atleta_id?: string | null
+          created_at?: string | null
+          funcao?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "perfis_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: true
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "perfis_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: true
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -1430,9 +1491,92 @@ export type Database = {
         }
         Relationships: []
       }
+      view_definitions_backup: {
+        Row: {
+          backup_date: string | null
+          definition: string | null
+          view_name: string
+        }
+        Insert: {
+          backup_date?: string | null
+          definition?: string | null
+          view_name: string
+        }
+        Update: {
+          backup_date?: string | null
+          definition?: string | null
+          view_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       avaliacoes_exercicios: {
+        Row: {
+          acertos: number | null
+          atleta_id: string | null
+          created_at: string | null
+          erros: number | null
+          exercicio_id: string | null
+          fundamento: string | null
+          id: string | null
+          timestamp: string | null
+          treino_id: string | null
+        }
+        Insert: {
+          acertos?: number | null
+          atleta_id?: string | null
+          created_at?: string | null
+          erros?: number | null
+          exercicio_id?: string | null
+          fundamento?: string | null
+          id?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
+        }
+        Update: {
+          acertos?: number | null
+          atleta_id?: string | null
+          created_at?: string | null
+          erros?: number | null
+          exercicio_id?: string | null
+          fundamento?: string | null
+          id?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "athletes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
+            columns: ["atleta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_fundamentos_ranking"
+            referencedColumns: ["atleta_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avaliacoes_exercicios_original: {
         Row: {
           acertos: number | null
           atleta_id: string | null
@@ -1544,6 +1688,10 @@ export type Database = {
       }
     }
     Functions: {
+      backup_avaliacoes_exercicios_view: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       calculate_ranking_score: {
         Args: { acertos: number; erros: number }
         Returns: number

@@ -10,6 +10,7 @@ import { ArrowLeft, User, BarChart2, Calendar } from 'lucide-react';
 import { Athlete } from '@/types';
 import { getAthleteById } from '@/services/athleteService';
 import HistoricoTreinosAtleta from '@/components/atleta/HistoricoTreinosAtleta';
+import { AthleteAccessManager } from '@/components/atleta/AthleteAccessManager';
 
 const AthleteDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,6 +58,10 @@ const AthleteDetails = () => {
 
   const getTeamColor = (team: string) => {
     return team === 'Masculino' ? 'bg-sport-blue' : 'bg-sport-red';
+  };
+
+  const handleAccessUpdate = (updatedAthlete: Athlete) => {
+    setAthlete(updatedAthlete);
   };
 
   if (loading) {
@@ -115,6 +120,12 @@ const AthleteDetails = () => {
               </div>
             </div>
           </div>
+          
+          {/* Adicionar Gerenciamento de Acesso */}
+          <AthleteAccessManager 
+            athlete={athlete} 
+            onUpdate={handleAccessUpdate}
+          />
         </CardContent>
       </Card>
 
@@ -217,4 +228,4 @@ const AthleteDetails = () => {
   );
 };
 
-export default AthleteDetails; 
+export default AthleteDetails;
