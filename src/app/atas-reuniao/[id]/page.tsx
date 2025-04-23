@@ -307,7 +307,7 @@ export default function AtaReuniaoDetalhe() {
                 {ata.topicos.map((topico, index) => (
                   <Card key={index} className="shadow-sm">
                     <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-base">{topico.titulo}</CardTitle>
+                      <CardTitle className="text-base">{topico.descricao}</CardTitle>
                     </CardHeader>
                     <CardContent className="py-3 px-4">
                       <p className="text-muted-foreground whitespace-pre-line">{topico.descricao}</p>
@@ -325,7 +325,7 @@ export default function AtaReuniaoDetalhe() {
                     <Card key={index} className="shadow-sm">
                       <CardHeader className="py-3 px-4">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-base">{decisao.titulo}</CardTitle>
+                          <CardTitle className="text-base">{decisao.descricao}</CardTitle>
                           {decisao.responsavel && (
                             <Badge variant="outline" className="ml-2">
                               Resp: {decisao.responsavel}

@@ -5,6 +5,33 @@ export const isRunningAsPWA = () => {
          document.referrer.includes('android-app://');
 };
 
+// Verifica se é primeira visita após instalação do PWA
+export const isFirstVisitAfterInstall = (): boolean => {
+  if (!isRunningAsPWA()) return false;
+  
+  const lastVisit = localStorage.getItem('pwa_last_visit');
+  const now = new Date().toISOString();
+  
+  // Se não há registro de última visita ou se é uma nova data
+  if (!lastVisit) {
+    localStorage.setItem('pwa_last_visit', now);
+    localStorage.setItem('pwa_first_after_install', 'true');
+    return true;
+  }
+  
+  const wasFirstAfterInstall = localStorage.getItem('pwa_first_after_install') === 'true';
+  
+  // Se já teve a primeira visita, marca como false
+  if (wasFirstAfterInstall) {
+    localStorage.setItem('pwa_first_after_install', 'false');
+  }
+  
+  // Atualiza data da última visita
+  localStorage.setItem('pwa_last_visit', now);
+  
+  return wasFirstAfterInstall;
+};
+
 // Check if the app can be installed (PWA criteria met + not already installed)
 export const isAppInstallable = () => {
   return !isRunningAsPWA() && 'deferredPrompt' in window;

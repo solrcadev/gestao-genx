@@ -4,6 +4,9 @@ import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
 import RouterPersistence from '@/components/RouterPersistence';
 import NotificationsManager from '@/components/NotificationsManager';
+import { useState, useEffect } from 'react';
+import { isRunningAsPWA, isFirstVisitAfterInstall } from './services/pwaService';
+import { WelcomeScreen } from './components/WelcomeScreen';
 
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
@@ -50,7 +53,48 @@ import AtasReuniaoDetalhe from './app/atas-reuniao/[id]/page';
 
 const queryClient = new QueryClient();
 
+// SplashScreen component
+const SplashScreen = () => {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-primary z-50">
+      <img
+        src="/icons/icon-512x512.png"
+        alt="GEN X Logo"
+        className="w-32 h-32 mb-6 animate-pulse"
+      />
+      <h1 className="text-2xl font-bold text-white mb-2">GEN X</h1>
+      <p className="text-white/80 text-sm">Painel de Gestão</p>
+      <div className="mt-8 w-48 h-1 bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-full bg-white animate-[loading_1.5s_ease-in-out_infinite]"></div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const isPWA = isRunningAsPWA();
+  
+  useEffect(() => {
+    // Verificar se é a primeira visita após instalação
+    if (isFirstVisitAfterInstall()) {
+      setShowWelcome(true);
+    }
+    
+    // Simular carregamento para mostrar a tela de splash por alguns segundos
+    // Mais tempo se for PWA para melhor experiência de "app"
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, isPWA ? 2500 : 1000);
+    
+    return () => clearTimeout(timeout);
+  }, [isPWA]);
+
+  if (isLoading && isPWA) {
+    return <SplashScreen />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
@@ -206,6 +250,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
+            {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
           </RouterPersistence>
         </AuthProvider>
       </Router>
