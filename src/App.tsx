@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -33,6 +32,21 @@ import MetasEvolucao from './pages/MetasEvolucao';
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
 import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+
+// Atas de Reunião 
+import AtasReuniao from './app/atas-reuniao/page';
+import NovaAtaReuniao from './app/atas-reuniao/nova/page';
+import DashboardAtasReuniao from './app/atas-reuniao/dashboard/page';
+
+// Componente wrapper para lidar com os parâmetros da rota
+const AtasReuniaoDetalhePage = () => {
+  const params = useParams();
+  return <AtasReuniaoDetalhe />;
+};
+
+// Importação do useParams
+import { useParams } from 'react-router-dom';
+import AtasReuniaoDetalhe from './app/atas-reuniao/[id]/page';
 
 const queryClient = new QueryClient();
 
@@ -159,6 +173,33 @@ function App() {
               <Route path="/metas" element={
                 <ProtectedRoute>
                   <MetasEvolucao />
+                </ProtectedRoute>
+              } />
+              
+              {/* Rotas para Atas de Reunião */}
+              <Route path="/atas-reuniao" element={
+                <ProtectedRoute>
+                  <AtasReuniao />
+                </ProtectedRoute>
+              } />
+              <Route path="/atas-reuniao/nova" element={
+                <ProtectedRoute>
+                  <NovaAtaReuniao />
+                </ProtectedRoute>
+              } />
+              <Route path="/atas-reuniao/dashboard" element={
+                <ProtectedRoute>
+                  <DashboardAtasReuniao />
+                </ProtectedRoute>
+              } />
+              <Route path="/atas-reuniao/editar/:id" element={
+                <ProtectedRoute>
+                  <NovaAtaReuniao />
+                </ProtectedRoute>
+              } />
+              <Route path="/atas-reuniao/:id" element={
+                <ProtectedRoute>
+                  <AtasReuniaoDetalhePage />
                 </ProtectedRoute>
               } />
               

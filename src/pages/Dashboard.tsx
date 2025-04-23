@@ -10,7 +10,8 @@ import {
   BarChart3, 
   LogOut,
   Plus,
-  Bell
+  Bell,
+  FileText
 } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 
@@ -99,6 +100,14 @@ const Dashboard: React.FC = () => {
           >
             <Calendar className="h-4 w-4 mr-2" />
             Treino do dia
+          </Button>
+          <Button 
+            className="justify-start" 
+            variant="outline"
+            onClick={() => navigate("/atas-reuniao")}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Atas de Reunião
           </Button>
           {isSupported && !isPermissionGranted && (
             <Button 

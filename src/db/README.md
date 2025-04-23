@@ -2,6 +2,50 @@
 
 Este diretório contém scripts SQL para realizar atualizações no esquema do banco de dados Supabase.
 
+## Tabela de Atas de Reunião
+
+O script `criar_tabela_atas_reuniao.sql` cria uma tabela para armazenar atas de reunião da equipe técnica.
+
+A tabela possui os seguintes campos:
+- `id`: Identificador único da ata (UUID)
+- `titulo`: Título da reunião
+- `data`: Data em que a reunião ocorreu
+- `participantes`: Array de texto com os nomes dos participantes
+- `topicos`: Array JSON com os tópicos discutidos
+- `decisoes`: Array JSON com as decisões tomadas
+- `created_at`: Data e hora de criação do registro
+- `updated_at`: Data e hora da última atualização do registro
+
+### Como aplicar o script
+
+#### Opção 1: Via Supabase Studio
+
+1. Acesse o painel de controle do Supabase para o seu projeto
+2. Navegue até "SQL Editor" no menu lateral
+3. Crie um "New Query"
+4. Copie e cole o conteúdo do arquivo `criar_tabela_atas_reuniao.sql`
+5. Clique em "Run" para executar o script
+
+#### Opção 2: Via CLI do Supabase
+
+Se você tem o CLI do Supabase instalado e configurado:
+
+```bash
+# Navegue até a pasta do script
+cd src/db
+
+# Execute o script (substitua PROJECT_ID pelo ID do seu projeto Supabase)
+supabase db push -d criar_tabela_atas_reuniao.sql --project-ref PROJECT_ID
+```
+
+#### Opção 3: Via Código
+
+O script cria uma função RPC `criar_tabela_atas_reuniao()` que pode ser chamada a partir do código para criar a tabela caso ela não exista. Esta função está disponível no serviço `atasReuniaoService.ts` através do método `verificarECriarTabelaAtas()`.
+
+### Estrutura da Tabela
+
+A tabela implementa Row Level Security (RLS) com políticas que permitem operações CRUD para usuários autenticados. Também inclui um trigger para atualizar automaticamente o campo `updated_at` sempre que um registro for modificado.
+
 ## Adicionando Colunas para a Funcionalidade "Avaliação Pós-Treino"
 
 **Nota Importante**: Descobrimos que `avaliacoes_exercicios` é uma VIEW e não uma tabela física. Isso exige uma abordagem diferente para adicionar novos campos.

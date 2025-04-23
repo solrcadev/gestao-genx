@@ -513,21 +513,21 @@ export const salvarAvaliacaoExercicio = async ({
       exercicio_id_ref = null;
     } else {
       // Se não for avaliação pós-treino, buscar referência do exercício
-      try {
-        // Tentar buscar o registro em treinos_exercicios para ver se existe e obter o exercicio_id correto
-        const { data: treinoExercicio, error: treinoExercicioError } = await supabase
-          .from('treinos_exercicios')
-          .select('exercicio_id')
-          .eq('id', exercicioId)
-          .single();
-        
-        if (!treinoExercicioError && treinoExercicio && treinoExercicio.exercicio_id) {
-          console.log("Encontrada referência ao exercício real:", treinoExercicio.exercicio_id);
-          exercicio_id_ref = treinoExercicio.exercicio_id;
-        }
-      } catch (refError) {
-        console.warn("Erro ao buscar referência do exercício:", refError);
-        // Continuar com o ID original
+    try {
+      // Tentar buscar o registro em treinos_exercicios para ver se existe e obter o exercicio_id correto
+      const { data: treinoExercicio, error: treinoExercicioError } = await supabase
+        .from('treinos_exercicios')
+        .select('exercicio_id')
+        .eq('id', exercicioId)
+        .single();
+      
+      if (!treinoExercicioError && treinoExercicio && treinoExercicio.exercicio_id) {
+        console.log("Encontrada referência ao exercício real:", treinoExercicio.exercicio_id);
+        exercicio_id_ref = treinoExercicio.exercicio_id;
+      }
+    } catch (refError) {
+      console.warn("Erro ao buscar referência do exercício:", refError);
+      // Continuar com o ID original
       }
     }
     

@@ -10,7 +10,9 @@ import {
   History,
   Target,
   BarChart3,
-  CheckSquare
+  CheckSquare,
+  Clipboard,
+  PieChart
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +33,18 @@ const More = () => {
       title: "Desempenho Detalhado",
       description: "Estatísticas e análises avançadas",
       path: "/desempenho-detalhado"
+    },
+    {
+      icon: <Clipboard className="h-5 w-5" />,
+      title: "Atas de Reunião",
+      description: "Registro e consulta de atas de reunião",
+      path: "/atas-reuniao"
+    },
+    {
+      icon: <PieChart className="h-5 w-5" />,
+      title: "Dashboard de Atas",
+      description: "Estatísticas e análises de reuniões",
+      path: "/atas-reuniao/dashboard"
     },
     {
       icon: <CheckSquare className="h-5 w-5" />,
