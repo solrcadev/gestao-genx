@@ -265,7 +265,7 @@ const Trainings = () => {
             <Clipboard className="mr-2 h-4 w-4" />
             Gerenciar Presenças
           </Button>
-          <Button onClick={() => navigate('/montagem-treino')}>
+          <Button onClick={() => navigate('/montar-treino')}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Treino
           </Button>
