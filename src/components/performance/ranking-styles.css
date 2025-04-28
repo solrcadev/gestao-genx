@@ -276,4 +276,15 @@
 .ranking-transition-exit-active {
   opacity: 0;
   transition: opacity 300ms;
+}
+
+.score-legend {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: rgba(135, 94, 255, 0.15);
+  border: 1px solid rgba(135, 94, 255, 0.3);
+  color: #d4ccff;
+  font-size: 12px;
+  text-align: center;
 } 

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS public.atas_reuniao (
   participantes TEXT[] DEFAULT '{}',
   topicos JSONB DEFAULT '[]',
   decisoes JSONB DEFAULT '[]',
+  observacoes TEXT DEFAULT '',
+  responsavel_registro TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -24,6 +26,8 @@ COMMENT ON COLUMN public.atas_reuniao.data IS 'Data em que a reunião ocorreu';
 COMMENT ON COLUMN public.atas_reuniao.participantes IS 'Lista de nomes dos participantes da reunião';
 COMMENT ON COLUMN public.atas_reuniao.topicos IS 'Lista de tópicos discutidos na reunião, armazenados como JSON';
 COMMENT ON COLUMN public.atas_reuniao.decisoes IS 'Lista de decisões tomadas na reunião, armazenadas como JSON';
+COMMENT ON COLUMN public.atas_reuniao.observacoes IS 'Observações adicionais sobre a reunião';
+COMMENT ON COLUMN public.atas_reuniao.responsavel_registro IS 'Pessoa responsável por registrar a ata';
 COMMENT ON COLUMN public.atas_reuniao.created_at IS 'Data e hora de criação do registro';
 COMMENT ON COLUMN public.atas_reuniao.updated_at IS 'Data e hora da última atualização do registro';
 
@@ -97,18 +101,20 @@ BEGIN
     participantes TEXT[] DEFAULT '{}',
     topicos JSONB DEFAULT '[]',
     decisoes JSONB DEFAULT '[]',
+    observacoes TEXT DEFAULT '',
+    responsavel_registro TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
   );
   
   -- Criar função para atualizar automaticamente o campo updated_at
   CREATE OR REPLACE FUNCTION update_updated_at_column()
-  RETURNS TRIGGER AS $func$
+  RETURNS TRIGGER AS $BODY$
   BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
   END;
-  $func$ LANGUAGE plpgsql;
+  $BODY$ LANGUAGE plpgsql;
   
   -- Remover trigger se já existir
   DROP TRIGGER IF EXISTS update_atas_reuniao_updated_at ON public.atas_reuniao;

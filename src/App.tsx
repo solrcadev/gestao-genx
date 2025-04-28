@@ -31,6 +31,7 @@ import More from '@/pages/More';
 import Ciclos from './pages/Ciclos';
 import NotificationSettings from './pages/NotificationSettings';
 import MetasEvolucao from './pages/MetasEvolucao';
+import AvaliacaoQualitativa from './pages/AvaliacaoQualitativa';
 
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -217,6 +218,13 @@ function App() {
               <Route path="/metas" element={
                 <ProtectedRoute>
                   <MetasEvolucao />
+                </ProtectedRoute>
+              } />
+              
+              {/* Avaliação Qualitativa */}
+              <Route path="/avaliacao-qualitativa" element={
+                <ProtectedRoute>
+                  <AvaliacaoQualitativa />
                 </ProtectedRoute>
               } />
               

@@ -12,7 +12,8 @@ import {
   BarChart3,
   CheckSquare,
   Clipboard,
-  PieChart
+  PieChart,
+  Award
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +28,12 @@ const More = () => {
       title: "Metas & Evolução",
       description: "Acompanhe o progresso de metas individuais",
       path: "/metas-evolucao"
+    },
+    {
+      icon: <Award className="h-5 w-5" />,
+      title: "Avaliação Qualitativa",
+      description: "Registre eventos com peso técnico por fundamento",
+      path: "/avaliacao-qualitativa"
     },
     {
       icon: <BarChart3 className="h-5 w-5" />,

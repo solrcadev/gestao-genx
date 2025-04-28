@@ -5,6 +5,12 @@ import { ptBR } from 'date-fns/locale';
 import { TeamType } from '@/types';
 import '@/styles/ranking-export-styles.css';
 
+// Pesos para cálculo de ranking por fundamento
+const PESOS_FUNDAMENTO = {
+  quantitativo: 0.6, // 60% para ranking por fundamento
+  qualitativo: 0.4   // 40% para ranking por fundamento
+};
+
 // Tipos
 type Fundamento = 'saque' | 'passe' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
 
@@ -15,6 +21,12 @@ interface RankingAtleta {
   percentual: number;
   totalExecucoes: number;
   acertos?: number;
+  // Campos para avaliação qualitativa
+  notaQualitativa?: number;
+  scoreTotal?: number;
+  totalAvaliacoesQualitativas?: number;
+  avaliacaoDescritiva?: string;
+  posicao?: number;
 }
 
 interface RankingExportViewProps {
@@ -158,20 +170,41 @@ const RankingExportView: React.FC<RankingExportViewProps> = ({
                     {' '} | {getMedalhaTexto(index)}
                   </p>
                   
+                  {/* Métricas de desempenho detalhadas */}
+                  <div className="athlete-metrics">
+                    <span className="athlete-metric">
+                      Eficiência: {atleta.percentual.toFixed(1).replace('.', ',')}%
+                    </span>
+                    {atleta.notaQualitativa && atleta.totalAvaliacoesQualitativas && atleta.totalAvaliacoesQualitativas > 0 && (
+                      <span className="athlete-metric">
+                        Nota Técnica: {atleta.notaQualitativa.toFixed(1).replace('.', ',')}%
+                        {atleta.avaliacaoDescritiva && ` (${atleta.avaliacaoDescritiva})`}
+                      </span>
+                    )}
+                  </div>
+                  
                   {/* Barra de progresso */}
                   <div className="progress-container">
                     <div 
                       className={getProgressBarClass(index)} 
-                      style={{ width: `${atleta.percentual}%` }}
+                      style={{ width: `${atleta.scoreTotal ? Math.min(atleta.scoreTotal, 100) : atleta.percentual}%` }}
                     ></div>
                   </div>
                 </div>
                 
                 <span className="athlete-percentage">
-                  {atleta.percentual.toFixed(1).replace('.', ',')}%
+                  {(atleta.scoreTotal ? atleta.scoreTotal : atleta.percentual).toFixed(1).replace('.', ',')}%
                 </span>
               </div>
             ))}
+            
+            {/* Legenda do cálculo de score quando há avaliações qualitativas */}
+            {atletas.some(a => a.notaQualitativa && a.totalAvaliacoesQualitativas && a.totalAvaliacoesQualitativas > 0) && (
+              <div className="score-legend">
+                <p><strong>Score Final</strong> = ({PESOS_FUNDAMENTO.quantitativo * 100}% Eficiência Quantitativa + {PESOS_FUNDAMENTO.qualitativo * 100}% Nota Técnica)</p>
+                <p className="text-sm">Avaliação qualitativa baseada em {atletas.reduce((total, a) => total + (a.totalAvaliacoesQualitativas || 0), 0)} análises técnicas</p>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center py-8">

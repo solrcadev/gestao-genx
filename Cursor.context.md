@@ -61,9 +61,93 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 8. **metas**: Metas de evolução para atletas
 9. **historico_metas**: Histórico de atualizações das metas
 
-### Buckets do Storage
-1. **athletes-images**: Armazena fotos de atletas
-2. **exercises-images**: Armazena imagens ilustrativas de exercícios
+### Melhorias no Upload de Imagens
+- Correção de erro "Bucket not found" nas funcionalidades de upload
+- Atualização dos nomes dos buckets de 'avatars' para 'athletes-images' e de 'exercicios' para 'exercises-images'
+- Implementação de scripts de verificação e criação automática de buckets
+- Melhoria no tratamento de erros de upload, com mensagens amigáveis e guias de solução
+- Criação de componentes para exibir alertas específicos para cada tipo de upload
+
+### Sincronização em Tempo Real de Avaliações
+- Implementação de sincronização em tempo real das avaliações durante os treinos
+- Armazenamento em localStorage como fallback quando offline
+- Sincronização automática com o Supabase quando a conexão é restabelecida
+
+### Módulo de Metas e Evolução
+- Criação do serviço `metasService.ts` para gerenciamento de metas
+- Implementação da página principal `MetasEvolucao.tsx`
+- Desenvolvimento do componente de detalhes `MetaDetalhes.tsx` com gráfico de evolução
+- Integração com o menu de navegação
+
+### Correções e Melhorias
+- Resolução de conflitos de merge nos arquivos após integrações com GitHub
+- Adaptação do componente Select para evitar valores vazios
+- Implementação de consultas separadas para contornar limitações de joins no Supabase
+- Verificação e criação automática de tabelas quando não existem no banco
+- Documentação detalhada sobre solução de problemas com Storage
+
+## Scripts SQL
+
+### Criação das Tabelas de Metas
+
+```sql
+-- Habilitar a extensão para gerar UUIDs
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Criar tabela de metas
+CREATE TABLE IF NOT EXISTS public.metas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  atleta_id UUID NOT NULL,
+  titulo TEXT NOT NULL,
+  descricao TEXT,
+  progresso INTEGER DEFAULT 0 CHECK (progresso >= 0 AND progresso <= 100),
+  data_alvo DATE NOT NULL,
+  observacoes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT fk_atleta FOREIGN KEY (atleta_id) REFERENCES public.athletes(id) ON DELETE CASCADE
+);
+
+-- Criar tabela de histórico de progresso das metas
+CREATE TABLE IF NOT EXISTS public.historico_metas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  meta_id UUID NOT NULL,
+  progresso INTEGER NOT NULL CHECK (progresso >= 0 AND progresso <= 100),
+  observacao TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT fk_meta FOREIGN KEY (meta_id) REFERENCES public.metas(id) ON DELETE CASCADE
+);
+```
+
+## Configuração do Storage do Supabase
+
+Para garantir que o upload de imagens funcione corretamente, é necessário configurar os buckets do Storage do Supabase:
+
+1. Criar dois buckets:
+   - `athletes-images`: para fotos de atletas
+   - `exercises-images`: para imagens de exercícios
+
+2. Configurar políticas de acesso para permitir upload e download de imagens.
+
+O script `scripts/setup-storage.js` automatiza este processo, verificando a existência dos buckets e criando-os quando necessário.
+
+## Scripts de Utilitários
+
+### Verificação e Criação de Buckets
+O script `src/scripts/createBuckets.js` verifica automaticamente se os buckets necessários existem no Supabase e os cria se necessário:
+
+```javascript
+const REQUIRED_BUCKETS = [
+  { name: 'athletes-images', isPublic: true },
+  { name: 'exercises-images', isPublic: true }
+];
+
+async function checkAndCreateBuckets() {
+  // Verificar buckets existentes
+  // Criar os que não existem
+  // Configurar políticas de acesso
+}
+```
 
 ## Atualizações Recentes (2023-2024)
 
@@ -138,96 +222,6 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 - `add_observacoes_column.sql`: Adiciona as colunas observacoes e origem
 - `make_exercicio_id_nullable.sql`: Modifica a restrição NOT NULL da coluna exercicio_id
 - Backup automático das definições das views antes de alterá-las
-
-### 5. Correções e Melhorias
-
-- Resolução de conflitos de merge nos arquivos após integrações com GitHub
-- Adaptação do componente Select para evitar valores vazios
-- Implementação de consultas separadas para contornar limitações de joins no Supabase
-- Verificação e criação automática de tabelas quando não existem no banco
-- Documentação detalhada sobre solução de problemas com Storage
-
-## Scripts SQL
-
-### Criação das Tabelas de Metas
-
-```sql
--- Habilitar a extensão para gerar UUIDs
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Criar tabela de metas
-CREATE TABLE IF NOT EXISTS public.metas (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  atleta_id UUID NOT NULL,
-  titulo TEXT NOT NULL,
-  descricao TEXT,
-  progresso INTEGER DEFAULT 0 CHECK (progresso >= 0 AND progresso <= 100),
-  data_alvo DATE NOT NULL,
-  observacoes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT fk_atleta FOREIGN KEY (atleta_id) REFERENCES public.athletes(id) ON DELETE CASCADE
-);
-
--- Criar tabela de histórico de progresso das metas
-CREATE TABLE IF NOT EXISTS public.historico_metas (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  meta_id UUID NOT NULL,
-  progresso INTEGER NOT NULL CHECK (progresso >= 0 AND progresso <= 100),
-  observacao TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT fk_meta FOREIGN KEY (meta_id) REFERENCES public.metas(id) ON DELETE CASCADE
-);
-```
-
-### Script para Modificar Restrição NOT NULL na Coluna exercicio_id
-
-```sql
--- Script para tornar o campo exercicio_id da tabela avaliacoes_fundamento nullable
--- Este script permite que avaliações sem exercício específico (como avaliações pós-treino) sejam salvas
-
--- 1. Verificar se a coluna exercicio_id existe e se tem restrição NOT NULL
-DO $$
-DECLARE
-  column_not_null BOOLEAN;
-BEGIN
-  -- Verificar se a coluna tem restrição NOT NULL
-  SELECT is_nullable = 'NO' INTO column_not_null
-  FROM information_schema.columns
-  WHERE table_schema = 'public'
-    AND table_name = 'avaliacoes_fundamento'
-    AND column_name = 'exercicio_id';
-
-  -- Exibir informação sobre o estado atual da coluna
-  IF column_not_null THEN
-    RAISE NOTICE 'A coluna exercicio_id possui restrição NOT NULL e será modificada';
-  ELSE
-    RAISE NOTICE 'A coluna exercicio_id já permite NULL, nenhuma alteração necessária';
-  END IF;
-END $$;
-
--- 2. Alterar a coluna para permitir valores NULL
-ALTER TABLE avaliacoes_fundamento
-ALTER COLUMN exercicio_id DROP NOT NULL;
-
--- 3. Adicionar um índice para melhorar performance em consultas
--- que filtram por exercicio_id
-CREATE INDEX IF NOT EXISTS idx_avaliacoes_fundamento_exercicio_id 
-ON avaliacoes_fundamento(exercicio_id)
-WHERE exercicio_id IS NOT NULL;
-```
-
-## Configuração do Storage do Supabase
-
-Para garantir que o upload de imagens funcione corretamente, é necessário configurar os buckets do Storage do Supabase:
-
-1. Criar dois buckets:
-   - `athletes-images`: para fotos de atletas
-   - `exercises-images`: para imagens de exercícios
-
-2. Configurar políticas de acesso para permitir upload e download de imagens.
-
-O script `scripts/setup-storage.js` automatiza este processo, verificando a existência dos buckets e criando-os quando necessário.
 
 ## Estado Atual e Próximos Passos
 1. O aplicativo possui todas as funcionalidades principais implementadas
