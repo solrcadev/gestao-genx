@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Medal, Calendar, FileDown, Share2, Maximize2, Minimize2, Trophy, AlertTriangle, Star } from 'lucide-react';
+import { Medal, Calendar, FileDown, Share2, Maximize2, Minimize2, Trophy, AlertTriangle, Star, HelpCircle, Info, ArrowDownUp, BarChart2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +15,13 @@ import './ranking-styles.css';
 import RankingExportView from './RankingExportView';
 import ExportRankingButton from '@/components/ui/export-ranking-button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { buscarAvaliacoesQualitativas, gerarRankingCombinado, AvaliacaoQualitativa, RankingCombinado, PESOS_PADRAO } from '@/services/rankingQualitativoService';
+import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
 
 /**
  * Componente RankingFundamentos
@@ -36,6 +43,7 @@ import { Label } from '@/components/ui/label';
 // Tipos
 type PeriodoRanking = '7dias' | '30dias' | 'personalizado';
 type Fundamento = 'saque' | 'passe' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
+type OrdenacaoRanking = 'scoreTotal' | 'quantitativo' | 'qualitativo';
 
 // Interface para os atletas no ranking
 interface RankingAtleta {
@@ -43,7 +51,37 @@ interface RankingAtleta {
   nome: string;
   percentual: number;
   totalExecucoes: number;
+  // Campos para avaliação qualitativa
+  notaQualitativa?: number;
+  scoreTotal?: number;
+  totalAvaliacoesQualitativas?: number;
+  avaliacaoDescritiva?: string;
+  posicao?: number; // Adicionado para exibir a posição no ranking
 }
+
+// Pesos para cálculo de ranking por tipo (geral vs. por fundamento)
+type PesosRankingConfig = {
+  geral: {
+    quantitativo: number;
+    qualitativo: number;
+  };
+  fundamento: {
+    quantitativo: number;
+    qualitativo: number;
+  };
+};
+
+// Pesos configuráveis para o cálculo de ranking
+const PESOS_RANKING: PesosRankingConfig = {
+  geral: {
+    quantitativo: 0.7, // 70% para ranking geral
+    qualitativo: 0.3  // 30% para ranking geral
+  },
+  fundamento: {
+    quantitativo: 0.6, // 60% para ranking por fundamento
+    qualitativo: 0.4  // 40% para ranking por fundamento
+  }
+};
 
 interface RankingFundamentosProps {
   performanceData: AthletePerformance[];
@@ -60,9 +98,32 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
   const [dataInicioTemp, setDataInicioTemp] = useState(new Date(getDateBefore(7)));
   const [dataFimTemp, setDataFimTemp] = useState(new Date(getToday()));
   
+  // Estados para ordenação e filtros do ranking refinado
+  const [apenasComAvaliacaoQualitativa, setApenasComAvaliacaoQualitativa] = useState(false);
+  const [exibirInfoRanking, setExibirInfoRanking] = useState(false);
+  const [ordenacao, setOrdenacao] = useState<OrdenacaoRanking>('scoreTotal');
+  const [quantidadeAtletasExibidos, setQuantidadeAtletasExibidos] = useState(3); // Top 3 por padrão
+  
   const rankingRef = useRef<HTMLDivElement>(null);
   const exportViewRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  
+  // Buscar avaliações qualitativas
+  const { data: avaliacoesQualitativas = [], isLoading: isLoadingQualitativas } = useQuery({
+    queryKey: ['avaliacoes-qualitativas', team, fundamento, dataInicio, dataFim],
+    queryFn: () => buscarAvaliacoesQualitativas(team, fundamento?.toLowerCase() === 'passe' ? 'recepção' : fundamento, dataInicio, dataFim),
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+
+  // Log para depuração das avaliações qualitativas
+  useEffect(() => {
+    if (avaliacoesQualitativas && avaliacoesQualitativas.length > 0) {
+      console.log(`Avaliações qualitativas disponíveis: ${avaliacoesQualitativas.length}`);
+      console.log('Exemplo de avaliação:', avaliacoesQualitativas[0]);
+    } else {
+      console.log('Nenhuma avaliação qualitativa encontrada para os filtros aplicados');
+    }
+  }, [avaliacoesQualitativas]);
 
   // Função para obter data de hoje formatada
   function getToday() {
@@ -125,11 +186,29 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
     setPeriodoSelecionado(value);
     
     if (value === '7dias') {
-      setDataInicio(getDateBefore(7));
-      setDataFim(getToday());
+      const novaDataInicio = getDateBefore(7);
+      const novaDataFim = getToday();
+      
+      setDataInicio(novaDataInicio);
+      setDataFim(novaDataFim);
+      
+      // Atualizar também as datas temporárias para o seletor
+      setDataInicioTemp(new Date(novaDataInicio));
+      setDataFimTemp(new Date(novaDataFim));
+      
+      console.log(`Período atualizado para 7 dias: ${novaDataInicio} a ${novaDataFim}`);
     } else if (value === '30dias') {
-      setDataInicio(getDateBefore(30));
-      setDataFim(getToday());
+      const novaDataInicio = getDateBefore(30);
+      const novaDataFim = getToday();
+      
+      setDataInicio(novaDataInicio);
+      setDataFim(novaDataFim);
+      
+      // Atualizar também as datas temporárias para o seletor
+      setDataInicioTemp(new Date(novaDataInicio));
+      setDataFimTemp(new Date(novaDataFim));
+      
+      console.log(`Período atualizado para 30 dias: ${novaDataInicio} a ${novaDataFim}`);
     }
   };
 
@@ -137,7 +216,7 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
   const gerarRanking = (): RankingAtleta[] => {
     if (!performanceData || performanceData.length === 0) return [];
     
-    const atletas: RankingAtleta[] = [];
+    const atletasQuantitativos: { id: string, nome: string, percentual: number, totalExecucoes: number }[] = [];
     
     performanceData.forEach(athlete => {
       // Filtrar as avaliações pelo período
@@ -181,7 +260,7 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
           const total = dadosFundamento.total;
           const eficiencia = (acertos / total) * 100;
           
-          atletas.push({
+          atletasQuantitativos.push({
             id: athlete.atleta.id,
             nome: athlete.atleta.nome,
             percentual: eficiencia,
@@ -191,25 +270,101 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
       }
     });
     
-    // Ordenar por percentual (decrescente)
-    const rankingOrdenado = atletas.sort((a, b) => {
-      // Primeiro critério: eficiência (percentual)
-      if (b.percentual !== a.percentual) {
-        return b.percentual - a.percentual;
+    // Log para depuração
+    console.log(`Atletas com dados quantitativos: ${atletasQuantitativos.length}`);
+    
+    // Usar os pesos para fundamento específico conforme a configuração
+    const pesosAplicados = {
+      quantitativo: PESOS_RANKING.fundamento.quantitativo,
+      qualitativo: PESOS_RANKING.fundamento.qualitativo
+    };
+    
+    console.log(`Aplicando pesos para ranking: Quantitativo=${pesosAplicados.quantitativo}, Qualitativo=${pesosAplicados.qualitativo}`);
+    
+    // Gerar ranking combinado (quantitativo + qualitativo)
+    const rankingCombinado = gerarRankingCombinado(
+      atletasQuantitativos,
+      avaliacoesQualitativas,
+      pesosAplicados
+    );
+    
+    console.log(`Ranking combinado gerado com ${rankingCombinado.length} atletas`);
+    
+    // Debug das notas qualitativas
+    if (rankingCombinado.length > 0) {
+      rankingCombinado.forEach((atleta, idx) => {
+        if (idx < 5) { // Mostra apenas os 5 primeiros para não poluir o console
+          console.log(`${atleta.atleta_nome}: Quant=${atleta.percentual_quantitativo.toFixed(1)}%, Qual=${atleta.nota_qualitativa.toFixed(1)}%, Score=${atleta.score_total.toFixed(1)}%`);
+        }
+      });
+    }
+    
+    // Mapear para o formato RankingAtleta
+    let atletas: RankingAtleta[] = rankingCombinado.map(item => ({
+      id: item.atleta_id,
+      nome: item.atleta_nome,
+      percentual: item.percentual_quantitativo,
+      totalExecucoes: item.total_execucoes,
+      notaQualitativa: item.nota_qualitativa,
+      scoreTotal: item.score_total,
+      totalAvaliacoesQualitativas: item.total_avaliacoes_qualitativas,
+      avaliacaoDescritiva: item.avaliacao_descritiva
+    }));
+    
+    // Filtrar apenas atletas com avaliação qualitativa se o filtro estiver ativo
+    const atletasFiltrados = apenasComAvaliacaoQualitativa
+      ? atletas.filter(a => a.totalAvaliacoesQualitativas && a.totalAvaliacoesQualitativas > 0)
+      : atletas;
+    
+    // Ordenar conforme critério selecionado
+    atletasFiltrados.sort((a, b) => {
+      switch (ordenacao) {
+        case 'quantitativo':
+          // Ordenar por percentual quantitativo
+          return b.percentual - a.percentual;
+          
+        case 'qualitativo':
+          // Ordenar por nota qualitativa (se disponível)
+          // Se não houver nota qualitativa, colocar no final da lista
+          if (a.notaQualitativa === undefined && b.notaQualitativa === undefined) return 0;
+          if (a.notaQualitativa === undefined) return 1;
+          if (b.notaQualitativa === undefined) return -1;
+          return b.notaQualitativa - a.notaQualitativa;
+          
+        case 'scoreTotal':
+        default:
+          // Ordenar por score total (padrão)
+          const scoreA = a.scoreTotal !== undefined ? a.scoreTotal : a.percentual;
+          const scoreB = b.scoreTotal !== undefined ? b.scoreTotal : b.percentual;
+          
+          // Primeiro critério: score total
+          if (scoreB !== scoreA) {
+            return scoreB - scoreA;
+          }
+          
+          // Segundo critério: número de execuções
+          if (b.totalExecucoes !== a.totalExecucoes) {
+            return b.totalExecucoes - a.totalExecucoes;
+          }
+          
+          // Terceiro critério: ordem alfabética
+          return a.nome.localeCompare(b.nome);
       }
-      // Segundo critério: número de tentativas
-      if (b.totalExecucoes !== a.totalExecucoes) {
-        return b.totalExecucoes - a.totalExecucoes;
-      }
-      // Terceiro critério: ordem alfabética por nome
-      return a.nome.localeCompare(b.nome);
     });
     
-    return rankingOrdenado;
+    // Adicionar posição no ranking
+    atletasFiltrados.forEach((atleta, index) => {
+      atleta.posicao = index;
+    });
+    
+    // Log para os atletas filtrados
+    console.log(`Atletas após filtragem e ordenação: ${atletasFiltrados.length}`);
+    
+    return atletasFiltrados;
   };
 
-  // Obter os top 3 atletas
-  const topAtletas = gerarRanking().slice(0, 3);
+  // Obter os top atletas com a quantidade configurada
+  const topAtletas = gerarRanking().slice(0, quantidadeAtletasExibidos);
   
   // Obter o pior fundamento da equipe
   const obterPiorFundamento = () => {
@@ -488,56 +643,175 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
   
   // Exibir os atletas no ranking
   const rankingContent = () => {
-    if (topAtletas.length === 0) {
+    // Forçar a recriação do ranking
+    const atletas = gerarRanking();
+    const atletasParaExibir = atletas.slice(0, quantidadeAtletasExibidos);
+    
+    if (atletasParaExibir.length === 0) {
       return (
         <div className="py-10 text-center text-gray-300">
           <Trophy className="h-12 w-12 mx-auto mb-2 opacity-20 text-primary" />
           <p>Nenhum atleta com mais de 5 tentativas neste fundamento no período selecionado.</p>
           <p className="text-sm mt-2 text-gray-400">O ranking considera apenas atletas com pelo menos 5 tentativas para evitar distorções.</p>
+          {apenasComAvaliacaoQualitativa && (
+            <p className="text-sm mt-1 text-amber-400">
+              Você está filtrando apenas atletas com avaliação qualitativa. Tente desativar esse filtro.
+            </p>
+          )}
         </div>
       );
     }
     
     return (
       <div className="space-y-4">
-        {topAtletas.length > 0 && (
+        {atletasParaExibir.length > 0 && (
           <div className="text-center mb-3 bg-primary/20 text-white py-2 px-3 rounded-lg shadow-md relative border border-primary/30">
             <Trophy className="h-5 w-5 text-primary inline-block mr-2 absolute left-2 top-1/2 transform -translate-y-1/2" />
-            <span className="font-semibold">{gerarMensagemParabenizacao(topAtletas[0].nome)}</span>
+            <span className="font-semibold">{gerarMensagemParabenizacao(atletasParaExibir[0].nome)}</span>
           </div>
         )}
-        {topAtletas.map((atleta, index) => (
-          <div key={atleta.id} className={`flex items-center p-3 rounded-lg border ${
+        {atletasParaExibir.map((atleta, index) => (
+          <div key={atleta.id} className={`p-3 rounded-lg border ${
             index === 0 
               ? 'bg-yellow-900/20 border-yellow-500/30 text-white' 
               : index === 1 
                 ? 'bg-slate-800/30 border-slate-400/30 text-white' 
-                : 'bg-amber-900/20 border-amber-500/30 text-white'
+                : index === 2
+                  ? 'bg-amber-900/20 border-amber-500/30 text-white'
+                  : 'bg-slate-900/20 border-slate-700/30 text-white'
           }`}>
-            <div className="flex items-center justify-center w-8 h-8 mr-3">
-              {getMedalIcon(index)}
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-8 h-8 mr-3">
+                {index < 3 ? getMedalIcon(index) : (
+                  <Badge variant="outline" className="h-6 w-6 flex items-center justify-center text-xs">
+                    {index + 1}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-white">{atleta.nome}</h3>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-gray-300">{atleta.totalExecucoes} execuções</p>
+                  {atleta.totalAvaliacoesQualitativas && atleta.totalAvaliacoesQualitativas > 0 && (
+                    <Badge variant="outline" className="text-xs bg-primary/10 border-primary/20">
+                      {atleta.totalAvaliacoesQualitativas} aval. qualitativas
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className={`text-lg font-bold ${
+                        index === 0 
+                          ? 'border-yellow-500/50 bg-yellow-500/20 text-yellow-300' 
+                          : index === 1 
+                            ? 'border-slate-400/50 bg-slate-400/20 text-slate-300' 
+                            : index === 2
+                              ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
+                              : 'border-slate-400/50 bg-slate-400/10 text-slate-300'
+                      }`}>
+                        {atleta.scoreTotal !== undefined 
+                        ? atleta.scoreTotal.toFixed(1) 
+                        : atleta.percentual.toFixed(1)}%
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-[240px]">
+                      <p>Score Final: {atleta.scoreTotal !== undefined 
+                        ? atleta.scoreTotal.toFixed(1) 
+                        : atleta.percentual.toFixed(1)}%</p>
+                      <p className="text-xs mt-1 text-muted-foreground">
+                        {atleta.notaQualitativa !== undefined && atleta.notaQualitativa > 0
+                          ? `Combinação de ${PESOS_RANKING.fundamento.quantitativo * 100}% quantitativo e ${PESOS_RANKING.fundamento.qualitativo * 100}% qualitativo`
+                          : 'Baseado apenas em dados quantitativos'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-white">{atleta.nome}</h3>
-              <p className="text-sm text-gray-300">{atleta.totalExecucoes} execuções</p>
-            </div>
-            <div className="text-right">
-              <Badge variant="outline" className={`text-lg font-bold ${
-                index === 0 
-                  ? 'border-yellow-500/50 bg-yellow-500/20 text-yellow-300' 
-                  : index === 1 
-                    ? 'border-slate-400/50 bg-slate-400/20 text-slate-300' 
-                    : 'border-amber-500/50 bg-amber-500/20 text-amber-300'
-              }`}>
-                {atleta.percentual.toFixed(1)}%
-              </Badge>
+            
+            {/* Detalhes do ranking com nota qualitativa e técnica */}
+            <div className="mt-3 pt-2 border-t border-white/10 grid grid-cols-2 gap-2">
+              <div className="text-center">
+                <div className="text-xs text-gray-400 mb-1">Eficiência Quantitativa</div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="outline" 
+                        className="text-sm border-blue-500/20 bg-blue-500/10 text-blue-300"
+                      >
+                        {atleta.percentual.toFixed(1)}%
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Taxa de acerto = (acertos ÷ total) × 100</p>
+                      <p className="text-xs mt-1">Baseado em {atleta.totalExecucoes} execuções</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="text-center">
+                <div className="text-xs text-gray-400 mb-1">Nota Técnica Média</div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-sm ${
+                          atleta.notaQualitativa !== undefined && atleta.notaQualitativa > 0 
+                          ? 'border-green-500/30 bg-green-500/10 text-green-300' 
+                          : 'border-gray-500/30 bg-gray-500/10 text-gray-400'
+                        }`}
+                      >
+                        {atleta.notaQualitativa !== undefined && atleta.notaQualitativa > 0
+                          ? `${atleta.notaQualitativa.toFixed(1)}% (${atleta.avaliacaoDescritiva})` 
+                          : 'Sem avaliação'}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {atleta.notaQualitativa !== undefined && atleta.notaQualitativa > 0 ? (
+                        <>
+                          <p>Fundamento: {traduzirFundamento(fundamento)}</p>
+                          <p>Avaliação Média: {atleta.avaliacaoDescritiva}</p>
+                          <p>Baseado em {atleta.totalAvaliacoesQualitativas} avaliações técnicas</p>
+                        </>
+                      ) : (
+                        <p>Este atleta ainda não possui avaliações técnicas qualitativas para {traduzirFundamento(fundamento)}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </div>
         ))}
         <div className="text-xs text-gray-300 mt-2 p-2 bg-muted rounded-md border border-primary/10">
-          <p>• Eficiência = (Total de Acertos / Total de Tentativas) * 100</p>
+          <div className="flex items-center justify-between mb-1">
+            <p>Como o ranking é calculado:</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-400">
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Score Total = ({PESOS_RANKING.fundamento.quantitativo * 100}% Quantitativo + {PESOS_RANKING.fundamento.qualitativo * 100}% Qualitativo)</p>
+                  <p className="mt-1">- O percentual quantitativo é calculado pelos acertos/tentativas</p>
+                  <p>- A nota qualitativa é baseada nas avaliações técnicas dos treinadores</p>
+                  <p>- Se não houver avaliação qualitativa, o score é 100% quantitativo</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <p>• Score Total = ({PESOS_RANKING.fundamento.quantitativo * 100}% Eficiência Quantitativa + {PESOS_RANKING.fundamento.qualitativo * 100}% Nota Técnica)</p>
           <p>• Somente atletas com no mínimo 5 tentativas são considerados</p>
           <p>• Em caso de empate: 1) Maior número de tentativas, 2) Ordem alfabética</p>
+          <p>• Ordenado por: {ordenacao === 'scoreTotal' ? 'Score Final' : ordenacao === 'quantitativo' ? 'Eficiência Quantitativa' : 'Nota Técnica'}</p>
+          <p className="mt-1 text-amber-400">• {apenasComAvaliacaoQualitativa ? 'Filtrando' : 'Exibindo'} atletas {apenasComAvaliacaoQualitativa ? 'com' : 'com e sem'} avaliação qualitativa</p>
         </div>
       </div>
     );
@@ -667,9 +941,15 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
   };
 
   const aplicarFiltroPersonalizado = () => {
-    setDataInicio(format(dataInicioTemp, 'yyyy-MM-dd'));
-    setDataFim(format(dataFimTemp, 'yyyy-MM-dd'));
+    const novaDataInicio = format(dataInicioTemp, 'yyyy-MM-dd');
+    const novaDataFim = format(dataFimTemp, 'yyyy-MM-dd');
+    
+    setDataInicio(novaDataInicio);
+    setDataFim(novaDataFim);
+    setPeriodoSelecionado('personalizado');
     setExibirSeletorDatas(false);
+    
+    console.log(`Período personalizado aplicado: ${novaDataInicio} a ${novaDataFim}`);
   };
 
   return (
@@ -715,7 +995,7 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
               <Button
                 variant={periodoSelecionado === "7dias" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPeriodoSelecionado("7dias")}
+                onClick={() => handleChangePeriodo("7dias")}
                 className={periodoSelecionado === "7dias" ? "bg-primary text-white" : "border-border text-white hover:bg-primary/10 hover:text-primary"}
               >
                 Últimos 7 dias
@@ -723,7 +1003,7 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
               <Button
                 variant={periodoSelecionado === "30dias" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPeriodoSelecionado("30dias")}
+                onClick={() => handleChangePeriodo("30dias")}
                 className={periodoSelecionado === "30dias" ? "bg-primary text-white" : "border-border text-white hover:bg-primary/10 hover:text-primary"}
               >
                 Últimos 30 dias
@@ -741,7 +1021,7 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center space-x-1 text-white">
               <Star className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Fundamento:</span>
@@ -762,7 +1042,107 @@ const RankingFundamentos: React.FC<RankingFundamentosProps> = ({ performanceData
                 <SelectItem value="defesa">Defesa</SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Nova opção de ordenação */}
+            <div className="flex items-center space-x-1 ml-auto text-white">
+              <ArrowDownUp className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Ordenar por:</span>
+            </div>
+            <Select
+              value={ordenacao}
+              onValueChange={(value: OrdenacaoRanking) => setOrdenacao(value as OrdenacaoRanking)}
+            >
+              <SelectTrigger className="w-fit border-border bg-muted text-white hover:bg-primary/10">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent className="bg-muted text-white border-border">
+                <SelectItem value="scoreTotal">Score Final</SelectItem>
+                <SelectItem value="quantitativo">Eficiência Quantitativa</SelectItem>
+                <SelectItem value="qualitativo">Nota Técnica</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Opção para mostrar mais atletas */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-border text-white hover:bg-primary/10 hover:text-primary"
+                >
+                  <BarChart2 className="h-4 w-4 mr-1" />
+                  Top {quantidadeAtletasExibidos}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-muted text-white border-border">
+                <DropdownMenuItem onClick={() => setQuantidadeAtletasExibidos(3)}>
+                  Top 3 Atletas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setQuantidadeAtletasExibidos(5)}>
+                  Top 5 Atletas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setQuantidadeAtletasExibidos(10)}>
+                  Top 10 Atletas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        </div>
+        
+        {/* Filtro para exibir apenas atletas com avaliação qualitativa */}
+        <div className="py-2 px-4 border-b border-border bg-background/80">
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-2 items-center">
+              <Checkbox 
+                id="filtro-qualitativo" 
+                checked={apenasComAvaliacaoQualitativa}
+                onCheckedChange={(checked) => setApenasComAvaliacaoQualitativa(checked as boolean)}
+                className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              />
+              <Label 
+                htmlFor="filtro-qualitativo" 
+                className="text-sm text-white cursor-pointer"
+              >
+                Exibir apenas atletas com avaliação qualitativa
+              </Label>
+            </div>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6"
+                    onClick={() => setExibirInfoRanking(!exibirInfoRanking)}
+                  >
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[240px]">
+                  O ranking agora considera avaliações qualitativas dos técnicos (Avaliação Qualitativa) que complementam os dados de execução (acerto/erro).
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          
+          {isLoadingQualitativas && (
+            <div className="mt-2 flex items-center space-x-2 text-xs text-muted-foreground">
+              <Skeleton className="h-3 w-3 rounded-full animate-pulse bg-primary/20" />
+              <span>Carregando avaliações qualitativas...</span>
+            </div>
+          )}
+          
+          {exibirInfoRanking && (
+            <div className="mt-2 p-2 bg-muted rounded-md text-xs text-muted-foreground border border-border">
+              <p className="font-medium text-primary">Sobre o Ranking Combinado</p>
+              <p className="mt-1">Para cada fundamento específico, o ranking apresenta uma pontuação combinada: 60% dos dados quantitativos (taxa de acerto) e 40% das avaliações qualitativas dos técnicos.</p>
+              <p className="mt-1">Se um atleta não possui avaliação qualitativa, apenas o componente quantitativo é considerado.</p>
+              <div className="mt-2 p-1 bg-background/30 rounded-sm">
+                <p className="text-[10px] text-primary">Fórmula: ScoreFinal = ({PESOS_RANKING.fundamento.quantitativo * 100}% × Eficiência Quantitativa) + ({PESOS_RANKING.fundamento.qualitativo * 100}% × Nota Técnica)</p>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="p-4 md:p-6">

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import RankingTop10Atletas from '@/components/performance/RankingTop10Atletas';
 import RankingFundamentos from '@/components/performance/RankingFundamentos';
+import RankingDesempenho from '@/components/performance/RankingDesempenho';
 import { TeamType, AthletePerformance } from '@/types';
 import { loadPerformanceDataForRanking } from '@/services/performanceService';
 
@@ -56,17 +56,17 @@ export default function RankingPage() {
       {/* Tipos de Rankings */}
       <Tabs defaultValue="top10" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="top10">Top 10 por Fundamento</TabsTrigger>
-          <TabsTrigger value="top3">Top 3 Destaques</TabsTrigger>
+          <TabsTrigger value="top10">Ranking de Desempenho</TabsTrigger>
+          <TabsTrigger value="top3">Top 3 Destaques Técnicos</TabsTrigger>
         </TabsList>
         
         <TabsContent value="top10" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Ranking Top 10 Atletas</CardTitle>
+              <CardTitle className="text-xl">Ranking de Desempenho de Atletas</CardTitle>
             </CardHeader>
             <CardContent>
-              <RankingTop10Atletas team={selectedTeam} />
+              <RankingDesempenho team={selectedTeam} performanceData={performanceData} />
             </CardContent>
           </Card>
         </TabsContent>
