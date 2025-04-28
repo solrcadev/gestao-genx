@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import RankingTop10Atletas from '@/components/performance/RankingTop10Atletas';
 import RankingFundamentos from '@/components/performance/RankingFundamentos';
+import TeamRanking from '@/components/performance/TeamRanking';
+import RankingTop10Atletas from '@/components/performance/RankingTop10Atletas';
 import { TeamType, AthletePerformance } from '@/types';
 import { loadPerformanceDataForRanking } from '@/services/performanceService';
 
@@ -13,21 +14,21 @@ export default function RankingPage() {
   const [performanceData, setPerformanceData] = useState<AthletePerformance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar os dados de performance quando mudar o time
+  // Carregar dados de performance
   useEffect(() => {
-    async function loadData() {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         const data = await loadPerformanceDataForRanking(selectedTeam);
         setPerformanceData(data);
       } catch (error) {
-        console.error('Erro ao carregar dados de desempenho:', error);
+        console.error('Erro ao carregar dados:', error);
       } finally {
         setIsLoading(false);
       }
-    }
-    
-    loadData();
+    };
+
+    fetchData();
   }, [selectedTeam]);
 
   return (
@@ -54,21 +55,53 @@ export default function RankingPage() {
       </div>
 
       {/* Tipos de Rankings */}
-      <Tabs defaultValue="top10" className="w-full">
+      <Tabs defaultValue="atletas" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="top10">Top 10 por Fundamento</TabsTrigger>
+          <TabsTrigger value="atletas">Ranking de Atletas</TabsTrigger>
+          <TabsTrigger value="equipes">Ranking de Equipes</TabsTrigger>
           <TabsTrigger value="top3">Top 3 Destaques</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="top10" className="space-y-6">
+        <TabsContent value="atletas" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Ranking Top 10 Atletas</CardTitle>
+              <CardTitle className="text-xl">Ranking de Desempenho de Atletas</CardTitle>
             </CardHeader>
             <CardContent>
-              <RankingTop10Atletas team={selectedTeam} />
+              <Tabs defaultValue="saque" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="saque">Saque</TabsTrigger>
+                  <TabsTrigger value="passe">Passe</TabsTrigger>
+                  <TabsTrigger value="levantamento">Levantamento</TabsTrigger>
+                  <TabsTrigger value="ataque">Ataque</TabsTrigger>
+                  <TabsTrigger value="bloqueio">Bloqueio</TabsTrigger>
+                  <TabsTrigger value="defesa">Defesa</TabsTrigger>
+                </TabsList>
+                <TabsContent value="saque" className="pt-4">
+                  <RankingTop10Atletas team={selectedTeam} fundamento="saque" />
+                </TabsContent>
+                <TabsContent value="passe" className="pt-4">
+                  <RankingTop10Atletas team={selectedTeam} fundamento="passe" />
+                </TabsContent>
+                <TabsContent value="levantamento" className="pt-4">
+                  <RankingTop10Atletas team={selectedTeam} fundamento="levantamento" />
+                </TabsContent>
+                <TabsContent value="ataque" className="pt-4">
+                  <RankingTop10Atletas team={selectedTeam} fundamento="ataque" />
+                </TabsContent>
+                <TabsContent value="bloqueio" className="pt-4">
+                  <RankingTop10Atletas team={selectedTeam} fundamento="bloqueio" />
+                </TabsContent>
+                <TabsContent value="defesa" className="pt-4">
+                  <RankingTop10Atletas team={selectedTeam} fundamento="defesa" />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="equipes" className="space-y-6">
+          <TeamRanking />
         </TabsContent>
         
         <TabsContent value="top3" className="space-y-6">

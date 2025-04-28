@@ -15,13 +15,14 @@ import '@/styles/ranking-export-styles.css';
 
 interface RankingTop10AtletasProps {
   team: TeamType;
+  fundamento?: string;
 }
 
 // Tipo para os fundamentos disponíveis
 type Fundamento = 'saque' | 'passe' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
 
-const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team }) => {
-  const [fundamento, setFundamento] = useState<Fundamento>('saque');
+const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundamento: fundamentoProp }) => {
+  const [fundamento, setFundamento] = useState<Fundamento>(fundamentoProp as Fundamento || 'saque');
   const [rankingData, setRankingData] = useState<RankingAtletaFundamento[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const rankingRef = useRef<HTMLDivElement>(null);

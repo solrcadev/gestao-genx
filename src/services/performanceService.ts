@@ -931,19 +931,11 @@ export async function getTrainingHistory(studentId: string): Promise<any[]> {
           // Mapear resultados
           return presencasData.map(presenca => {
             const presencaStatus = presenca.presente !== undefined ? presenca.presente : false;
-            const treino = treinosMap.get(presenca.treino_id);
-            
-            let dataFormatada = 'Data não disponível';
-            if (treino?.data) {
-              dataFormatada = new Date(treino.data).toLocaleDateString('pt-BR');
-            } else if (presenca.data) {
-              dataFormatada = new Date(presenca.data).toLocaleDateString('pt-BR');
-            }
             
             return {
               id: presenca.id,
-              date: dataFormatada,
-              type: treino?.nome || 'Treino',
+              date: presenca.data ? new Date(presenca.data).toLocaleDateString('pt-BR') : 'Data não disponível',
+              type: 'Treino',
               duration: 90, // Tempo médio estimado para um treino
               status: presencaStatus ? 'completed' : 'incomplete'
             };
@@ -1639,6 +1631,157 @@ export async function loadPerformanceDataForRanking(team: TeamType): Promise<Ath
     return await getAthletesPerformance(team);
   } catch (error) {
     console.error('Erro ao carregar dados de performance para ranking:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtém o ranking das equipes com base nos dados de todos os fundamentos
+ * 
+ * @returns Array com os dados do ranking de equipes (masculino e feminino)
+ */
+export async function getTeamsRanking(): Promise<any[]> {
+  try {
+    // Array com os tipos de equipes
+    const tiposEquipe: TeamType[] = ['Masculino', 'Feminino'];
+    
+    // Array para armazenar o resultado final
+    const rankingEquipes: any[] = [];
+    
+    // Para cada tipo de equipe
+    for (const tipoEquipe of tiposEquipe) {
+      console.log(`Gerando estatísticas para equipe ${tipoEquipe}`);
+      
+      // 1. Buscar todos os atletas desta equipe
+      const { data: atletas, error: atletasError } = await supabase
+        .from('athletes')
+        .select('*')
+        .eq('time', tipoEquipe);
+      
+      if (atletasError) {
+        console.error(`Erro ao buscar atletas da equipe ${tipoEquipe}:`, atletasError);
+        continue;
+      }
+      
+      console.log(`Encontrados ${atletas?.length || 0} atletas no time ${tipoEquipe}`);
+      
+      // 2. Buscar todas as avaliações dos atletas da equipe
+      const { data: avaliacoes, error: avaliacoesError } = await supabase
+        .from('avaliacoes_fundamento')
+        .select('*')
+        .in('atleta_id', atletas.map(a => a.id));
+      
+      if (avaliacoesError) {
+        console.error(`Erro ao buscar avaliações da equipe ${tipoEquipe}:`, avaliacoesError);
+        continue;
+      }
+      
+      console.log(`Encontradas ${avaliacoes?.length || 0} avaliações para a equipe ${tipoEquipe}`);
+      
+      // 3. Processar dados por fundamento
+      const fundamentos: Record<string, {
+        acertos: number;
+        erros: number;
+        tentativas: number;
+        eficiencia: number;
+        atletasAvaliados: number;
+      }> = {
+        'saque': { acertos: 0, erros: 0, tentativas: 0, eficiencia: 0, atletasAvaliados: 0 },
+        'passe': { acertos: 0, erros: 0, tentativas: 0, eficiencia: 0, atletasAvaliados: 0 },
+        'levantamento': { acertos: 0, erros: 0, tentativas: 0, eficiencia: 0, atletasAvaliados: 0 },
+        'ataque': { acertos: 0, erros: 0, tentativas: 0, eficiencia: 0, atletasAvaliados: 0 },
+        'bloqueio': { acertos: 0, erros: 0, tentativas: 0, eficiencia: 0, atletasAvaliados: 0 },
+        'defesa': { acertos: 0, erros: 0, tentativas: 0, eficiencia: 0, atletasAvaliados: 0 }
+      };
+      
+      // Mapear os atletas com avaliações em cada fundamento
+      const atletasPorFundamento: Record<string, Set<string>> = {
+        'saque': new Set(),
+        'passe': new Set(),
+        'levantamento': new Set(),
+        'ataque': new Set(),
+        'bloqueio': new Set(),
+        'defesa': new Set()
+      };
+      
+      // Processar cada avaliação
+      avaliacoes?.forEach(avaliacao => {
+        const fundamento = avaliacao.fundamento;
+        
+        if (fundamentos[fundamento]) {
+          fundamentos[fundamento].acertos += avaliacao.acertos || 0;
+          fundamentos[fundamento].erros += avaliacao.erros || 0;
+          fundamentos[fundamento].tentativas += (avaliacao.acertos || 0) + (avaliacao.erros || 0);
+          
+          // Registrar o atleta para este fundamento
+          atletasPorFundamento[fundamento].add(avaliacao.atleta_id);
+        }
+      });
+      
+      // Calcular eficiência para cada fundamento e contar atletas
+      Object.entries(fundamentos).forEach(([nome, dados]) => {
+        dados.eficiencia = dados.tentativas > 0 ? (dados.acertos / dados.tentativas) * 100 : 0;
+        dados.atletasAvaliados = atletasPorFundamento[nome].size;
+      });
+      
+      // 4. Encontrar o melhor e pior fundamento
+      let melhorFundamento = { nome: '', eficiencia: 0 };
+      let piorFundamento = { nome: '', eficiencia: 100 };
+      
+      Object.entries(fundamentos).forEach(([nome, dados]) => {
+        // Só considerar fundamentos com quantidade mínima de tentativas
+        if (dados.tentativas >= 10) {
+          if (dados.eficiencia > melhorFundamento.eficiencia) {
+            melhorFundamento = { nome, eficiencia: dados.eficiencia };
+          }
+          
+          if (dados.eficiencia < piorFundamento.eficiencia) {
+            piorFundamento = { nome, eficiencia: dados.eficiencia };
+          }
+        }
+      });
+      
+      // 5. Calcular média de eficiência e pontuação total
+      let totalEficiencia = 0;
+      let countFundamentos = 0;
+      let pontuacaoTotal = 0;
+      
+      Object.values(fundamentos).forEach(dados => {
+        if (dados.tentativas >= 10) {
+          totalEficiencia += dados.eficiencia;
+          countFundamentos++;
+          
+          // Calcular pontuação (exemplo: 1 ponto por % de eficiência)
+          pontuacaoTotal += Math.round(dados.eficiencia);
+        }
+      });
+      
+      const mediaEficiencia = countFundamentos > 0 ? totalEficiencia / countFundamentos : 0;
+      
+      // 6. Adicionar ao ranking de equipes
+      rankingEquipes.push({
+        time: tipoEquipe,
+        mediaEficiencia,
+        pontuacaoTotal,
+        melhorFundamento,
+        piorFundamento,
+        fundamentos
+      });
+    }
+    
+    // 7. Ordenar equipes por pontuação total
+    rankingEquipes.sort((a, b) => b.pontuacaoTotal - a.pontuacaoTotal);
+    
+    // 8. Adicionar posição no ranking
+    rankingEquipes.forEach((equipe, index) => {
+      equipe.posicao = index + 1;
+    });
+    
+    console.log('Ranking de equipes gerado com sucesso:', rankingEquipes);
+    
+    return rankingEquipes;
+  } catch (error) {
+    console.error('Erro ao gerar ranking de equipes:', error);
     return [];
   }
 }
