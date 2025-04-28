@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart2, Search, X, Users, User, Trophy } from 'lucide-react';
+import { BarChart2, Search, X, Users, User, Trophy, Award } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton, CardSkeleton } from '@/components/ui/skeleton';
+import { Link } from 'react-router-dom';
 import { getAthletesPerformance } from '@/services/performanceService';
 import { TeamType, AthletePerformance } from '@/types';
 import AthletePerformanceDetail from '@/components/performance/AthletePerformanceDetail';
@@ -15,7 +16,7 @@ import TopAthletesSection from '@/components/performance/TopAthletesSection';
 import PerformanceAlerts from '@/components/performance/PerformanceAlerts';
 import AthleteAnalysis from '@/components/performance/AthleteAnalysis';
 import AthleteRanking from '@/components/performance/AthleteRanking';
-import RankingFundamentos from '@/components/performance/RankingFundamentos';
+import Rankings from '@/components/performance/Rankings';
 import { IndividualView } from '@/components/performance/content/IndividualView';
 
 // Tipo para os fundamentos
@@ -199,33 +200,46 @@ const Performance = () => {
   }, [activeTab]);
 
   return (
-    <div className="mobile-container pb-20">
-      <header className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <BarChart2 className="mr-2 h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Desempenho</h1>
+    <div className="container py-6">
+      <div className="flex flex-col gap-4">
+        {/* Header e filtros */}
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Desempenho de Atletas</h1>
+            <p className="text-muted-foreground">
+              Análise de performance técnica por fundamento
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/avaliacao-qualitativa">
+              <Button variant="outline" className="gap-2">
+                <Award className="h-4 w-4" />
+                Avaliação Qualitativa
+              </Button>
+            </Link>
+            <div className="rounded-md border">
+              <Tabs value={team} onValueChange={(value) => setTeam(value as TeamType)}>
+                <TabsList className="bg-transparent">
+                  <TabsTrigger
+                    value="Masculino"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    Masculino
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="Feminino"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    Feminino
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
         </div>
         
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="flex items-center gap-1"
-          onClick={() => setActiveTab('ranking')}
-        >
-          <Trophy className="h-4 w-4" /> 
-          <span>Ver Ranking</span>
-        </Button>
-      </header>
-      
-      {/* Filtros - Fixos no topo */}
+        {/* Resto do conteúdo */}
       <div className="sticky top-0 z-10 bg-background pt-2 pb-4 space-y-4 mb-6 shadow-sm">
-        <Tabs defaultValue="Masculino" onValueChange={(value) => setTeam(value as TeamType)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="Masculino">Masculino</TabsTrigger>
-            <TabsTrigger value="Feminino">Feminino</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
         <div className="relative">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -276,44 +290,44 @@ const Performance = () => {
         </div>
       </div>
       
-      {/* Mensagem de erro se houver */}
-      {errorMessage && (
-        <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
-          <p>{errorMessage}</p>
-        </div>
-      )}
-      
-      {/* Mostrar adequadamente com base na aba selecionada */}
-      <div className="mt-6">
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-4">
-            {renderSkeletons()}
+        {/* Mensagem de erro se houver */}
+          {errorMessage && (
+          <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+            <p>{errorMessage}</p>
+          </div>
+        )}
+        
+        {/* Mostrar adequadamente com base na aba selecionada */}
+        <div className="mt-6">
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-4">
+              {renderSkeletons()}
         </div>
       ) : (
         <>
-            {activeTab === 'equipe' && (
-              <div className="space-y-6">
-                <TeamPerformanceSummary 
-                  mediasFundamentos={mediasFundamentos}
-                />
+              {activeTab === 'equipe' && (
+                <div className="space-y-6">
+                  <TeamPerformanceSummary 
+                    mediasFundamentos={mediasFundamentos}
+                  />
               
               <TopAthletesSection
-                  topAtletas={topAtletas} 
+                    topAtletas={topAtletas} 
                 fundamentoSelecionado={fundamentoSelecionado}
                 setFundamentoSelecionado={setFundamentoSelecionado}
-                  onSelectAthlete={(id) => handleSelectAthlete(id)}
+                    onSelectAthlete={(id) => handleSelectAthlete(id)}
               />
               
               <PerformanceAlerts
                 alertas={alertas}
-                  onSelectAthlete={(id) => handleSelectAthlete(id)}
+                    onSelectAthlete={(id) => handleSelectAthlete(id)}
               />
             </div>
-            )}
-            
-            {activeTab === 'individual' && (
-              <IndividualView
-                performanceData={performanceData || []}
+              )}
+              
+              {activeTab === 'individual' && (
+                <IndividualView
+                  performanceData={performanceData || []}
               selectedAthleteId={selectedAthleteId}
               setSelectedAthleteId={setSelectedAthleteId}
               selectedAthlete={selectedAthlete}
@@ -321,19 +335,19 @@ const Performance = () => {
               team={team}
               onOpenDetailDrawer={() => setIsDetailOpen(true)}
             />
-            )}
-            
-            {activeTab === 'ranking' && (
-              <div className="space-y-6">
-                <RankingFundamentos
-                  performanceData={performanceData || []} 
+              )}
+              
+              {activeTab === 'ranking' && (
+                <div className="space-y-6">
+                  <Rankings
+                    performanceData={performanceData || []} 
               team={team}
             />
-              </div>
+                </div>
           )}
         </>
       )}
-      </div>
+        </div>
       
       <Drawer open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DrawerContent className="max-h-[90vh]">
@@ -366,6 +380,7 @@ const Performance = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+      </div>
     </div>
   );
 };

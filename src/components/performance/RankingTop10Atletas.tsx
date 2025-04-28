@@ -1,47 +1,61 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TeamType } from '@/types';
-import { RankingAtletaFundamento, getAthletesRankingByFundamento } from '@/services/performanceService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Medal, Trophy, FileDown, Share2, Loader2 } from 'lucide-react';
+import { Medal, Trophy, FileDown, Share2, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import '@/styles/ranking-export-styles.css';
+import { gerarRankingDesempenho, RankingDesempenhoAtleta, descreverDesempenho } from '@/services/rankingDesempenhoService';
 
 interface RankingTop10AtletasProps {
   team: TeamType;
   fundamento?: string;
 }
 
-// Tipo para os fundamentos disponíveis
-type Fundamento = 'saque' | 'passe' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
+type PeriodoRanking = '7dias' | '30dias' | 'personalizado';
 
+<<<<<<< HEAD
 const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundamento: fundamentoProp }) => {
   const [fundamento, setFundamento] = useState<Fundamento>(fundamentoProp as Fundamento || 'saque');
   const [rankingData, setRankingData] = useState<RankingAtletaFundamento[]>([]);
+=======
+/**
+ * Componente alternativo para exibir o Ranking de Desempenho (versão legada)
+ * @deprecated Use o componente RankingDesempenho em vez deste
+ */
+const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team }) => {
+  const [periodoSelecionado, setPeriodoSelecionado] = useState<PeriodoRanking>('7dias');
+  const [dataInicio, setDataInicio] = useState<string>(getDateBefore(7));
+  const [dataFim, setDataFim] = useState<string>(getToday());
+  const [rankingData, setRankingData] = useState<RankingDesempenhoAtleta[]>([]);
+>>>>>>> e00e4d317bf47193707a8e5057a94cd176a32469
   const [isLoading, setIsLoading] = useState(false);
   const rankingRef = useRef<HTMLDivElement>(null);
 
-  // Tradução dos fundamentos
-  const traducoesFundamentos: Record<Fundamento, string> = {
-    'saque': 'Saque',
-    'passe': 'Passe/Recepção',
-    'levantamento': 'Levantamento',
-    'ataque': 'Ataque',
-    'bloqueio': 'Bloqueio',
-    'defesa': 'Defesa'
-  };
+  // Função para obter data de hoje formatada
+  function getToday() {
+    const date = new Date();
+    return date.toISOString().split('T')[0];
+  }
+
+  // Função para obter data X dias atrás
+  function getDateBefore(days: number) {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString().split('T')[0];
+  }
 
   // Função para atualizar o ranking
   const atualizarRanking = async () => {
     setIsLoading(true);
     try {
-      const dados = await getAthletesRankingByFundamento(team, fundamento);
+      const dados = await gerarRankingDesempenho(team, dataInicio, dataFim);
       setRankingData(dados);
     } catch (error) {
       console.error('Erro ao carregar ranking:', error);
@@ -50,17 +64,40 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
     }
   };
 
-  // Carregar o ranking quando o componente montar ou quando mudar o fundamento/time
+  // Atualizar o período quando mudar a seleção
+  const handleChangePeriodo = (value: PeriodoRanking) => {
+    setPeriodoSelecionado(value);
+    
+    if (value === '7dias') {
+      const novaDataInicio = getDateBefore(7);
+      const novaDataFim = getToday();
+      
+      setDataInicio(novaDataInicio);
+      setDataFim(novaDataFim);
+      
+      console.log(`Período atualizado para 7 dias: ${novaDataInicio} a ${novaDataFim}`);
+    } else if (value === '30dias') {
+      const novaDataInicio = getDateBefore(30);
+      const novaDataFim = getToday();
+      
+      setDataInicio(novaDataInicio);
+      setDataFim(novaDataFim);
+      
+      console.log(`Período atualizado para 30 dias: ${novaDataInicio} a ${novaDataFim}`);
+    }
+  };
+
+  // Carregar o ranking quando o componente montar ou quando mudar o time/período
   useEffect(() => {
     atualizarRanking();
-  }, [fundamento, team]);
+  }, [team, dataInicio, dataFim]);
 
   // Função para gerar uma frase de parabenização dinâmica
   const gerarFraseParabenizacao = () => {
     const frases = [
-      `🏆 Parabéns aos destaques da semana no fundamento ${traducoesFundamentos[fundamento]}! Excelente dedicação!`,
-      `🌟 Destaques da semana: nossos campeões no ${traducoesFundamentos[fundamento]}! Orgulho da equipe!`,
-      `🔝 Top desempenho semanal em ${traducoesFundamentos[fundamento]}! Continuem com este excelente trabalho!`
+      `🏆 Parabéns aos destaques no ranking de desempenho! Excelente dedicação!`,
+      `🌟 Nossos campeões de desempenho técnico! Orgulho da equipe!`,
+      `🔝 Top desempenho da categoria! Continuem com este excelente trabalho!`
     ];
     return frases[Math.floor(Math.random() * frases.length)];
   };
@@ -68,19 +105,29 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
   // Função para obter a cor da medalha com base na posição
   const getMedalColor = (posicao: number) => {
     switch (posicao) {
-      case 1: return 'text-yellow-500'; // Ouro
-      case 2: return 'text-slate-400';  // Prata
-      case 3: return 'text-amber-600';  // Bronze
+      case 0: return 'text-yellow-500'; // Ouro
+      case 1: return 'text-slate-400';  // Prata
+      case 2: return 'text-amber-600';  // Bronze
       default: return 'text-slate-700';
     }
   };
 
   // Função para obter a medalha ou posição
   const getMedalOrPosition = (posicao: number) => {
-    if (posicao <= 3) {
+    if (posicao <= 2) {
       return <Medal className={`h-5 w-5 ${getMedalColor(posicao)}`} />;
     }
-    return <span className="text-sm font-medium">{posicao}º</span>;
+    return <span className="text-sm font-medium">{posicao + 1}º</span>;
+  };
+  
+  // Obter a cor para o badge de desempenho
+  const getDesempenhoColor = (media: number): string => {
+    if (media >= 80) return 'bg-green-100 text-green-800 hover:bg-green-200';
+    if (media >= 70) return 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200';
+    if (media >= 60) return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+    if (media >= 50) return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+    if (media >= 40) return 'bg-orange-100 text-orange-800 hover:bg-orange-200';
+    return 'bg-red-100 text-red-800 hover:bg-red-200';
   };
 
   // Exportar para PDF
@@ -117,7 +164,7 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       
       // Salvar o PDF
-      pdf.save(`ranking-${fundamento}-${team}-${format(new Date(), 'dd-MM-yyyy')}.pdf`);
+      pdf.save(`ranking-desempenho-${team}-${format(new Date(), 'dd-MM-yyyy')}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
     } finally {
@@ -151,14 +198,14 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
       // Criar um objeto File para compartilhamento
       const file = new File(
         [blob], 
-        `ranking-${fundamento}-${team}-${format(new Date(), 'dd-MM-yyyy')}.png`, 
+        `ranking-desempenho-${team}-${format(new Date(), 'dd-MM-yyyy')}.png`, 
         { type: 'image/png' }
       );
       
       // Verificar se o navegador suporta a API de compartilhamento
       if (navigator.share) {
         await navigator.share({
-          title: `Ranking de ${traducoesFundamentos[fundamento]} - Time ${team}`,
+          title: `Ranking de Desempenho - Time ${team}`,
           text: gerarFraseParabenizacao(),
           files: [file]
         });
@@ -166,7 +213,7 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
         // Fallback para download se o compartilhamento não for suportado
         const link = document.createElement('a');
         link.href = imgData;
-        link.download = `ranking-${fundamento}-${team}-${format(new Date(), 'dd-MM-yyyy')}.png`;
+        link.download = `ranking-desempenho-${team}-${format(new Date(), 'dd-MM-yyyy')}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -185,25 +232,21 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
           <div>
             <h2 className="text-xl font-bold flex items-center text-blue-900">
               <Trophy className="h-6 w-6 text-blue-700 mr-2" />
-              Top 10 Atletas - {traducoesFundamentos[fundamento]}
+              Ranking de Desempenho
             </h2>
             <p className="text-sm text-blue-700 mt-1">
-              Time {team} | Semana: {format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), 'dd/MM', { locale: ptBR })} 
-              a {format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}
+              Time {team} | Período: {format(new Date(dataInicio), 'dd/MM', { locale: ptBR })} 
+              a {format(new Date(dataFim), 'dd/MM/yyyy', { locale: ptBR })}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={fundamento} onValueChange={(value) => setFundamento(value as Fundamento)}>
+            <Select value={periodoSelecionado} onValueChange={handleChangePeriodo}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Selecione um fundamento" />
+                <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="saque">Saque</SelectItem>
-                <SelectItem value="passe">Passe/Recepção</SelectItem>
-                <SelectItem value="levantamento">Levantamento</SelectItem>
-                <SelectItem value="ataque">Ataque</SelectItem>
-                <SelectItem value="bloqueio">Bloqueio</SelectItem>
-                <SelectItem value="defesa">Defesa</SelectItem>
+                <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                <SelectItem value="30dias">Últimos 30 dias</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon" onClick={exportarPDF} disabled={isLoading}>
@@ -230,11 +273,11 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
               </div>
             ) : rankingData.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <Trophy className="h-16 w-16 opacity-20 mb-4" />
+                <AlertCircle className="h-16 w-16 opacity-20 mb-4" />
                 <p className="text-center">
-                  Não há atletas com avaliações suficientes neste fundamento na última semana.
+                  Não há atletas com avaliações suficientes no período selecionado.
                   <br />
-                  <span className="text-sm">São necessárias pelo menos 5 tentativas para entrar no ranking.</span>
+                  <span className="text-sm">São necessárias avaliações qualitativas para gerar o ranking.</span>
                 </p>
               </div>
             ) : (
@@ -243,22 +286,21 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
                   <TableRow>
                     <TableHead className="w-12 text-center font-semibold">Pos.</TableHead>
                     <TableHead className="font-semibold">Atleta</TableHead>
-                    <TableHead className="w-24 text-center font-semibold">Eficiência</TableHead>
-                    <TableHead className="w-24 text-center font-semibold">Acertos</TableHead>
-                    <TableHead className="w-24 text-center font-semibold">Tentativas</TableHead>
+                    <TableHead className="w-32 text-center font-semibold">Média de Desempenho</TableHead>
+                    <TableHead className="w-24 text-center font-semibold">Avaliações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rankingData.map((atleta) => (
-                    <TableRow key={atleta.id} className={atleta.posicao <= 3 ? 'bg-blue-50/50' : ''}>
+                  {rankingData.slice(0, 10).map((atleta, index) => (
+                    <TableRow key={atleta.id} className={index <= 2 ? 'bg-blue-50/50' : ''}>
                       <TableCell className="text-center">
                         <div className="flex justify-center">
-                          {getMedalOrPosition(atleta.posicao)}
+                          {getMedalOrPosition(index)}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
                         {atleta.nome}
-                        {atleta.posicao === 1 && (
+                        {index === 0 && (
                           <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800 border-yellow-300">
                             Destaque
                           </Badge>
@@ -266,18 +308,18 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge 
-                          className={`
-                            ${atleta.posicao === 1 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
-                            atleta.posicao === 2 ? 'bg-slate-100 text-slate-800 border-slate-300' : 
-                            atleta.posicao === 3 ? 'bg-amber-100 text-amber-800 border-amber-300' : 
-                            'bg-blue-50 text-blue-800 border-blue-200'}
-                          `}
+                          variant="outline"
+                          className={`${getDesempenhoColor(atleta.mediaDesempenho)} font-medium`}
                         >
-                          {atleta.eficiencia.toFixed(1)}%
+                          {atleta.mediaDesempenho.toFixed(1)}%
                         </Badge>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {descreverDesempenho(atleta.mediaDesempenho)}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-center">{atleta.acertos}</TableCell>
-                      <TableCell className="text-center">{atleta.tentativas}</TableCell>
+                      <TableCell className="text-center">
+                        {atleta.totalAvaliacoes}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -285,26 +327,6 @@ const RankingTop10Atletas: React.FC<RankingTop10AtletasProps> = ({ team, fundame
             )}
           </CardContent>
         </Card>
-
-        {/* Legenda e observações */}
-        <div className="mt-6 text-sm text-gray-500">
-          <p>• Eficiência = (Total de Acertos / Total de Tentativas) * 100</p>
-          <p>• Somente atletas com mínimo de 5 tentativas são considerados no ranking.</p>
-          <p>• Em caso de empate na eficiência, o critério de desempate é o número de tentativas.</p>
-        </div>
-      </div>
-      
-      {/* Botão de atualizar ranking */}
-      <div className="flex justify-center mt-4">
-        <Button 
-          variant="outline" 
-          onClick={atualizarRanking} 
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-          Atualizar Ranking
-        </Button>
       </div>
     </div>
   );

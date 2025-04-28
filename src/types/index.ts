@@ -73,3 +73,17 @@ export interface StudentPerformance {
   completedTrainings: number;
   achievedGoals: number;
 }
+
+// EventoQualificado para o módulo de avaliação qualitativa
+export interface EventoQualificado {
+  id?: string;
+  atleta_id: string;
+  treino_id?: string;
+  fundamento: string;
+  tipo_evento: string;
+  peso: number;
+  timestamp?: string;
+  observacoes?: string;
+  created_at?: string;
+  updated_at?: string;
+}

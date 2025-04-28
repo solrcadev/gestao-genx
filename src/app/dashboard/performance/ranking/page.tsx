@@ -4,8 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import RankingFundamentos from '@/components/performance/RankingFundamentos';
+<<<<<<< HEAD
 import TeamRanking from '@/components/performance/TeamRanking';
 import RankingTop10Atletas from '@/components/performance/RankingTop10Atletas';
+=======
+import RankingDesempenho from '@/components/performance/RankingDesempenho';
+>>>>>>> e00e4d317bf47193707a8e5057a94cd176a32469
 import { TeamType, AthletePerformance } from '@/types';
 import { loadPerformanceDataForRanking } from '@/services/performanceService';
 
@@ -57,9 +61,14 @@ export default function RankingPage() {
       {/* Tipos de Rankings */}
       <Tabs defaultValue="atletas" className="w-full">
         <TabsList className="mb-6">
+<<<<<<< HEAD
           <TabsTrigger value="atletas">Ranking de Atletas</TabsTrigger>
           <TabsTrigger value="equipes">Ranking de Equipes</TabsTrigger>
           <TabsTrigger value="top3">Top 3 Destaques</TabsTrigger>
+=======
+          <TabsTrigger value="top10">Ranking de Desempenho</TabsTrigger>
+          <TabsTrigger value="top3">Top 3 Destaques Técnicos</TabsTrigger>
+>>>>>>> e00e4d317bf47193707a8e5057a94cd176a32469
         </TabsList>
         
         <TabsContent value="atletas" className="space-y-6">
@@ -68,6 +77,7 @@ export default function RankingPage() {
               <CardTitle className="text-xl">Ranking de Desempenho de Atletas</CardTitle>
             </CardHeader>
             <CardContent>
+<<<<<<< HEAD
               <Tabs defaultValue="saque" className="w-full">
                 <TabsList>
                   <TabsTrigger value="saque">Saque</TabsTrigger>
@@ -96,6 +106,9 @@ export default function RankingPage() {
                   <RankingTop10Atletas team={selectedTeam} fundamento="defesa" />
                 </TabsContent>
               </Tabs>
+=======
+              <RankingDesempenho team={selectedTeam} performanceData={performanceData} />
+>>>>>>> e00e4d317bf47193707a8e5057a94cd176a32469
             </CardContent>
           </Card>
         </TabsContent>
