@@ -2,12 +2,26 @@ import React, { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle, Search, Filter } from "lucide-react";
+import { Search, X, Info, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { fetchPresencasAtletas, salvarAvaliacaoExercicio } from "@/services/treinosDoDiaService";
+import { fetchPresencasAtletas } from "@/services/treinosDoDiaService";
 import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Badge } from "@/components/ui/badge";
+import { 
+  CONFIG_EVENTOS_QUALIFICADOS,
+  EventoQualificado,
+  salvarEventoQualificado,
+  buscarEventosQualificados
+} from "@/services/avaliacaoQualitativaService";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useGetAthleteAttendance } from '@/hooks/attendance-hooks';
 
 interface RealTimeEvaluationProps {
   exercise: any;
@@ -29,13 +43,9 @@ export const RealTimeEvaluation = ({
 }: RealTimeEvaluationProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [fundamentos, setFundamentos] = useState<string[]>(DEFAULT_FUNDAMENTOS);
-  const [activeFundamento, setActiveFundamento] = useState<string>(DEFAULT_FUNDAMENTOS[0]);
-  const [evaluationData, setEvaluationData] = useState<{
-    [atletaId: string]: {
-      [fundamento: string]: { acertos: number; erros: number };
-    };
-  }>(initialData);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [activeFundamento, setActiveFundamento] = useState<string>("ataque");
+  const [observacoes, setObservacoes] = useState<string>("");
+  const [selectedAtleta, setSelectedAtleta] = useState<string | null>(null);
   
   const { toast } = useToast();
 
@@ -45,209 +55,18 @@ export const RealTimeEvaluation = ({
     queryFn: () => fetchPresencasAtletas(treinoDoDiaId),
   });
 
-  // Mutation for saving evaluations
-  const saveEvaluationMutation = useMutation({
-    mutationFn: salvarAvaliacaoExercicio,
-    onSuccess: () => {
-      toast({
-        title: "Avaliação salva",
-        description: "A avaliação foi registrada com sucesso!",
-        duration: 1500
-      });
-    },
-    onError: (error) => {
-      console.error("Error saving evaluation:", error);
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: "Não foi possível salvar a avaliação.",
-        variant: "destructive"
-      });
-    }
-  });
+  // Configuração de fundamentos e suas opções qualitativas
+  const configFundamento = CONFIG_EVENTOS_QUALIFICADOS.find(
+    (config) => config.fundamento.toLowerCase() === activeFundamento.toLowerCase()
+  );
 
-  // Initialize data structure for each athlete if coming from initialData
-  useEffect(() => {
-    // Evitar inicialização repetida para prevenir loops infinitos
-    if (isInitialized) {
-      return;
-    }
-    
-    if (Object.keys(initialData).length > 0) {
-      console.log("Inicializando dados de avaliação a partir do initialData");
-      setEvaluationData(initialData);
-      setIsInitialized(true);
-    } else if (athletesWithAttendance.length > 0) {
-      console.log("Inicializando dados de avaliação para atletas presentes");
-      const presentAthletes = athletesWithAttendance.filter(a => a.presente).map(a => a.atleta.id);
-      
-      // Initialize empty evaluation data for all present athletes
-      const initialEvalData = presentAthletes.reduce((acc, atletaId) => {
-        acc[atletaId] = fundamentos.reduce((fundAcc, fundamento) => {
-          fundAcc[fundamento] = { acertos: 0, erros: 0 };
-          return fundAcc;
-        }, {} as { [fundamento: string]: { acertos: number; erros: number } });
-        return acc;
-      }, {} as { [atletaId: string]: { [fundamento: string]: { acertos: number; erros: number } } });
-      
-      setEvaluationData(initialEvalData);
-      setIsInitialized(true);
-    }
-  }, [athletesWithAttendance, fundamentos, initialData, isInitialized]);
-
-  // Handle score updates
-  const handleUpdateScore = (atletaId: string, isAcerto: boolean) => {
-    // Armazenar valores anteriores para caso de erro
-    const prevAthleteData = evaluationData[atletaId] || {};
-    const prevFundamentoData = prevAthleteData[activeFundamento] || { acertos: 0, erros: 0 };
-    
-    // Calcular novos valores
-    const newAcertos = isAcerto 
-      ? prevFundamentoData.acertos + 1 
-      : prevFundamentoData.acertos;
-    
-    const newErros = isAcerto 
-      ? prevFundamentoData.erros 
-      : prevFundamentoData.erros + 1;
-      
-    // Criar objeto de atualização
-    const updatedFundamentoData = {
-      acertos: newAcertos,
-      erros: newErros
-    };
-    
-    // Primeiro atualizamos o estado local para feedback imediato ao usuário
-    setEvaluationData(prev => {
-      const athleteData = prev[atletaId] || {};
-      
-      return {
-        ...prev,
-        [atletaId]: {
-          ...athleteData,
-          [activeFundamento]: updatedFundamentoData
-        }
-      };
-    });
-    
-    // Em seguida, fazemos a mutação para o banco de dados
-    console.log(`Enviando avaliação para o servidor: ${atletaId}, ${activeFundamento}, acertos=${newAcertos}, erros=${newErros}`);
-    
-    saveEvaluationMutation.mutate({
-      treinoDoDiaId,
-      exercicioId: exercise.id,
-      atletaId,
-      fundamento: activeFundamento,
-      acertos: newAcertos,
-      erros: newErros
-    }, {
-      onSuccess: () => {
-        // Confirmação visual de que a ação foi bem-sucedida
-        toast({
-          title: "Avaliação registrada",
-          description: isAcerto ? "Acerto registrado com sucesso" : "Erro registrado com sucesso",
-          duration: 1000
-        });
-      },
-      onError: (error) => {
-        // Se ocorrer erro, revertemos o estado local para o valor original
-        toast({
-          title: "Erro ao salvar avaliação",
-          description: `Não foi possível registrar a avaliação. ${error.message || ''}`,
-          variant: "destructive"
-        });
-        
-        // Revertendo o estado para os valores anteriores
-        setEvaluationData(prev => {
-          const athleteData = prev[atletaId] || {};
-          return {
-            ...prev,
-            [atletaId]: {
-              ...athleteData,
-              [activeFundamento]: prevFundamentoData
-            }
-          };
-        });
-      }
-    });
-  };
-
-  const handleResetScore = (atletaId: string) => {
-    // Armazenar valores anteriores para caso de erro
-    const prevAthleteData = evaluationData[atletaId] || {};
-    const prevFundamentoData = prevAthleteData[activeFundamento] || { acertos: 0, erros: 0 };
-    
-    // Primeiro atualizamos o estado local para feedback imediato
-    setEvaluationData(prev => {
-      const athleteData = prev[atletaId] || {};
-      
-      const updatedData = {
-        ...prev,
-        [atletaId]: {
-          ...athleteData,
-          [activeFundamento]: { acertos: 0, erros: 0 }
-        }
-      };
-      
-      return updatedData;
-    });
-    
-    // Reset in database
-    saveEvaluationMutation.mutate({
-      treinoDoDiaId,
-      exercicioId: exercise.id,
-      atletaId,
-      fundamento: activeFundamento,
-      acertos: 0,
-      erros: 0
-    }, {
-      onSuccess: () => {
-        toast({
-          title: "Contagem zerada",
-          description: "Os valores foram redefinidos com sucesso",
-          duration: 1000
-        });
-      },
-      onError: (error) => {
-        toast({
-          title: "Erro ao redefinir contagem",
-          description: `Não foi possível zerar os valores. ${error.message || ''}`,
-          variant: "destructive"
-        });
-        
-        // Se ocorrer erro, revertemos ao estado anterior
-        setEvaluationData(prev => {
-          const athleteData = prev[atletaId] || {};
-          return {
-            ...prev,
-            [atletaId]: {
-              ...athleteData,
-              [activeFundamento]: prevFundamentoData
-            }
-          };
-        });
-      }
-    });
-  };
-
-  const handleComplete = () => {
-    // Deliver the final evaluation data to parent component
-    onComplete(evaluationData);
-  };
-
-  // Calculate totals for the active fundamento
-  const getTotalsForActiveFundamento = () => {
-    let acertoTotal = 0;
-    let erroTotal = 0;
-    
-    Object.values(evaluationData).forEach(athlete => {
-      const fundData = athlete[activeFundamento];
-      if (fundData) {
-        acertoTotal += fundData.acertos;
-        erroTotal += fundData.erros;
-      }
-    });
-    
-    return { acertos: acertoTotal, erros: erroTotal };
-  };
+  // Obter todos os fundamentos disponíveis do sistema de avaliação qualitativa
+  const fundamentosQualitativos = Array.from(
+    new Set([
+      ...exercise.exercicio?.fundamentos || ["ataque"],
+      ...CONFIG_EVENTOS_QUALIFICADOS.map(config => config.fundamento.toLowerCase())
+    ])
+  );
 
   // Filter and sort athletes
   const filteredAthletes = athletesWithAttendance
@@ -263,9 +82,105 @@ export const RealTimeEvaluation = ({
     );
   }
 
-  const totals = getTotalsForActiveFundamento();
-  const totalExecucoes = totals.acertos + totals.erros;
-  const percentAcerto = totalExecucoes > 0 ? Math.round((totals.acertos / totalExecucoes) * 100) : 0;
+  // Busca eventos qualificados registrados para este treino
+  const { data: eventosQualificados = [], isLoading: isLoadingEventos } = useQuery({
+    queryKey: ['eventos-qualificados', treinoDoDiaId],
+    queryFn: async () => {
+      const eventos = await buscarEventosQualificados({
+        treino_id: treinoDoDiaId
+      });
+      return eventos;
+    },
+    enabled: !!treinoDoDiaId
+  });
+  
+  // Processa os eventos qualificados para exibição por atleta e fundamento
+  const eventosPorAtleta = React.useMemo(() => {
+    const result: Record<string, Record<string, { 
+      total: number, 
+      positivos: number, 
+      negativos: number, 
+      mediaPeso: number 
+    }>> = {};
+    
+    eventosQualificados.forEach(evento => {
+      if (!evento.atleta_id || !evento.fundamento) return;
+      
+      if (!result[evento.atleta_id]) {
+        result[evento.atleta_id] = {};
+      }
+      
+      if (!result[evento.atleta_id][evento.fundamento]) {
+        result[evento.atleta_id][evento.fundamento] = {
+          total: 0,
+          positivos: 0,
+          negativos: 0,
+          mediaPeso: 0
+        };
+      }
+      
+      const dados = result[evento.atleta_id][evento.fundamento];
+      dados.total += 1;
+      if (evento.peso > 0) {
+        dados.positivos += 1;
+      } else if (evento.peso < 0) {
+        dados.negativos += 1;
+      }
+      
+      // Recalcula a média de peso
+      const novaSoma = (dados.mediaPeso * (dados.total - 1)) + evento.peso;
+      dados.mediaPeso = novaSoma / dados.total;
+    });
+    
+    return result;
+  }, [eventosQualificados]);
+
+  // Função para registrar evento qualificado
+  const registrarEventoQualificado = async (atletaId: string, tipoEvento: string, peso: number) => {
+    if (!atletaId || !activeFundamento || !tipoEvento) {
+      toast({
+        title: "Erro",
+        description: "Dados incompletos para registrar avaliação",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const evento: EventoQualificado = {
+      atleta_id: atletaId,
+      treino_id: treinoDoDiaId,
+      fundamento: activeFundamento,
+      tipo_evento: tipoEvento,
+      peso: peso,
+      observacoes: observacoes || undefined
+    };
+
+    try {
+      await salvarEventoQualificado(evento);
+      toast({
+        title: "Sucesso",
+        description: `Evento "${tipoEvento}" registrado com sucesso!`
+      });
+      setObservacoes("");
+    } catch (error) {
+      console.error("Erro ao registrar evento:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar o evento. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Exibe indicador de carregamento enquanto busca os eventos
+  if (isLoadingEventos) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10">
+        <LoadingSpinner />
+        <p className="mt-4 text-muted-foreground">Carregando avaliações...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -274,14 +189,14 @@ export const RealTimeEvaluation = ({
           {exercise.exercicio?.nome || "Exercício"}
         </h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Avaliação em tempo real
+          Avaliação qualitativa em tempo real
         </p>
       </div>
       
       {/* Fundamentos tabs */}
       <div className="overflow-x-auto pb-2">
         <div className="flex space-x-2 w-max">
-          {fundamentos.map((fundamento) => (
+          {fundamentosQualitativos.map((fundamento) => (
             <Button
               key={fundamento}
               variant={activeFundamento === fundamento ? "default" : "outline"}
@@ -300,37 +215,64 @@ export const RealTimeEvaluation = ({
         </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="bg-muted/30 rounded-md p-3 my-3 flex items-center justify-between">
+      {/* Painel de avaliação qualitativa */}
+      <div className="bg-muted/30 rounded-md p-3 my-3">
         <div className="text-sm">
           <p className="font-medium">{activeFundamento}</p>
           <p className="text-xs text-muted-foreground">
-            {totalExecucoes} execuções totais
+            {selectedAtleta ? "Atleta selecionado para avaliação" : "Selecione um atleta abaixo"}
           </p>
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center text-green-600">
-              <CheckCircle className="h-4 w-4 mr-1" />
-              <span className="font-medium">{totals.acertos}</span>
+        
+        {selectedAtleta && configFundamento && (
+          <div className="mt-3 space-y-2">
+            {/* Campo de observações */}
+            <Input
+              placeholder="Observações sobre este evento..."
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              className="text-sm"
+            />
+            
+            {/* Botões para eventos qualitativos */}
+            <div className="grid grid-cols-2 gap-2">
+              {configFundamento.eventos.map((evento) => (
+                <TooltipProvider key={evento.tipo}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        onClick={() => registrarEventoQualificado(selectedAtleta, evento.tipo, evento.peso)}
+                        variant={evento.peso > 0 ? "default" : "destructive"}
+                        className="h-9 flex items-center justify-between w-full px-3"
+                        size="sm"
+                      >
+                        <span>{evento.tipo}</span>
+                        <Badge 
+                          variant={evento.peso > 0 ? "outline" : "destructive"} 
+                          className="ml-1"
+                        >
+                          {evento.peso.toFixed(1)}
+                        </Badge>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{evento.descricao || evento.tipo}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
             </div>
-            <span className="text-xs text-muted-foreground">Acertos</span>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mt-2" 
+              onClick={() => setSelectedAtleta(null)}
+            >
+              <X className="h-4 w-4 mr-1" /> Cancelar seleção
+            </Button>
           </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="flex items-center text-red-600">
-              <XCircle className="h-4 w-4 mr-1" />
-              <span className="font-medium">{totals.erros}</span>
-            </div>
-            <span className="text-xs text-muted-foreground">Erros</span>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <span className="font-medium">{percentAcerto}%</span>
-            <span className="text-xs text-muted-foreground">Eficiência</span>
-          </div>
-        </div>
+        )}
       </div>
       
       {/* Search */}
@@ -352,16 +294,19 @@ export const RealTimeEvaluation = ({
           </div>
         ) : (
           filteredAthletes.map(({ atleta }) => {
-            const stats = evaluationData[atleta.id]?.[activeFundamento] || { acertos: 0, erros: 0 };
-            const total = stats.acertos + stats.erros;
-            const percentAcertos = total > 0 ? Math.round((stats.acertos / total) * 100) : 0;
+            // Busca dados de avaliação para este atleta no fundamento atual
+            const avaliacoesFundamento = eventosPorAtleta[atleta.id]?.[activeFundamento];
             
             return (
               <div 
                 key={atleta.id} 
-                className="border rounded-lg p-3 flex items-center justify-between bg-background"
+                className={cn(
+                  "border rounded-lg p-3 flex items-center justify-between bg-background cursor-pointer",
+                  selectedAtleta === atleta.id && "border-primary"
+                )}
+                onClick={() => setSelectedAtleta(atleta.id)}
               >
-                <div className="flex items-center">
+                <div className="flex items-center flex-grow">
                   <Avatar className="h-10 w-10 mr-3">
                     <AvatarImage src={atleta.imagem_url} alt={atleta.nome} />
                     <AvatarFallback className="bg-primary/10 text-primary">
@@ -369,61 +314,32 @@ export const RealTimeEvaluation = ({
                     </AvatarFallback>
                   </Avatar>
                   
-                  <div>
+                  <div className="flex-grow">
                     <p className="font-medium">{atleta.nome}</p>
                     <div className="text-xs text-muted-foreground flex">
                       <span>{atleta.posicao}</span>
-                      {total > 0 && (
-                        <span className="ml-2 font-medium">
-                          {percentAcertos}% eficiência ({stats.acertos}/{total})
-                        </span>
-                      )}
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  {total > 0 && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleResetScore(atleta.id)}
-                      title="Limpar contagem"
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
+                  
+                  {/* Indicadores de avaliação para o fundamento atual */}
+                  {avaliacoesFundamento && avaliacoesFundamento.total > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
+                        <span className="text-xs">{avaliacoesFundamento.positivos}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <XCircle className="h-4 w-4 text-red-500 mr-1" />
+                        <span className="text-xs">{avaliacoesFundamento.negativos}</span>
+                      </div>
+                      <Badge 
+                        variant={avaliacoesFundamento.mediaPeso > 0 ? "outline" : "destructive"} 
+                        className="ml-1 text-xs"
                       >
-                        <path d="M3 12h18"></path>
-                      </svg>
-                    </Button>
+                        {avaliacoesFundamento.mediaPeso.toFixed(1)}
+                      </Badge>
+                    </div>
                   )}
-                  
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 rounded-full bg-green-500/10 hover:bg-green-500/20 text-green-500"
-                    onClick={() => handleUpdateScore(atleta.id, true)}
-                  >
-                    <CheckCircle className="h-5 w-5" />
-                  </Button>
-                  
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-500"
-                    onClick={() => handleUpdateScore(atleta.id, false)}
-                  >
-                    <XCircle className="h-5 w-5" />
-                  </Button>
                 </div>
               </div>
             );
@@ -442,3 +358,4 @@ export const RealTimeEvaluation = ({
 };
 
 export default RealTimeEvaluation;
+

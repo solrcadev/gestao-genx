@@ -1,32 +1,27 @@
-
-import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  CheckCircle, 
-  XCircle, 
   User, 
-  Save, 
   Edit, 
   BarChart3,
   ClipboardList
 } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { fetchPresencasAtletas, salvarAvaliacoesEmLote } from "@/services/treinosDoDiaService";
+import { fetchPresencasAtletas } from "@/services/treinosDoDiaService";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { 
+  EventoQualificado, 
+  buscarEventosQualificados,
+} from "@/services/avaliacaoQualitativaService";
 
 interface EvaluationSummaryProps {
   exercise: any;
   treinoDoDiaId: string;
-  evaluationData: {
-    [atletaId: string]: {
-      [fundamento: string]: { acertos: number; erros: number };
-    };
-  };
+  evaluationData: any; // Mantido apenas para retrocompatibilidade
   onEdit: () => void;
   onSave: () => void;
 }
@@ -34,13 +29,13 @@ interface EvaluationSummaryProps {
 const EvaluationSummary = ({
   exercise,
   treinoDoDiaId,
-  evaluationData,
   onEdit,
   onSave
 }: EvaluationSummaryProps) => {
   const [activeTab, setActiveTab] = useState<"atletas" | "fundamentos">("atletas");
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
+  const [eventosQualificados, setEventosQualificados] = useState<EventoQualificado[]>([]);
+  const [isLoadingEventos, setIsLoadingEventos] = useState(true);
 
   // Fetch athletes with attendance
   const { data: athletesWithAttendance = [], isLoading: isLoadingAthletes } = useQuery({
@@ -49,102 +44,84 @@ const EvaluationSummary = ({
     enabled: !!treinoDoDiaId,
   });
 
+  // Carregar eventos qualificados ao montar o componente
+  useEffect(() => {
+    const carregarEventos = async () => {
+      try {
+        setIsLoadingEventos(true);
+        const eventos = await buscarEventosQualificados({
+          treino_id: treinoDoDiaId
+        });
+        setEventosQualificados(eventos);
+      } catch (error) {
+        console.error("Erro ao carregar eventos qualificados:", error);
+        toast({
+          title: "Erro ao carregar avaliações",
+          description: "Não foi possível carregar as avaliações qualitativas",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingEventos(false);
+      }
+    };
+
+    if (treinoDoDiaId) {
+      carregarEventos();
+    }
+  }, [treinoDoDiaId, toast]);
+
   // Get all fundamentos that have evaluations
   const fundamentos = Array.from(
-    new Set(
-      Object.values(evaluationData).flatMap(athlete => 
-        Object.keys(athlete).filter(fund => 
-          athlete[fund].acertos > 0 || athlete[fund].erros > 0
-        )
-      )
-    )
+    new Set(eventosQualificados.map(evento => evento.fundamento))
   );
+
+  // Agrupar dados de atletas para exibição
+  const dadosPorAtleta = eventosQualificados.reduce((acc, evento) => {
+    if (!acc[evento.atleta_id]) {
+      acc[evento.atleta_id] = {
+        eventos: [],
+        totalPontos: 0,
+        fundamentos: new Set()
+      };
+    }
+    
+    acc[evento.atleta_id].eventos.push(evento);
+    acc[evento.atleta_id].totalPontos += evento.peso;
+    acc[evento.atleta_id].fundamentos.add(evento.fundamento);
+    
+    return acc;
+  }, {} as Record<string, { eventos: EventoQualificado[], totalPontos: number, fundamentos: Set<string> }>);
+
+  // Agrupar dados por fundamento para exibição
+  const dadosPorFundamento = eventosQualificados.reduce((acc, evento) => {
+    if (!acc[evento.fundamento]) {
+      acc[evento.fundamento] = {
+        eventos: [],
+        totalPontos: 0,
+        atletasAvaliados: new Set()
+      };
+    }
+    
+    acc[evento.fundamento].eventos.push(evento);
+    acc[evento.fundamento].totalPontos += evento.peso;
+    acc[evento.fundamento].atletasAvaliados.add(evento.atleta_id);
+    
+    return acc;
+  }, {} as Record<string, { eventos: EventoQualificado[], totalPontos: number, atletasAvaliados: Set<string> }>);
+
+  const handleSalvarEFechar = () => {
+    toast({
+      title: "Avaliações salvas",
+      description: "As avaliações qualitativas já foram registradas no sistema.",
+    });
+    onSave();
+  };
 
   // Get athletes with evaluations
   const athletesWithEvaluations = athletesWithAttendance
-    .filter(a => a.presente && evaluationData[a.atleta.id])
-    .filter(a => {
-      // Only include athletes that have at least one evaluation
-      const athleteData = evaluationData[a.atleta.id];
-      return Object.values(athleteData).some(
-        fund => fund.acertos > 0 || fund.erros > 0
-      );
-    });
+    .filter(a => a.presente && dadosPorAtleta[a.atleta.id]);
 
-  // Save mutation
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      setIsSaving(true);
-      
-      // Format data for the API
-      const avaliacoes = [];
-      
-      for (const atletaId in evaluationData) {
-        for (const fundamento in evaluationData[atletaId]) {
-          const { acertos, erros } = evaluationData[atletaId][fundamento];
-          
-          // Only save if there's actual evaluation data
-          if (acertos > 0 || erros > 0) {
-            avaliacoes.push({
-              treinoDoDiaId,
-              exercicioId: exercise.exercicio_id,
-              atletaId,
-              fundamento,
-              acertos,
-              erros
-            });
-          }
-        }
-      }
-      
-      if (avaliacoes.length > 0) {
-        await salvarAvaliacoesEmLote(avaliacoes);
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: "Avaliação salva com sucesso",
-        description: "Todas as avaliações foram registradas no sistema.",
-      });
-      setIsSaving(false);
-      onSave();
-    },
-    onError: (error) => {
-      console.error("Erro ao salvar avaliações:", error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar as avaliações. Por favor, tente novamente.",
-        variant: "destructive",
-      });
-      setIsSaving(false);
-    }
-  });
-
-  const handleSave = () => {
-    saveMutation.mutate();
-  };
-
-  // Calculate overall statistics
-  const calculateOverallStats = () => {
-    let totalAcertos = 0;
-    let totalErros = 0;
-    
-    Object.values(evaluationData).forEach(athlete => {
-      Object.values(athlete).forEach(fund => {
-        totalAcertos += fund.acertos;
-        totalErros += fund.erros;
-      });
-    });
-    
-    const total = totalAcertos + totalErros;
-    const eficiencia = total > 0 ? Math.round((totalAcertos / total) * 100) : 0;
-    
-    return { totalAcertos, totalErros, total, eficiencia };
-  };
-
-  const stats = calculateOverallStats();
-
-  if (isLoadingAthletes) {
+  if (isLoadingAthletes || isLoadingEventos) {
     return (
       <div className="flex flex-col items-center justify-center py-10">
         <LoadingSpinner />
@@ -153,7 +130,7 @@ const EvaluationSummary = ({
     );
   }
 
-  if (athletesWithEvaluations.length === 0) {
+  if (eventosQualificados.length === 0) {
     return (
       <div className="text-center py-8 space-y-4">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-600">
@@ -175,6 +152,12 @@ const EvaluationSummary = ({
     );
   }
 
+  // Calcular estatísticas gerais
+  const totalEventos = eventosQualificados.length;
+  const eventosPositivos = eventosQualificados.filter(e => e.peso > 0).length;
+  const eventosNegativos = eventosQualificados.filter(e => e.peso < 0).length;
+  const totalPontos = eventosQualificados.reduce((sum, e) => sum + e.peso, 0);
+
   return (
     <div className="space-y-4">
       <div>
@@ -192,22 +175,22 @@ const EvaluationSummary = ({
             Estatísticas Gerais
           </h3>
           <Badge variant="outline" className="font-normal">
-            {stats.eficiencia}% eficiência
+            {totalEventos} eventos registrados
           </Badge>
         </div>
         
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-muted/50 p-2 rounded-md">
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <div className="text-xs text-muted-foreground">Total</div>
+            <div className="text-2xl font-bold">{totalPontos.toFixed(1)}</div>
+            <div className="text-xs text-muted-foreground">Total de pontos</div>
           </div>
           <div className="bg-green-500/10 p-2 rounded-md">
-            <div className="text-2xl font-bold text-green-600">{stats.totalAcertos}</div>
-            <div className="text-xs text-muted-foreground">Acertos</div>
+            <div className="text-2xl font-bold text-green-600">{eventosPositivos}</div>
+            <div className="text-xs text-muted-foreground">Eventos positivos</div>
           </div>
           <div className="bg-red-500/10 p-2 rounded-md">
-            <div className="text-2xl font-bold text-red-600">{stats.totalErros}</div>
-            <div className="text-xs text-muted-foreground">Erros</div>
+            <div className="text-2xl font-bold text-red-600">{eventosNegativos}</div>
+            <div className="text-xs text-muted-foreground">Eventos negativos</div>
           </div>
         </div>
       </div>
@@ -222,17 +205,10 @@ const EvaluationSummary = ({
         {/* Athletes tab */}
         <TabsContent value="atletas" className="space-y-3 max-h-[40vh] overflow-y-auto">
           {athletesWithEvaluations.map(({ atleta }) => {
-            const athleteData = evaluationData[atleta.id] || {};
-            let totalAcertos = 0;
-            let totalErros = 0;
-            
-            Object.values(athleteData).forEach(fund => {
-              totalAcertos += fund.acertos;
-              totalErros += fund.erros;
-            });
-            
-            const total = totalAcertos + totalErros;
-            const eficiencia = total > 0 ? Math.round((totalAcertos / total) * 100) : 0;
+            const atletaData = dadosPorAtleta[atleta.id];
+            const totalEventosAtleta = atletaData?.eventos.length || 0;
+            const totalPontosAtleta = atletaData?.totalPontos || 0;
+            const fundamentosAvaliados = Array.from(atletaData?.fundamentos || []);
             
             return (
               <div key={atleta.id} className="border rounded-lg p-3 bg-background">
@@ -249,119 +225,60 @@ const EvaluationSummary = ({
                       <p className="text-xs text-muted-foreground">{atleta.posicao}</p>
                     </div>
                   </div>
-                  <Badge variant="outline">
-                    {eficiencia}% eficiência
-                  </Badge>
+                  <div className="text-right">
+                    <p className="font-medium">{totalPontosAtleta.toFixed(1)} pts</p>
+                    <p className="text-xs text-muted-foreground">{totalEventosAtleta} eventos</p>
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {Object.entries(athleteData).map(([fundamento, data]) => {
-                    if (data.acertos === 0 && data.erros === 0) return null;
-                    const fundTotal = data.acertos + data.erros;
-                    const fundEficiencia = fundTotal > 0 ? Math.round((data.acertos / fundTotal) * 100) : 0;
-                    
-                    return (
-                      <div key={fundamento} className="bg-muted/30 p-2 rounded-md text-sm">
-                        <div className="flex justify-between items-center">
-                          <span>{fundamento}</span>
-                          <span className="text-xs">{fundEficiencia}%</span>
-                        </div>
-                        <div className="flex justify-between text-xs mt-1">
-                          <span className="flex items-center text-green-600">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {data.acertos}
-                          </span>
-                          <span className="flex items-center text-red-600">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            {data.erros}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {fundamentosAvaliados.map(fund => (
+                    <Badge key={fund} variant="outline" className="text-xs">
+                      {fund}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             );
           })}
         </TabsContent>
-
+        
         {/* Fundamentos tab */}
         <TabsContent value="fundamentos" className="space-y-3 max-h-[40vh] overflow-y-auto">
           {fundamentos.map(fundamento => {
-            let fundAcertos = 0;
-            let fundErros = 0;
-            const athleteResults = [];
-            
-            // Calculate total acertos/erros for this fundamento and prepare athlete data
-            athletesWithEvaluations.forEach(({ atleta }) => {
-              const fundData = evaluationData[atleta.id]?.[fundamento];
-              if (fundData && (fundData.acertos > 0 || fundData.erros > 0)) {
-                fundAcertos += fundData.acertos;
-                fundErros += fundData.erros;
-                
-                athleteResults.push({
-                  atleta,
-                  acertos: fundData.acertos,
-                  erros: fundData.erros,
-                  total: fundData.acertos + fundData.erros,
-                  eficiencia: Math.round((fundData.acertos / (fundData.acertos + fundData.erros)) * 100)
-                });
+            const fundData = dadosPorFundamento[fundamento] || { eventos: [], totalPontos: 0, atletasAvaliados: new Set() };
+            const tiposEvento = fundData.eventos.reduce((acc, ev) => {
+              if (!acc[ev.tipo_evento]) {
+                acc[ev.tipo_evento] = 0;
               }
-            });
-            
-            if (athleteResults.length === 0) return null;
-            
-            const fundTotal = fundAcertos + fundErros;
-            const fundEficiencia = fundTotal > 0 ? Math.round((fundAcertos / fundTotal) * 100) : 0;
+              acc[ev.tipo_evento]++;
+              return acc;
+            }, {} as Record<string, number>);
             
             return (
               <div key={fundamento} className="border rounded-lg p-3 bg-background">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-medium">{fundamento}</h3>
-                  <Badge variant="outline">
-                    {fundEficiencia}% eficiência
-                  </Badge>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                  <div className="bg-muted/50 p-1 rounded-md">
-                    <div className="text-lg font-bold">{fundTotal}</div>
-                    <div className="text-xs text-muted-foreground">Total</div>
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium">{fundamento}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {fundData.atletasAvaliados.size} atletas avaliados
+                    </p>
                   </div>
-                  <div className="bg-green-500/10 p-1 rounded-md">
-                    <div className="text-lg font-bold text-green-600">{fundAcertos}</div>
-                    <div className="text-xs text-muted-foreground">Acertos</div>
-                  </div>
-                  <div className="bg-red-500/10 p-1 rounded-md">
-                    <div className="text-lg font-bold text-red-600">{fundErros}</div>
-                    <div className="text-xs text-muted-foreground">Erros</div>
+                  <div className="text-right">
+                    <p className="font-medium">{fundData.totalPontos.toFixed(1)} pts</p>
+                    <p className="text-xs text-muted-foreground">{fundData.eventos.length} eventos</p>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  {athleteResults.map(result => (
-                    <div 
-                      key={result.atleta.id} 
-                      className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/30 text-sm"
-                    >
-                      <div className="flex items-center">
-                        <Avatar className="h-6 w-6 mr-2">
-                          <AvatarFallback className="text-xs">
-                            {result.atleta.nome.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{result.atleta.nome}</span>
+                <div className="mt-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(tiposEvento).map(([tipo, count]) => (
+                      <div key={tipo} className="text-xs flex justify-between px-2 py-1 bg-muted/30 rounded">
+                        <span>{tipo}</span>
+                        <span className="font-medium">{count}x</span>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <span className="text-green-600">{result.acertos}</span>
-                        <span className="text-red-600">{result.erros}</span>
-                        <span className="text-xs bg-muted rounded px-1">
-                          {result.eficiencia}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             );
@@ -369,27 +286,9 @@ const EvaluationSummary = ({
         </TabsContent>
       </Tabs>
 
-      <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={onEdit}>
-          <Edit className="h-4 w-4 mr-2" />
-          Editar avaliação
-        </Button>
-        
-        <Button 
-          onClick={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <>
-              <LoadingSpinner className="h-4 w-4 mr-2" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Confirmar e Salvar
-            </>
-          )}
+      <div className="pt-4 mt-4 flex justify-center">
+        <Button onClick={handleSalvarEFechar} className="w-full">
+          Concluir
         </Button>
       </div>
     </div>

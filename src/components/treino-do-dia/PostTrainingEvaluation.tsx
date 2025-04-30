@@ -10,11 +10,17 @@ import {
 import { fetchPresencasAtletas, salvarAvaliacaoExercicio } from "@/services/treinosDoDiaService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, X, CheckCircle2, PlusCircle, MinusCircle, ClipboardEdit } from "lucide-react";
+import { Search, X, CheckCircle2, PlusCircle, MinusCircle, ClipboardEdit, Check, FileMinus, FilePlus, ChevronDown } from "lucide-react";
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { buscarEventosQualificados } from "@/services/avaliacaoQualitativaService";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface PostTrainingEvaluationProps {
   treinoDoDiaId: string;
@@ -31,12 +37,22 @@ const PostTrainingEvaluation: React.FC<PostTrainingEvaluationProps> = ({ treinoD
   const [erros, setErros] = useState(0);
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [eventosAtleta, setEventosAtleta] = useState<any[]>([]);
+  const [carregandoEventos, setCarregandoEventos] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       loadAthletes();
     }
   }, [isOpen, treinoDoDiaId]);
+
+  useEffect(() => {
+    if (selectedAthlete && fundamento) {
+      carregarEventosAtleta(selectedAthlete.atleta.id, fundamento);
+    } else {
+      setEventosAtleta([]);
+    }
+  }, [selectedAthlete, fundamento]);
 
   const loadAthletes = async () => {
     try {
@@ -233,6 +249,42 @@ const PostTrainingEvaluation: React.FC<PostTrainingEvaluationProps> = ({ treinoD
     item.atleta.nome.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Função para carregar eventos do atleta no fundamento atual
+  const carregarEventosAtleta = async (atletaId: string, fundamento: string) => {
+    try {
+      setCarregandoEventos(true);
+      const eventos = await buscarEventosQualificados({
+        atleta_id: atletaId,
+        fundamento: fundamento
+      });
+      
+      // Ordenar por data, mais recentes primeiro
+      const eventosOrdenados = eventos.sort((a, b) => {
+        const dataA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const dataB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return dataB - dataA;
+      });
+      
+      setEventosAtleta(eventosOrdenados);
+    } catch (error) {
+      console.error("Erro ao carregar eventos do atleta:", error);
+    } finally {
+      setCarregandoEventos(false);
+    }
+  };
+  
+  // Função para formatar data relativa
+  const formatarDataRelativa = (dataString: string) => {
+    try {
+      return formatDistanceToNow(new Date(dataString), { 
+        addSuffix: true,
+        locale: ptBR
+      });
+    } catch (e) {
+      return "Data desconhecida";
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
@@ -354,74 +406,157 @@ const PostTrainingEvaluation: React.FC<PostTrainingEvaluationProps> = ({ treinoD
                   </TabsList>
                   
                   {/* Conteúdo comum para todas as abas */}
-                  {['saque', 'recepcao', 'levantamento', 'ataque', 'bloqueio', 'defesa'].map(tab => (
-                    <TabsContent key={tab} value={tab}>
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="flex flex-col items-center border rounded-lg p-4">
-                          <div className="text-lg font-semibold mb-2">Acertos</div>
-                          <div className="flex items-center">
-                            <Button variant="outline" size="icon" onClick={decrementAcertos} disabled={acertos <= 0}>
-                              <MinusCircle className="h-5 w-5" />
-                            </Button>
-                            <Input
-                              type="number"
-                              value={acertos}
-                              readOnly
-                              className="w-20 text-center mx-2"
-                            />
-                            <Button variant="outline" size="icon" onClick={incrementAcertos}>
-                              <PlusCircle className="h-5 w-5" />
-                            </Button>
+                  <TabsContent value={fundamento.toLowerCase().replace('ç', 'c')} className="mt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Coluna da avaliação */}
+                      <div>
+                        <div className="space-y-4">
+                          {/* Contador de acertos/erros */}
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Acertos */}
+                            <div className="border rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-medium">Acertos</label>
+                                <div className="flex items-center space-x-1">
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-6 w-6" 
+                                    onClick={decrementAcertos}
+                                    disabled={acertos <= 0}
+                                  >
+                                    <FileMinus className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-6 w-6" 
+                                    onClick={incrementAcertos}
+                                  >
+                                    <FilePlus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="text-2xl font-bold text-center py-1">{acertos}</div>
+                            </div>
+                            
+                            {/* Erros */}
+                            <div className="border rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-medium">Erros</label>
+                                <div className="flex items-center space-x-1">
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-6 w-6" 
+                                    onClick={decrementErros}
+                                    disabled={erros <= 0}
+                                  >
+                                    <FileMinus className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-6 w-6" 
+                                    onClick={incrementErros}
+                                  >
+                                    <FilePlus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="text-2xl font-bold text-center py-1">{erros}</div>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="flex flex-col items-center border rounded-lg p-4">
-                          <div className="text-lg font-semibold mb-2">Erros</div>
-                          <div className="flex items-center">
-                            <Button variant="outline" size="icon" onClick={decrementErros} disabled={erros <= 0}>
-                              <MinusCircle className="h-5 w-5" />
-                            </Button>
-                            <Input
-                              type="number"
-                              value={erros}
-                              readOnly
-                              className="w-20 text-center mx-2"
+                          
+                          {/* Campo para observações */}
+                          <div>
+                            <label className="text-sm font-medium block mb-2">
+                              Observações sobre o desempenho
+                            </label>
+                            <Textarea 
+                              placeholder="Descreva o desempenho, aspectos técnicos, sugestões de melhoria..."
+                              className="min-h-[100px]"
+                              value={observacoes}
+                              onChange={(e) => setObservacoes(e.target.value)}
                             />
-                            <Button variant="outline" size="icon" onClick={incrementErros}>
-                              <PlusCircle className="h-5 w-5" />
-                            </Button>
                           </div>
+                          
+                          {/* Botão salvar */}
+                          <Button 
+                            className="w-full" 
+                            onClick={handleSaveEvaluation}
+                            disabled={saving || (acertos === 0 && erros === 0)}
+                          >
+                            {saving ? (
+                              <>
+                                <LoadingSpinner className="mr-2 h-4 w-4" />
+                                Salvando...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="mr-2 h-4 w-4" />
+                                Salvar Avaliação
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
                       
-                      <div className="mb-4">
-                        <label className="text-sm font-medium mb-1 block">
-                          Observações (opcional)
-                        </label>
-                        <Textarea
-                          placeholder="Adicione observações sobre a avaliação..."
-                          className="resize-none"
-                          value={observacoes}
-                          onChange={(e) => setObservacoes(e.target.value)}
-                        />
+                      {/* Coluna de histórico de avaliações */}
+                      <div>
+                        <h4 className="font-medium text-sm mb-3">Histórico de {fundamento}</h4>
+                        
+                        {carregandoEventos ? (
+                          <div className="flex justify-center py-8">
+                            <LoadingSpinner />
+                          </div>
+                        ) : eventosAtleta.length === 0 ? (
+                          <div className="text-center py-4 border rounded-lg bg-muted/30">
+                            <p className="text-muted-foreground">Sem avaliações anteriores para este fundamento</p>
+                          </div>
+                        ) : (
+                          <ScrollArea className="h-[280px] pr-4">
+                            <div className="space-y-3">
+                              {eventosAtleta.map(evento => (
+                                <Card key={evento.id} className="border-l-4" style={{ 
+                                  borderLeftColor: evento.peso > 0 ? 'var(--success)' : 
+                                                  evento.peso < 0 ? 'var(--destructive)' : 
+                                                  'var(--border)' 
+                                }}>
+                                  <CardContent className="p-3">
+                                    <div className="flex justify-between items-start mb-1">
+                                      <Badge variant={evento.peso > 0 ? "outline" : "destructive"} 
+                                        className="text-xs font-normal">
+                                        {evento.tipo_evento} ({evento.peso > 0 ? '+' : ''}{evento.peso})
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        {evento.timestamp ? formatarDataRelativa(evento.timestamp) : ''}
+                                      </span>
+                                    </div>
+                                    {evento.observacoes && (
+                                      <p className="text-sm mt-2 text-muted-foreground">
+                                        {evento.observacoes}
+                                      </p>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        )}
                       </div>
-                      
-                      <Button 
-                        className="w-full" 
-                        onClick={handleSaveEvaluation}
-                        disabled={saving}
-                      >
-                        {saving && <LoadingSpinner className="mr-2" />}
-                        Salvar Avaliação
-                      </Button>
-                    </TabsContent>
-                  ))}
+                    </div>
+                  </TabsContent>
                 </Tabs>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-[60vh]">
-                <p className="text-muted-foreground mb-2">Selecione um atleta para avaliar</p>
-                <p className="text-sm text-muted-foreground">Escolha um atleta da lista à esquerda para começar a avaliação</p>
+              <div className="flex flex-col items-center justify-center h-full py-10">
+                <div className="bg-muted/30 h-20 w-20 rounded-full flex items-center justify-center">
+                  <ChevronDown className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <p className="mt-4 text-center text-muted-foreground">
+                  Selecione um atleta para iniciar a avaliação
+                </p>
               </div>
             )}
           </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -20,11 +19,7 @@ type Step = "select-exercise" | "evaluate" | "summary";
 export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) {
   const [step, setStep] = useState<Step>("select-exercise");
   const [selectedExercise, setSelectedExercise] = useState<any>(null);
-  const [evaluationData, setEvaluationData] = useState<{
-    [atletaId: string]: {
-      [fundamento: string]: { acertos: number; erros: number };
-    };
-  }>({});
+  const [evaluationData, setEvaluationData] = useState<{}>({});
   const { toast } = useToast();
 
   // Fetch exercises for this treino do dia
@@ -43,6 +38,7 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
   };
 
   const handleFinishEvaluation = (evaluationResults: any) => {
+    // Apenas para compatibilidade com o componente anterior
     setEvaluationData(evaluationResults);
     setStep("summary");
   };
@@ -113,7 +109,6 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
           <RealTimeEvaluation
             exercise={selectedExercise}
             treinoDoDiaId={treinoDoDiaId}
-            initialData={evaluationData}
             onBack={handleBackToExercises}
             onComplete={handleFinishEvaluation}
           />
@@ -123,7 +118,7 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
           <EvaluationSummary
             exercise={selectedExercise}
             treinoDoDiaId={treinoDoDiaId}
-            evaluationData={evaluationData}
+            evaluationData={{}} // Não utilizamos mais dados binários
             onEdit={handleEditEvaluation}
             onSave={handleSaveComplete}
           />
