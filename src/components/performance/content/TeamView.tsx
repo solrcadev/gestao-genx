@@ -13,6 +13,9 @@ interface TeamViewProps {
 }
 
 export function TeamView({ team, dateRange, performanceData, onSelectAthlete }: TeamViewProps) {
+  // State for selected foundation
+  const [fundamentoSelecionado, setFundamentoSelecionado] = React.useState<string>('saque');
+  
   const mediasFundamentos = React.useMemo(() => {
     const fundamentos = [
       { nome: 'saque' as const, media: 0, totalExecucoes: 0 },
@@ -48,10 +51,12 @@ export function TeamView({ team, dateRange, performanceData, onSelectAthlete }: 
     <div className="space-y-8">
       <TeamPerformanceSummary mediasFundamentos={mediasFundamentos} />
       <TopAthletesSection
-        fundamentoSelecionado="saque"
-        setFundamentoSelecionado={() => {}}
-        topAtletas={[]}
+        fundamentoSelecionado={fundamentoSelecionado}
+        setFundamentoSelecionado={setFundamentoSelecionado}
+        topAtletas={[]} // This prop is now unused, data comes from the hook
         onSelectAthlete={onSelectAthlete}
+        team={team}
+        dateRange={dateRange}
       />
       <PerformanceAlerts
         alertas={[]}

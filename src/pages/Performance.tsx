@@ -18,6 +18,7 @@ import AthleteAnalysis from '@/components/performance/AthleteAnalysis';
 import AthleteRanking from '@/components/performance/AthleteRanking';
 import Rankings from '@/components/performance/Rankings';
 import { IndividualView } from '@/components/performance/content/IndividualView';
+import { TeamView } from '@/components/performance/content/TeamView';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -199,6 +200,9 @@ const Performance = () => {
     console.log('Active tab:', activeTab);
   }, [activeTab]);
 
+  const [dataInicio, setDataInicio] = useState<string>(new Date(new Date().setDate(new Date().getDate() - 7)).toISOString());
+  const [dataFim, setDataFim] = useState<string>(new Date().toISOString());
+
   return (
     <div className="container py-6">
       <div className="flex flex-col gap-4">
@@ -311,16 +315,14 @@ const Performance = () => {
                     mediasFundamentos={mediasFundamentos}
                   />
               
-              <TopAthletesSection
-                    topAtletas={topAtletas} 
-                fundamentoSelecionado={fundamentoSelecionado}
-                setFundamentoSelecionado={setFundamentoSelecionado}
-                    onSelectAthlete={(id) => handleSelectAthlete(id)}
-              />
-              
-              <PerformanceAlerts
-                alertas={alertas}
-                    onSelectAthlete={(id) => handleSelectAthlete(id)}
+              <TeamView
+                team={team}
+                dateRange={{
+                  from: new Date(dataInicio),
+                  to: new Date(dataFim)
+                }}
+                performanceData={performanceData || []}
+                onSelectAthlete={(id) => handleSelectAthlete(id)}
               />
             </div>
               )}
