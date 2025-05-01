@@ -9,39 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      atas_reuniao: {
-        Row: {
-          created_at: string | null
-          data: string
-          decisoes: Json | null
-          id: string
-          participantes: string[] | null
-          titulo: string
-          topicos: Json | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          data: string
-          decisoes?: Json | null
-          id?: string
-          participantes?: string[] | null
-          titulo: string
-          topicos?: Json | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          data?: string
-          decisoes?: Json | null
-          id?: string
-          participantes?: string[] | null
-          titulo?: string
-          topicos?: Json | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       athletes: {
         Row: {
           access_status: string | null
@@ -54,7 +21,6 @@ export type Database = {
           imagem_url: string | null
           nome: string
           posicao: string
-          telefone: string | null
           time: string
           updated_at: string | null
           user_id: string | null
@@ -70,7 +36,6 @@ export type Database = {
           imagem_url?: string | null
           nome: string
           posicao: string
-          telefone?: string | null
           time: string
           updated_at?: string | null
           user_id?: string | null
@@ -86,66 +51,11 @@ export type Database = {
           imagem_url?: string | null
           nome?: string
           posicao?: string
-          telefone?: string | null
           time?: string
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
-      }
-      avaliacoes_eventos_qualificados: {
-        Row: {
-          atleta_id: string
-          created_at: string | null
-          fundamento: string
-          id: string
-          observacoes: string | null
-          peso: number
-          timestamp: string | null
-          tipo_evento: string
-          treino_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          atleta_id: string
-          created_at?: string | null
-          fundamento: string
-          id?: string
-          observacoes?: string | null
-          peso: number
-          timestamp?: string | null
-          tipo_evento: string
-          treino_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          atleta_id?: string
-          created_at?: string | null
-          fundamento?: string
-          id?: string
-          observacoes?: string | null
-          peso?: number
-          timestamp?: string | null
-          tipo_evento?: string
-          treino_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_atleta"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_atleta"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
-            referencedColumns: ["atleta_id"]
-          },
-        ]
       }
       avaliacoes_exercicios_backup: {
         Row: {
@@ -188,7 +98,6 @@ export type Database = {
           acertos: number
           atleta_id: string
           created_at: string | null
-          data_avaliacao: string | null
           erros: number
           exercicio_id: string | null
           fundamento: string
@@ -202,7 +111,6 @@ export type Database = {
           acertos?: number
           atleta_id: string
           created_at?: string | null
-          data_avaliacao?: string | null
           erros?: number
           exercicio_id?: string | null
           fundamento: string
@@ -216,7 +124,6 @@ export type Database = {
           acertos?: number
           atleta_id?: string
           created_at?: string | null
-          data_avaliacao?: string | null
           erros?: number
           exercicio_id?: string | null
           fundamento?: string
@@ -238,7 +145,7 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
           {
@@ -311,74 +218,8 @@ export type Database = {
             foreignKeyName: "avaliacoes_historico_avaliacao_id_fkey"
             columns: ["avaliacao_id"]
             isOneToOne: false
-            referencedRelation: "v_avaliacoes_fundamento_resumidas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_historico_avaliacao_id_fkey"
-            columns: ["avaliacao_id"]
-            isOneToOne: false
             referencedRelation: "vw_avaliacoes"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      convites_pendentes: {
-        Row: {
-          atleta_id: string
-          created_at: string | null
-          email: string
-          expires_at: string | null
-          id: string
-          nome: string | null
-          status: string | null
-        }
-        Insert: {
-          atleta_id: string
-          created_at?: string | null
-          email: string
-          expires_at?: string | null
-          id?: string
-          nome?: string | null
-          status?: string | null
-        }
-        Update: {
-          atleta_id?: string
-          created_at?: string | null
-          email?: string
-          expires_at?: string | null
-          id?: string
-          nome?: string | null
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "convites_pendentes_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "convites_pendentes_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
-            referencedColumns: ["atleta_id"]
-          },
-          {
-            foreignKeyName: "fk_convites_atleta"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_convites_atleta"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
-            referencedColumns: ["atleta_id"]
           },
         ]
       }
@@ -470,7 +311,7 @@ export type Database = {
             foreignKeyName: "destaques_atletas_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
         ]
@@ -851,7 +692,7 @@ export type Database = {
             foreignKeyName: "fk_atleta"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
         ]
@@ -1021,7 +862,7 @@ export type Database = {
             foreignKeyName: "notificacoes_preferencias_athlete_id_fkey"
             columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
         ]
@@ -1072,7 +913,7 @@ export type Database = {
             foreignKeyName: "notificacoes_subscriptions_athlete_id_fkey"
             columns: ["athlete_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
         ]
@@ -1080,41 +921,65 @@ export type Database = {
       perfis: {
         Row: {
           atleta_id: string | null
+          created_at: string | null
           funcao: string
           id: string
-          status: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
           atleta_id?: string | null
+          created_at?: string | null
           funcao: string
           id?: string
-          status?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           atleta_id?: string | null
+          created_at?: string | null
           funcao?: string
           id?: string
-          status?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "perfis_atleta_id_fkey"
             columns: ["atleta_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "athletes"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "perfis_atleta_id_fkey"
             columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            isOneToOne: true
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       rankings: {
         Row: {
@@ -1192,7 +1057,7 @@ export type Database = {
             foreignKeyName: "registro_execucoes_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
           {
@@ -1245,7 +1110,7 @@ export type Database = {
             foreignKeyName: "subscriptions_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
         ]
@@ -1455,7 +1320,7 @@ export type Database = {
             foreignKeyName: "treinos_atletas_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
           {
@@ -1584,7 +1449,7 @@ export type Database = {
             foreignKeyName: "treinos_presencas_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
           {
@@ -1655,8 +1520,8 @@ export type Database = {
           exercicio_id: string | null
           fundamento: string | null
           id: string | null
-          observacoes: string | null
-          origem: string | null
+          timestamp: string | null
+          treino_id: string | null
         }
         Insert: {
           acertos?: number | null
@@ -1666,8 +1531,8 @@ export type Database = {
           exercicio_id?: string | null
           fundamento?: string | null
           id?: string | null
-          observacoes?: string | null
-          origem?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
         }
         Update: {
           acertos?: number | null
@@ -1677,8 +1542,8 @@ export type Database = {
           exercicio_id?: string | null
           fundamento?: string | null
           id?: string | null
-          observacoes?: string | null
-          origem?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
         }
         Relationships: [
           {
@@ -1692,7 +1557,7 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
           {
@@ -1700,6 +1565,13 @@ export type Database = {
             columns: ["exercicio_id"]
             isOneToOne: false
             referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
             referencedColumns: ["id"]
           },
         ]
@@ -1713,6 +1585,8 @@ export type Database = {
           exercicio_id: string | null
           fundamento: string | null
           id: string | null
+          timestamp: string | null
+          treino_id: string | null
         }
         Insert: {
           acertos?: number | null
@@ -1722,6 +1596,8 @@ export type Database = {
           exercicio_id?: string | null
           fundamento?: string | null
           id?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
         }
         Update: {
           acertos?: number | null
@@ -1731,6 +1607,8 @@ export type Database = {
           exercicio_id?: string | null
           fundamento?: string | null
           id?: string | null
+          timestamp?: string | null
+          treino_id?: string | null
         }
         Relationships: [
           {
@@ -1744,7 +1622,7 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
           },
           {
@@ -1754,92 +1632,25 @@ export type Database = {
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      v_avaliacoes_fundamento_resumidas: {
-        Row: {
-          acertos: number | null
-          atleta_id: string | null
-          created_at: string | null
-          erros: number | null
-          exercicio_id: string | null
-          fundamento: string | null
-          id: string | null
-          observacoes: string | null
-          origem: string | null
-        }
-        Insert: {
-          acertos?: number | null
-          atleta_id?: string | null
-          created_at?: string | null
-          erros?: number | null
-          exercicio_id?: string | null
-          fundamento?: string | null
-          id?: string | null
-          observacoes?: string | null
-          origem?: string | null
-        }
-        Update: {
-          acertos?: number | null
-          atleta_id?: string | null
-          created_at?: string | null
-          erros?: number | null
-          exercicio_id?: string | null
-          fundamento?: string | null
-          id?: string | null
-          observacoes?: string | null
-          origem?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
-            columns: ["atleta_id"]
+            foreignKeyName: "avaliacoes_fundamento_treino_id_fkey"
+            columns: ["treino_id"]
             isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
-            referencedColumns: ["atleta_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
-            columns: ["exercicio_id"]
-            isOneToOne: false
-            referencedRelation: "exercicios"
+            referencedRelation: "treinos"
             referencedColumns: ["id"]
           },
         ]
-      }
-      vw_avaliacao_qualitativa_media: {
-        Row: {
-          atleta_id: string | null
-          atleta_nome: string | null
-          avaliacao_qualitativa: string | null
-          avaliacoes_negativas: number | null
-          avaliacoes_positivas: number | null
-          fundamento: string | null
-          media_peso: number | null
-          nota_percentual: number | null
-          time: string | null
-          total_avaliacoes: number | null
-          ultima_avaliacao: string | null
-        }
-        Relationships: []
       }
       vw_avaliacoes: {
         Row: {
           acertos: number | null
           atleta_id: string | null
           atleta_nome: string | null
-          created_at: string | null
           erros: number | null
-          exercicio_id: string | null
           fundamento: string | null
           id: string | null
+          nota_calculada: number | null
+          timestamp: string | null
         }
         Relationships: [
           {
@@ -1853,53 +1664,30 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
             columns: ["atleta_id"]
             isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
+            referencedRelation: "vw_fundamentos_ranking"
             referencedColumns: ["atleta_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
-            columns: ["exercicio_id"]
-            isOneToOne: false
-            referencedRelation: "exercicios"
-            referencedColumns: ["id"]
           },
         ]
       }
       vw_fundamentos_ranking: {
         Row: {
           atleta_id: string | null
+          atleta_nome: string | null
           eficiencia: number | null
           fundamento: string | null
+          posicao: number | null
+          primeira_avaliacao: string | null
+          ranking_score: number | null
+          time: string | null
           total_acertos: number | null
           total_erros: number | null
+          total_execucoes: number | null
+          ultima_avaliacao: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "athletes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_fundamento_atleta_id_fkey"
-            columns: ["atleta_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacao_qualitativa_media"
-            referencedColumns: ["atleta_id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
-      atualizar_perfil_atleta: {
-        Args: { perfil_id: string; p_atleta_id: string }
-        Returns: undefined
-      }
-      atualizar_perfil_atleta_user: {
-        Args: { p_id: string; p_user_id: string }
-        Returns: undefined
-      }
       backup_avaliacoes_exercicios_view: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1911,26 +1699,6 @@ export type Database = {
       cleanup_old_subscriptions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
-      }
-      criar_perfil_atleta: {
-        Args: { p_user_id: string; p_atleta_id: string }
-        Returns: undefined
-      }
-      criar_tabela_atas_reuniao: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      criar_tabela_eventos_qualificados: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      executar_sql: {
-        Args: { sql_query: string }
-        Returns: undefined
-      }
-      fix_security_definer_views: {
-        Args: Record<PropertyKey, never>
-        Returns: string
       }
       user_has_role: {
         Args: { requested_role: Database["public"]["Enums"]["user_role"] }
