@@ -1,7 +1,9 @@
+
 import { Trophy, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -21,13 +23,15 @@ interface TopAthletesSectionProps {
   setFundamentoSelecionado: (fundamento: Fundamento) => void;
   topAtletas: TopAtleta[];
   onSelectAthlete: (id: string) => void;
+  isLoading?: boolean;
 }
 
 const TopAthletesSection = ({ 
   fundamentoSelecionado, 
   setFundamentoSelecionado, 
   topAtletas, 
-  onSelectAthlete 
+  onSelectAthlete,
+  isLoading = false
 }: TopAthletesSectionProps) => {
   
   // Função para determinar a cor com base no percentual
@@ -60,7 +64,25 @@ const TopAthletesSection = ({
         </Select>
       </div>
       
-      {topAtletas.length > 0 ? (
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((index) => (
+            <Card key={`skeleton-${index}`} className="overflow-hidden">
+              <div className="p-4 flex items-center gap-4">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-40 mb-2" />
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+                <Skeleton className="h-8 w-8 rounded" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : topAtletas.length > 0 ? (
         <div className="space-y-3">
           {topAtletas.map((atleta, index) => (
             <Card key={atleta.id} className="overflow-hidden">
@@ -91,9 +113,9 @@ const TopAthletesSection = ({
             </Card>
           ))}
           <div className="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded-md">
-            <p>• Eficiência = (Total de Acertos / Total de Tentativas) * 100</p>
+            <p>• Eficiência baseada na pontuação qualitativa (média ponderada)</p>
             <p>• Somente atletas com no mínimo 5 tentativas são considerados</p>
-            <p>• Em caso de empate: 1) Maior número de tentativas, 2) Ordem alfabética</p>
+            <p>• Em caso de empate: 1) Maior pontuação, 2) Maior número de tentativas, 3) Ordem alfabética</p>
           </div>
         </div>
       ) : (
@@ -109,4 +131,4 @@ const TopAthletesSection = ({
   );
 };
 
-export default TopAthletesSection; 
+export default TopAthletesSection;

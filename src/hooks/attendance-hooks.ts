@@ -1,5 +1,6 @@
+
 import { useQuery } from '@tanstack/react-query';
-import { fetchPresencasAtletas } from '@/services/treinosDoDiaService';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Hook para buscar presenças dos atletas para um treino específico
@@ -9,12 +10,124 @@ import { fetchPresencasAtletas } from '@/services/treinosDoDiaService';
 export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
   return useQuery({
     queryKey: ['attendance', treinoDoDiaId],
-    queryFn: () => {
+    queryFn: async () => {
       if (!treinoDoDiaId) {
-        return Promise.resolve([]);
+        return [];
       }
-      return fetchPresencasAtletas(treinoDoDiaId);
+      
+      // Buscar dados de presença do Supabase
+      const { data: presencas, error: presencasError } = await supabase
+        .from('treinos_presencas')
+        .select(`
+          id,
+          atleta_id,
+          presente,
+          justificativa,
+          created_at,
+          atleta:athletes(id, nome, posicao, time)
+        `)
+        .eq('treino_do_dia_id', treinoDoDiaId);
+      
+      if (presencasError) {
+        throw new Error(`Erro ao buscar presenças: ${presencasError.message}`);
+      }
+
+      // Se não houver presença registrada, buscar atletas disponíveis para o treino
+      if (presencas.length === 0) {
+        // Primeiro buscar dados do treino para saber o time
+        const { data: treinoDoDia, error: treinoError } = await supabase
+          .from('treinos_do_dia')
+          .select(`
+            treino:treino_id(id, time)
+          `)
+          .eq('id', treinoDoDiaId)
+          .single();
+          
+        if (treinoError) {
+          throw new Error(`Erro ao buscar treino: ${treinoError.message}`);
+        }
+          
+        // Buscar todos os atletas do time correspondente
+        const time = treinoDoDia?.treino?.time;
+        
+        if (!time) {
+          throw new Error('Não foi possível determinar o time do treino');
+        }
+
+        const { data: atletas, error: atletasError } = await supabase
+          .from('athletes')
+          .select('id, nome, posicao, time')
+          .eq('time', time);
+          
+        if (atletasError) {
+          throw new Error(`Erro ao buscar atletas: ${atletasError.message}`);
+        }
+
+        // Formatar atletas como registros de presença (todos presentes por padrão)
+        return atletas.map(atleta => ({
+          id: null, // ID será gerado ao salvar
+          atleta_id: atleta.id,
+          presente: true, // Padrão é presente
+          justificativa: null,
+          created_at: new Date().toISOString(),
+          atleta
+        }));
+      }
+      
+      return presencas;
     },
     enabled: !!treinoDoDiaId,
   });
-} 
+}
+
+/**
+ * Função para salvar presenças de atletas
+ * @param treinoDoDiaId ID do treino do dia
+ * @param presencas Array de presenças para salvar
+ */
+export async function saveAthleteAttendance(
+  treinoDoDiaId: string,
+  presencas: {
+    atleta_id: string;
+    presente: boolean;
+    justificativa?: string | null;
+    id?: string | null;
+  }[]
+) {
+  // Separar registros existentes (com ID) dos novos
+  const registrosExistentes = presencas.filter(p => p.id);
+  const novosRegistros = presencas.filter(p => !p.id);
+  
+  const resultados = [];
+  
+  // Atualizar registros existentes
+  for (const registro of registrosExistentes) {
+    const { id, ...dadosAtualizados } = registro;
+    if (id) { // Typescript type guard
+      const { data, error } = await supabase
+        .from('treinos_presencas')
+        .update(dadosAtualizados)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      if (data) resultados.push(...data);
+    }
+  }
+  
+  // Inserir novos registros
+  if (novosRegistros.length > 0) {
+    const { data, error } = await supabase
+      .from('treinos_presencas')
+      .insert(novosRegistros.map(registro => ({
+        ...registro,
+        treino_do_dia_id: treinoDoDiaId
+      })))
+      .select();
+    
+    if (error) throw error;
+    if (data) resultados.push(...data);
+  }
+  
+  return resultados;
+}

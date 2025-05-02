@@ -1,6 +1,8 @@
+
 import { AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -17,9 +19,37 @@ interface Alerta {
 interface PerformanceAlertsProps {
   alertas: Alerta[];
   onSelectAthlete: (id: string) => void;
+  isLoading?: boolean;
 }
 
-const PerformanceAlerts = ({ alertas, onSelectAthlete }: PerformanceAlertsProps) => {
+const PerformanceAlerts = ({ alertas, onSelectAthlete, isLoading = false }: PerformanceAlertsProps) => {
+  if (isLoading) {
+    return (
+      <section>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-destructive" /> Alertas de Desempenho
+        </h2>
+        <div className="space-y-3">
+          {Array(3).fill(0).map((_, i) => (
+            <Card key={i} className="overflow-hidden border-l-4 border-l-destructive">
+              <div className="p-4">
+                <div className="flex justify-between items-center mb-1">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+                <Skeleton className="h-4 w-32 mb-2" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+    );
+  }
+  
   return (
     <section>
       <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -69,4 +99,4 @@ const PerformanceAlerts = ({ alertas, onSelectAthlete }: PerformanceAlertsProps)
   );
 };
 
-export default PerformanceAlerts; 
+export default PerformanceAlerts;
