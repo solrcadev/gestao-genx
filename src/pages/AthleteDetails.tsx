@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -6,11 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ArrowLeft, User, BarChart2, Calendar } from 'lucide-react';
+import { ArrowLeft, User, BarChart2, Calendar, Target } from 'lucide-react';
 import { Athlete } from '@/types';
 import { getAthleteById } from '@/services/athleteService';
 import HistoricoTreinosAtleta from '@/components/atleta/HistoricoTreinosAtleta';
 import { AthleteAccessManager } from '@/components/atleta/AthleteAccessManager';
+import { MetasAtleta } from '@/components/atleta/MetasAtleta';
+import { AvaliacoesRecentes } from '@/components/atleta/AvaliacoesRecentes';
+import { ResumoDesempenho } from '@/components/atleta/ResumoDesempenho';
 
 const AthleteDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -115,7 +119,7 @@ const AthleteDetails = () => {
               <div className="text-sm text-muted-foreground mt-1">
                 {athlete.posicao} • {athlete.idade} anos • {athlete.altura}cm
               </div>
-              <div className={`mt-2 inline-block px-3 py-1 rounded-full text-sm font-medium ${getTeamColor(athlete.time)}`}>
+              <div className={`mt-2 inline-block px-3 py-1 rounded-full text-sm font-medium text-white ${getTeamColor(athlete.time)}`}>
                 {athlete.time}
               </div>
             </div>
@@ -130,18 +134,22 @@ const AthleteDetails = () => {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid sm:grid-cols-4 grid-cols-2 w-full gap-1">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Perfil</span>
+            <span className="sm:inline">Perfil</span>
           </TabsTrigger>
           <TabsTrigger value="performance" className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Desempenho</span>
+            <span className="sm:inline">Desempenho</span>
+          </TabsTrigger>
+          <TabsTrigger value="evaluations" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span className="sm:inline">Avaliações</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">Histórico</span>
+            <span className="sm:inline">Histórico</span>
           </TabsTrigger>
         </TabsList>
 
@@ -189,14 +197,14 @@ const AthleteDetails = () => {
                     <p className="font-medium">{athlete.telefone}</p>
                   </div>
                 )}
-                
-                {athlete.observacoes && (
-                  <div className="col-span-1 md:col-span-2">
-                    <p className="text-sm text-muted-foreground">Observações</p>
-                    <p className="font-medium">{athlete.observacoes}</p>
-                  </div>
-                )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-lg mb-4">Metas</h3>
+              <MetasAtleta atletaId={id || ''} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -205,17 +213,16 @@ const AthleteDetails = () => {
           <Card>
             <CardContent className="p-6">
               <h3 className="font-semibold text-lg mb-4">Estatísticas de Desempenho</h3>
-              <div className="flex flex-col items-center justify-center py-8">
-                <p className="text-muted-foreground">
-                  Aqui será exibido o desempenho detalhado do atleta.
-                </p>
-                <Button 
-                  onClick={() => navigate(`/aluno/${id}/performance`)}
-                  className="mt-4"
-                >
-                  Ver desempenho detalhado
-                </Button>
-              </div>
+              <ResumoDesempenho atletaId={id || ''} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="evaluations" className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-lg mb-4">Avaliações Recentes</h3>
+              <AvaliacoesRecentes atletaId={id || ''} />
             </CardContent>
           </Card>
         </TabsContent>

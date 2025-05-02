@@ -26,7 +26,7 @@ export function AtletaCard({ atleta, onClick }: AtletaCardProps) {
   };
 
   return (
-    <Link to={`/atleta/${atleta.id}`} className="block">
+    <Link to={`/atleta/${atleta.id}`} className="block" onClick={onClick}>
       <Card className="hover:border-primary transition-colors">
         <CardContent className="flex items-center p-4 gap-3">
           <Avatar className={`h-12 w-12 ${getTeamColor(atleta.time)} text-white`}>

@@ -36,6 +36,7 @@ export const routes = createBrowserRouter([
       { path: "presenca/:treinoDoDiaId", element: <Presenca /> },
       { path: "atletas", element: <Atletas /> },
       { path: "atleta/:id", element: <AthleteDetails /> },
+      { path: "atletas/:id", element: <Navigate to="/atleta/:id" replace /> },
       { path: "aluno/:id/performance", element: 
         <Suspense fallback={<LoadingPage />}>
           <AtletaPerformance />
