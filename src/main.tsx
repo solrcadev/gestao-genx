@@ -1,6 +1,6 @@
 
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
 import { registerPWAInstallListener, registerNetworkStatusListeners, registerServiceWorker } from './services/pwaService';
 
@@ -55,9 +55,13 @@ registerNetworkStatusListeners(
   }
 );
 
-createRoot(document.getElementById("root")!).render(
-  <App />
-);
+const root = document.getElementById("root");
+
+if (!root) {
+  console.error("Root element not found!");
+} else {
+  createRoot(root).render(<App />);
+}
 
 // Add offline toast styles
 const style = document.createElement('style');

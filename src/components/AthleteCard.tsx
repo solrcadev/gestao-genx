@@ -39,6 +39,11 @@ const AthleteCard = ({ athlete, onEdit, onDelete, index = 0 }: AthleteCardProps)
     return team === 'Masculino' ? 'bg-sport-blue' : 'bg-sport-red';
   };
 
+  const handleViewDetails = () => {
+    console.log("Viewing athlete details for:", athlete.id);
+    navigate(`/atleta/${athlete.id}`);
+  };
+
   return (
     <Transition type="slide" delay={index * 0.05}>
       <Card className="card-athlete card-hover touch-feedback">
@@ -70,7 +75,7 @@ const AthleteCard = ({ athlete, onEdit, onDelete, index = 0 }: AthleteCardProps)
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate(`/atleta/${athlete.id}`)} className="cursor-pointer">
+                <DropdownMenuItem onClick={handleViewDetails} className="cursor-pointer">
                   <Eye className="mr-2 h-4 w-4" />
                   <span>Ver Detalhes</span>
                 </DropdownMenuItem>

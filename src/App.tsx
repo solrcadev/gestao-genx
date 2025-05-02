@@ -1,4 +1,3 @@
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
@@ -8,7 +7,8 @@ import { useState, useEffect } from 'react';
 import { isRunningAsPWA, isFirstVisitAfterInstall } from './services/pwaService';
 import { WelcomeScreen } from './components/WelcomeScreen';
 
-// Context Providers
+// Import BrowserRouter separately to avoid nesting issues
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Pages
@@ -31,7 +31,7 @@ import More from '@/pages/More';
 import Ciclos from './pages/Ciclos';
 import NotificationSettings from './pages/NotificationSettings';
 import MetasEvolucao from './pages/MetasEvolucao';
-import AvaliacaoQualitativa from './pages/AvaliacaoQualitativa';
+import AvaliacaoQualitativa from '@/pages/AvaliacaoQualitativa';
 
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -41,16 +41,14 @@ import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 import AtasReuniao from './app/atas-reuniao/page';
 import NovaAtaReuniao from './app/atas-reuniao/nova/page';
 import DashboardAtasReuniao from './app/atas-reuniao/dashboard/page';
+import { useParams } from 'react-router-dom';
+import AtasReuniaoDetalhe from './app/atas-reuniao/[id]/page';
 
 // Componente wrapper para lidar com os parâmetros da rota
 const AtasReuniaoDetalhePage = () => {
   const params = useParams();
   return <AtasReuniaoDetalhe />;
 };
-
-// Importação do useParams
-import { useParams } from 'react-router-dom';
-import AtasReuniaoDetalhe from './app/atas-reuniao/[id]/page';
 
 const queryClient = new QueryClient();
 
@@ -98,7 +96,8 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <BrowserRouter>
+        {/* Keep AuthProvider inside BrowserRouter to ensure useNavigate works properly */}
         <AuthProvider>
           <RouterPersistence>
             <NotificationsManager />
@@ -123,6 +122,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Athletes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/atleta/:id"
+                element={
+                  <ProtectedRoute>
+                    <AthleteDetails />
                   </ProtectedRoute>
                 }
               />
@@ -261,7 +268,7 @@ function App() {
             {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
           </RouterPersistence>
         </AuthProvider>
-      </Router>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
