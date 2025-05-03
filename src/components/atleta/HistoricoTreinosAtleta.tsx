@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -241,7 +242,7 @@ export function HistoricoTreinosAtleta({ historico, title = 'Histórico de Trein
         </p>
         {selectedTreino && (
           <p className="text-sm">
-            Eficiência geral: <span className="font-medium">{selectedTreino.eficienciaGeral.toFixed(0)}%</span>
+            Eficiência geral: <span className="font-medium">{selectedTreino.eficienciaGeral?.toFixed(0) || 0}%</span>
           </p>
         )}
       </CardFooter>

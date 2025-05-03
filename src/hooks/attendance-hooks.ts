@@ -4,6 +4,36 @@ import { supabase } from '@/lib/supabase';
 import { TeamType } from '@/types';
 
 /**
+ * Interface para os dados retornados na consulta de presença
+ */
+interface AthleteWithAttendance {
+  id: string | null;
+  atleta_id: string;
+  presente: boolean;
+  justificativa: string | null;
+  created_at: string;
+  atleta: {
+    id: string;
+    nome: string;
+    posicao: string;
+    time: string;
+    foto_url?: string;
+  }
+}
+
+/**
+ * Interface para treino do dia
+ */
+interface TrainingItem {
+  id: string;
+  data: string;
+  nome: string;
+  local: string;
+  horario: string;
+  time: TeamType | string;
+}
+
+/**
  * Hook para buscar presenças dos atletas para um treino específico
  * @param treinoDoDiaId ID do treino do dia para buscar presenças
  * @returns Lista de atletas com status de presença
@@ -25,7 +55,7 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
           presente,
           justificativa,
           created_at,
-          atleta:athletes(id, nome, posicao, time)
+          atleta:athletes(id, nome, posicao, time, foto_url)
         `)
         .eq('treino_do_dia_id', treinoDoDiaId);
       
@@ -49,7 +79,7 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
         }
           
         // Buscar todos os atletas do time correspondente
-        const time = treinoDoDia?.treino ? treinoDoDia.treino.time : null;
+        const time = treinoDoDia?.treino ? (treinoDoDia.treino as any).time : null;
         
         if (!time) {
           throw new Error('Não foi possível determinar o time do treino');
@@ -57,7 +87,7 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
 
         const { data: atletas, error: atletasError } = await supabase
           .from('athletes')
-          .select('id, nome, posicao, time')
+          .select('id, nome, posicao, time, foto_url')
           .eq('time', time);
           
         if (atletasError) {
@@ -75,7 +105,7 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
         }));
       }
       
-      return presencas;
+      return presencas as AthleteWithAttendance[];
     },
     enabled: !!treinoDoDiaId,
   });
@@ -115,19 +145,24 @@ export function useGetAvailableTrainings(options: {
       // Filtrar por time se necessário
       let filteredData = data || [];
       if (options.team) {
-        filteredData = filteredData.filter(item => 
-          item.treino && item.treino.time === options.team
-        );
+        filteredData = filteredData.filter(item => {
+          // Acessar o time com segurança usando as any
+          const treino = item.treino as any;
+          return treino && treino.time === options.team;
+        });
       }
       
-      return filteredData.map(item => ({
-        id: item.id,
-        data: item.data,
-        nome: item.treino?.nome || 'Treino sem nome',
-        local: item.treino?.local || 'Local não especificado',
-        horario: item.treino?.horario || 'Horário não especificado',
-        time: item.treino?.time || 'Time não especificado'
-      }));
+      return filteredData.map(item => {
+        const treino = item.treino as any;
+        return {
+          id: item.id,
+          data: item.data,
+          nome: treino?.nome || 'Treino sem nome',
+          local: treino?.local || 'Local não especificado',
+          horario: treino?.horario || 'Horário não especificado',
+          time: treino?.time || 'Time não especificado'
+        } as TrainingItem;
+      });
     }
   });
 }

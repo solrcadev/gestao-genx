@@ -1,163 +1,133 @@
-import { useEffect, useState } from 'react';
-import { Card, Tabs, Progress } from 'antd';
-import { 
-  getStudentPerformance, 
-  getTrainingHistory, 
-  getStudentGoals, 
-  PerformanceData, 
-  TrainingHistory, 
-  Goal,
-  StudentPerformance
-} from '@/services/performanceService';
 
-interface PerformanceTabProps {
-  studentId: string;
+import React, { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+// Define our own interface instead of importing
+interface AthletePerformance {
+  id: string;
+  nome: string;
+  time: string;
+  posicao: string;
+  desempenho: {
+    fundamento: string;
+    eficiencia: number;
+  }[];
 }
 
-export function PerformanceTab({ studentId }: PerformanceTabProps) {
-  const [performance, setPerformance] = useState<StudentPerformance | null>(null);
-  const [history, setHistory] = useState<TrainingHistory[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
+// Placeholder component for charts
+const PerformanceChart = ({ title, data }: { title: string, data: any }) => (
+  <Card className="w-full h-[300px] flex items-center justify-center bg-muted/20">
+    <div className="text-center p-6">
+      <h3 className="font-medium mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground">Visualização de dados será implementada</p>
+    </div>
+  </Card>
+);
+
+interface PerformanceTabProps {
+  athleteId?: string;
+  initialTab?: string;
+}
+
+export function PerformanceTab({ athleteId, initialTab = 'overview' }: PerformanceTabProps) {
+  const [selectedTab, setSelectedTab] = useState(initialTab);
+  const [performanceData, setPerformanceData] = useState<AthletePerformance | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [performanceData, historyData, goalsData] = await Promise.all([
-          getStudentPerformance(studentId),
-          getTrainingHistory(studentId),
-          getStudentGoals(studentId)
-        ]);
-
-        setPerformance(performanceData);
-        setHistory(historyData);
-        setGoals(goalsData);
-      } catch (error) {
-        console.error('Erro ao carregar dados de performance:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, [studentId]);
+    // Simulated data loading
+    setTimeout(() => {
+      setPerformanceData({
+        id: athleteId || '1',
+        nome: 'Atleta Exemplo',
+        time: 'Masculino',
+        posicao: 'Levantador',
+        desempenho: [
+          { fundamento: 'Ataque', eficiencia: 78 },
+          { fundamento: 'Bloqueio', eficiencia: 65 },
+          { fundamento: 'Saque', eficiencia: 82 },
+        ]
+      });
+      setLoading(false);
+    }, 1000);
+  }, [athleteId]);
 
   if (loading) {
-    return <div>Carregando...</div>;
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
-  if (!performance) {
-    return <div>Não foi possível carregar os dados de performance</div>;
-  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Desempenho</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue={selectedTab} onValueChange={setSelectedTab} className="w-full">
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="fundamentos">Fundamentos</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
+            <TabsTrigger value="comparativo">Comparativo</TabsTrigger>
+          </TabsList>
 
-  const items = [
-    {
-      key: '1',
-      label: 'Visão Geral',
-      children: (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card title="Frequência">
-            <Progress percent={performance.frequency} />
-          </Card>
-          <Card title="Evolução">
-            <Progress percent={performance.evolution} />
-          </Card>
-          <Card title="Treinos Concluídos">
-            <Progress percent={(performance.completedTrainings / performance.totalTrainings) * 100} />
-          </Card>
-          <Card title="Metas Alcançadas">
-            <Progress percent={(performance.achievedGoals / performance.totalGoals) * 100} />
-          </Card>
-        </div>
-      ),
-    },
-    {
-      key: '2',
-      label: 'Progresso',
-      children: (
-        <div className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Gráfico de Progresso</h3>
-          {/* Aqui será implementado o gráfico de progresso */}
-          <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-            Gráfico de Progresso
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: '3',
-      label: 'Histórico',
-      children: (
-        <div className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Histórico de Treinos</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2">Data</th>
-                  <th className="px-4 py-2">Tipo</th>
-                  <th className="px-4 py-2">Duração</th>
-                  <th className="px-4 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-2">{new Date(item.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-2">{item.type}</td>
-                    <td className="px-4 py-2">{item.duration} min</td>
-                    <td className="px-4 py-2">
-                      <span className={`px-2 py-1 rounded ${
-                        item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        item.status === 'missed' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {item.status === 'completed' ? 'Concluído' :
-                         item.status === 'missed' ? 'Faltou' : 'Parcial'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: '4',
-      label: 'Metas',
-      children: (
-        <div className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Metas</h3>
-          <div className="space-y-4">
-            {goals.map((goal) => (
-              <Card key={goal.id} className="mb-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{goal.title}</h4>
-                    <p className="text-gray-600">{goal.description}</p>
-                    <p className="text-sm text-gray-500">
-                      Data alvo: {new Date(goal.targetDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-1 rounded ${
-                    goal.status === 'achieved' ? 'bg-green-100 text-green-800' :
-                    goal.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {goal.status === 'achieved' ? 'Alcançada' :
-                     goal.status === 'in_progress' ? 'Em Andamento' : 'Pendente'}
-                  </span>
-                </div>
-                <Progress percent={goal.progress} className="mt-4" />
-              </Card>
-            ))}
-          </div>
-        </div>
-      ),
-    },
-  ];
+          <TabsContent value="overview" className="space-y-4">
+            <PerformanceChart 
+              title="Eficiência Geral" 
+              data={performanceData?.desempenho || []}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {performanceData?.desempenho.map((item, index) => (
+                <Card key={index}>
+                  <CardContent className="p-4">
+                    <div className="font-medium">{item.fundamento}</div>
+                    <div className="text-2xl font-bold mt-1">{item.eficiencia}%</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
 
-  return <Tabs defaultActiveKey="1" items={items} />;
+          <TabsContent value="fundamentos">
+            <div className="grid gap-4">
+              {performanceData?.desempenho.map((item, index) => (
+                <PerformanceChart 
+                  key={index}
+                  title={`Desempenho em ${item.fundamento}`} 
+                  data={item}
+                />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="historico">
+            <PerformanceChart 
+              title="Evolução de Desempenho" 
+              data={performanceData?.desempenho || []}
+            />
+          </TabsContent>
+
+          <TabsContent value="comparativo">
+            <PerformanceChart 
+              title="Comparativo com Time" 
+              data={performanceData?.desempenho || []}
+            />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
 }
+
+export default PerformanceTab;
