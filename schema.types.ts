@@ -24,6 +24,7 @@ export interface Profile {
   atleta_id?: string;
   status: string;
   funcao: string;
+  role?: string;
 }
 
 export interface AthletePerformance {
@@ -112,6 +113,8 @@ export interface HistoricoTreinoPorAtleta {
     fundamento: string;
     pontuacao: number;
     totalEventos: number;
+    acertos: number;
+    erros: number;
   }[];
 }
 
@@ -137,6 +140,8 @@ export interface HistoricoTreino {
     fundamento: string;
     pontuacao: number;
     totalEventos: number;
+    acertos: number;
+    erros: number;
   }[];
 }
 
@@ -151,6 +156,7 @@ export interface ResumoAtas {
   ultimaReuniaoData: string;
   mediaParticipantesReuniao: number;
   mediaTopicosReuniao: number;
+  slice?: () => ResumoAtas['atasRecentes'];
 }
 
 export interface TopicoDaAta {
@@ -158,6 +164,7 @@ export interface TopicoDaAta {
   descricao: string;
   responsavel: string;
   status: string;
+  titulo?: string;
 }
 
 export interface DecisaoDaAta {
@@ -165,6 +172,7 @@ export interface DecisaoDaAta {
   descricao: string;
   responsavel: string;
   prazo: string;
+  titulo?: string;
 }
 
 export interface AtaReuniao {

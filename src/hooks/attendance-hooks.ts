@@ -81,6 +81,57 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
 }
 
 /**
+ * Hook para buscar treinos do dia disponíveis
+ * @param options Opções de filtragem como data ou time
+ * @returns Lista de treinos do dia
+ */
+export function useGetAvailableTrainings(options: { 
+  date?: Date | null;
+  team?: 'Masculino' | 'Feminino' | null;
+} = {}) {
+  return useQuery({
+    queryKey: ['available-trainings', options],
+    queryFn: async () => {
+      let query = supabase
+        .from('treinos_do_dia')
+        .select(`
+          id,
+          data,
+          treino:treino_id(id, nome, local, horario, time)
+        `)
+        .order('data', { ascending: false });
+        
+      // Filtrar por data específica se fornecida
+      if (options.date) {
+        const dateStr = options.date.toISOString().split('T')[0];
+        query = query.eq('data', dateStr);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      // Filtrar por time se necessário
+      let filteredData = data || [];
+      if (options.team) {
+        filteredData = filteredData.filter(item => 
+          item.treino && item.treino.time === options.team
+        );
+      }
+      
+      return filteredData.map(item => ({
+        id: item.id,
+        data: item.data,
+        nome: item.treino?.nome || 'Treino sem nome',
+        local: item.treino?.local || 'Local não especificado',
+        horario: item.treino?.horario || 'Horário não especificado',
+        time: item.treino?.time || 'Time não especificado'
+      }));
+    }
+  });
+}
+
+/**
  * Função para salvar presenças de atletas
  * @param treinoDoDiaId ID do treino do dia
  * @param presencas Array de presenças para salvar
