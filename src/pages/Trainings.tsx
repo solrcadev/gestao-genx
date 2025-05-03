@@ -252,6 +252,10 @@ const Trainings = () => {
     navigate('/treino-do-dia');
   };
 
+  const handleGerenciarPresencas = () => {
+    navigate('/presenca'); // Corrigido de '/presencas' para '/presenca'
+  };
+
   return (
     <div className="mobile-container pb-20">
       <div className="flex items-center justify-between mb-6">
@@ -261,7 +265,7 @@ const Trainings = () => {
             <ClipboardCheck className="mr-2 h-4 w-4" />
             Ver Treino do Dia
           </Button>
-          <Button variant="outline" onClick={() => navigate('/presencas')}>
+          <Button variant="outline" onClick={handleGerenciarPresencas}>
             <Clipboard className="mr-2 h-4 w-4" />
             Gerenciar Presenças
           </Button>

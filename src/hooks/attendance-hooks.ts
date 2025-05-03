@@ -1,6 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { TeamType } from '@/types';
 
 /**
  * Hook para buscar presenças dos atletas para um treino específico
@@ -48,7 +49,7 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
         }
           
         // Buscar todos os atletas do time correspondente
-        const time = treinoDoDia?.treino?.time;
+        const time = treinoDoDia?.treino ? treinoDoDia.treino.time : null;
         
         if (!time) {
           throw new Error('Não foi possível determinar o time do treino');
@@ -87,7 +88,7 @@ export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
  */
 export function useGetAvailableTrainings(options: { 
   date?: Date | null;
-  team?: 'Masculino' | 'Feminino' | null;
+  team?: TeamType | null;
 } = {}) {
   return useQuery({
     queryKey: ['available-trainings', options],

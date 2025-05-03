@@ -1,11 +1,48 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { HistoricoTreinoPorAtleta, HistoricoTreino } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, ChevronRight } from 'lucide-react';
+
+// Definindo as interfaces necessárias diretamente no arquivo para evitar dependências externas
+interface FundamentoAvaliacao {
+  fundamento: string;
+  pontuacao: number;
+  totalEventos: number;
+  acertos?: number;
+  erros?: number;
+}
+
+export interface HistoricoTreinoPorAtleta {
+  treinoId: string;
+  nomeTreino: string;
+  data: string;
+  local: string;
+  presenca: boolean;
+  justificativa?: string;
+  fundamentos: FundamentoAvaliacao[];
+}
+
+export interface HistoricoTreino {
+  id: string;
+  nome: string;
+  data: string;
+  dataFormatada: string;
+  avaliacoes: {
+    fundamento: string;
+    acertos: number;
+    erros: number;
+    eficiencia: number;
+  }[];
+  eficienciaGeral?: number;
+  treinoId: string;
+  nomeTreino: string;
+  local: string;
+  presenca: boolean;
+  justificativa?: string;
+  fundamentos: FundamentoAvaliacao[];
+}
 
 interface HistoricoTreinosAtletaProps {
   historico: HistoricoTreinoPorAtleta[];
@@ -211,3 +248,6 @@ export function HistoricoTreinosAtleta({ historico, title = 'Histórico de Trein
     </Card>
   );
 }
+
+// Exportar também como default para compatibilidade com imports existentes
+export default HistoricoTreinosAtleta;
