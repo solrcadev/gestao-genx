@@ -1,361 +1,585 @@
-import React, { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, X, Info, CheckCircle2, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { fetchPresencasAtletas } from "@/services/treinosDoDiaService";
-import { cn } from "@/lib/utils";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import { Badge } from "@/components/ui/badge";
-import { 
-  CONFIG_EVENTOS_QUALIFICADOS,
-  EventoQualificado,
-  salvarEventoQualificado,
-  buscarEventosQualificados
-} from "@/services/avaliacaoQualitativaService";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useGetAthleteAttendance } from '@/hooks/attendance-hooks';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CheckCircle, Loader2, Timer, UserRound, XCircle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/components/ui/use-toast';
+import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-interface RealTimeEvaluationProps {
-  exercise: any;
-  treinoDoDiaId: string;
-  initialData?: any;
-  onBack: () => void;
-  onComplete: (results: any) => void;
+interface Athlete {
+  id: string;
+  nome: string;
+  posicao: string;
+  time: string;
+  foto_url?: string;
 }
 
-// Fundamentos predefinidos (poderia vir do banco de dados)
-const DEFAULT_FUNDAMENTOS = ["Saque", "Recepção", "Levantamento", "Ataque", "Bloqueio", "Defesa"];
+interface Exercise {
+  id: string;
+  nome: string;
+  descricao: string;
+  categoria: string;
+  objetivo: string;
+  numero_jogadores: number;
+  tempo_estimado: number;
+  imagem_url?: string;
+  video_url?: string;
+}
 
-export const RealTimeEvaluation = ({ 
-  exercise, 
-  treinoDoDiaId,
-  initialData = {},
-  onBack,
-  onComplete
-}: RealTimeEvaluationProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [fundamentos, setFundamentos] = useState<string[]>(DEFAULT_FUNDAMENTOS);
-  const [activeFundamento, setActiveFundamento] = useState<string>("ataque");
-  const [observacoes, setObservacoes] = useState<string>("");
-  const [selectedAtleta, setSelectedAtleta] = useState<string | null>(null);
-  
-  const { toast } = useToast();
+interface TrainingExercise {
+  id: string;
+  ordem: number;
+  tempo_real: number | null;
+  concluido: boolean;
+  observacao: string | null;
+  exercicio: Exercise;
+}
 
-  // Fetch athletes with attendance status
-  const { data: athletesWithAttendance = [], isLoading: isLoadingAthletes } = useQuery({
-    queryKey: ["athletes-attendance", treinoDoDiaId],
-    queryFn: () => fetchPresencasAtletas(treinoDoDiaId),
+interface Evaluation {
+  id?: string;
+  treino_do_dia_id: string;
+  exercicio_id: string;
+  atleta_id: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+}
+
+const RealTimeEvaluation = () => {
+  const { treinoDoDiaId } = useParams<{ treinoDoDiaId: string }>();
+  const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null);
+  const [selectedExercise, setSelectedExercise] = useState<TrainingExercise | null>(null);
+  const [evaluationData, setEvaluationData] = useState<Evaluation>({
+    treino_do_dia_id: treinoDoDiaId || '',
+    exercicio_id: '',
+    atleta_id: '',
+    fundamento: '',
+    acertos: 0,
+    erros: 0,
   });
-
-  // Configuração de fundamentos e suas opções qualitativas
-  const configFundamento = CONFIG_EVENTOS_QUALIFICADOS.find(
-    (config) => config.fundamento.toLowerCase() === activeFundamento.toLowerCase()
-  );
-
-  // Obter todos os fundamentos disponíveis do sistema de avaliação qualitativa
-  const fundamentosQualitativos = Array.from(
-    new Set([
-      ...exercise.exercicio?.fundamentos || ["ataque"],
-      ...CONFIG_EVENTOS_QUALIFICADOS.map(config => config.fundamento.toLowerCase())
-    ])
-  );
-
-  // Filter and sort athletes
-  const filteredAthletes = athletesWithAttendance
-    .filter(a => a.presente && a.atleta.nome.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => a.atleta.nome.localeCompare(b.atleta.nome));
-    
-  if (isLoadingAthletes) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10">
-        <LoadingSpinner />
-        <p className="mt-4 text-muted-foreground">Carregando atletas...</p>
-      </div>
-    );
-  }
-
-  // Busca eventos qualificados registrados para este treino
-  const { data: eventosQualificados = [], isLoading: isLoadingEventos } = useQuery({
-    queryKey: ['eventos-qualificados', treinoDoDiaId],
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isExerciseCompleted, setIsExerciseCompleted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+	const [isResetting, setIsResetting] = useState(false);
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
+  
+  // Fetch athletes
+  const { data: athletes, isLoading: isLoadingAthletes } = useQuery({
+    queryKey: ['athletes'],
     queryFn: async () => {
-      const eventos = await buscarEventosQualificados({
-        treino_id: treinoDoDiaId
-      });
-      return eventos;
+      const { data, error } = await supabase
+        .from('athletes')
+        .select('id, nome, posicao, time, foto_url')
+        .order('nome');
+      
+      if (error) throw error;
+      return data as Athlete[];
+    }
+  });
+  
+  // Fetch training exercises
+  const { data: trainingExercises, isLoading: isLoadingExercises } = useQuery({
+    queryKey: ['training-exercises', treinoDoDiaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('treinos_exercicios')
+        .select(`
+          id,
+          ordem,
+          tempo_real,
+          concluido,
+          observacao,
+          exercicio:exercicio_id(id, nome, descricao, categoria, objetivo, numero_jogadores, tempo_estimado, imagem_url, video_url)
+        `)
+        .eq('treino_id', treinoDoDiaId)
+        .order('ordem');
+      
+      if (error) throw error;
+      return data as TrainingExercise[];
     },
     enabled: !!treinoDoDiaId
   });
   
-  // Processa os eventos qualificados para exibição por atleta e fundamento
-  const eventosPorAtleta = React.useMemo(() => {
-    const result: Record<string, Record<string, { 
-      total: number, 
-      positivos: number, 
-      negativos: number, 
-      mediaPeso: number 
-    }>> = {};
-    
-    eventosQualificados.forEach(evento => {
-      if (!evento.atleta_id || !evento.fundamento) return;
-      
-      if (!result[evento.atleta_id]) {
-        result[evento.atleta_id] = {};
-      }
-      
-      if (!result[evento.atleta_id][evento.fundamento]) {
-        result[evento.atleta_id][evento.fundamento] = {
-          total: 0,
-          positivos: 0,
-          negativos: 0,
-          mediaPeso: 0
-        };
-      }
-      
-      const dados = result[evento.atleta_id][evento.fundamento];
-      dados.total += 1;
-      if (evento.peso > 0) {
-        dados.positivos += 1;
-      } else if (evento.peso < 0) {
-        dados.negativos += 1;
-      }
-      
-      // Recalcula a média de peso
-      const novaSoma = (dados.mediaPeso * (dados.total - 1)) + evento.peso;
-      dados.mediaPeso = novaSoma / dados.total;
-    });
-    
-    return result;
-  }, [eventosQualificados]);
-
-  // Função para registrar evento qualificado
-  const registrarEventoQualificado = async (atletaId: string, tipoEvento: string, peso: number) => {
-    if (!atletaId || !activeFundamento || !tipoEvento) {
-      toast({
-        title: "Erro",
-        description: "Dados incompletos para registrar avaliação",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const evento: EventoQualificado = {
-      atleta_id: atletaId,
-      treino_id: treinoDoDiaId,
-      fundamento: activeFundamento,
-      tipo_evento: tipoEvento,
-      peso: peso,
-      observacoes: observacoes || undefined
-    };
-
-    try {
-      await salvarEventoQualificado(evento);
-      toast({
-        title: "Sucesso",
-        description: `Evento "${tipoEvento}" registrado com sucesso!`
-      });
-      setObservacoes("");
-    } catch (error) {
-      console.error("Erro ao registrar evento:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível registrar o evento. Tente novamente.",
-        variant: "destructive"
-      });
+  // Function to start the timer
+  const startTimer = () => {
+    setIsTimerRunning(true);
+    timerRef.current = setInterval(() => {
+      setTimeElapsed(prevTime => prevTime + 1);
+    }, 1000);
+  };
+  
+  // Function to stop the timer
+  const stopTimer = () => {
+    setIsTimerRunning(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
   };
-
-  // Exibe indicador de carregamento enquanto busca os eventos
-  if (isLoadingEventos) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10">
-        <LoadingSpinner />
-        <p className="mt-4 text-muted-foreground">Carregando avaliações...</p>
-      </div>
-    );
-  }
+  
+  // Function to reset the timer
+  const resetTimer = () => {
+    stopTimer();
+    setTimeElapsed(0);
+  };
+  
+  // Function to toggle the timer
+  const toggleTimer = () => {
+    if (isTimerRunning) {
+      stopTimer();
+    } else {
+      startTimer();
+    }
+  };
+  
+  // Function to format time in HH:MM:SS
+  const formatTime = (timeInSeconds: number): string => {
+    const hours = Math.floor(timeInSeconds / 3600);
+    const minutes = Math.floor((timeInSeconds % 3600) / 60);
+    const seconds = timeInSeconds % 60;
+    
+    return [hours, minutes, seconds]
+      .map(unit => String(unit).padStart(2, '0'))
+      .join(':');
+  };
+  
+  // Function to handle athlete selection
+  const handleAthleteSelect = (athlete: Athlete) => {
+    setSelectedAthlete(athlete);
+    setEvaluationData(prev => ({
+      ...prev,
+      atleta_id: athlete.id
+    }));
+  };
+  
+  // Function to handle exercise selection
+  const handleExerciseSelect = (exercise: TrainingExercise) => {
+    setSelectedExercise(exercise);
+    setEvaluationData(prev => ({
+      ...prev,
+      exercicio_id: exercise.id
+    }));
+  };
+  
+  // Function to handle input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEvaluationData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Function to handle increment
+  const handleIncrement = (field: 'acertos' | 'erros') => {
+    setEvaluationData(prev => ({
+      ...prev,
+      [field]: prev[field] + 1
+    }));
+  };
+  
+  // Function to handle decrement
+  const handleDecrement = (field: 'acertos' | 'erros') => {
+    setEvaluationData(prev => ({
+      ...prev,
+      [field]: Math.max(0, prev[field] - 1)
+    }));
+  };
+  
+  // Function to handle save evaluation
+  const handleSaveEvaluation = async () => {
+    setIsSaving(true);
+    try {
+      // Validate data
+      if (!selectedAthlete || !selectedExercise) {
+        toast({
+          title: "Erro ao salvar avaliação",
+          description: "Selecione um atleta e um exercício para salvar a avaliação.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Call API to save evaluation
+      const { data, error } = await supabase
+        .from('training_evaluations')
+        .insert(evaluationData)
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Avaliação salva com sucesso!",
+        description: `Avaliação de ${selectedAthlete.nome} para o exercício ${selectedExercise.exercicio.nome} salva.`,
+        duration: 3000
+      });
+      
+      // Reset form
+      setEvaluationData({
+        treino_do_dia_id: treinoDoDiaId || '',
+        exercicio_id: '',
+        atleta_id: '',
+        fundamento: '',
+        acertos: 0,
+        erros: 0,
+      });
+      setSelectedAthlete(null);
+      setSelectedExercise(null);
+    } catch (error) {
+      console.error("Error saving evaluation:", error);
+      toast({
+        title: "Erro ao salvar avaliação",
+        description: "Ocorreu um erro ao tentar salvar a avaliação. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Function to handle exercise completion
+  const handleCompleteExercise = async () => {
+    setIsSaving(true);
+    try {
+      // Stop timer
+      stopTimer();
+      
+      // Call API to mark exercise as complete
+      const { data, error } = await supabase
+        .from('treinos_exercicios')
+        .update({
+          concluido: true,
+          tempo_real: timeElapsed
+        })
+        .eq('id', selectedExercise?.id)
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Exercício concluído!",
+        description: `O exercício ${selectedExercise?.exercicio.nome} foi marcado como concluído.`,
+        duration: 3000
+      });
+      
+      setIsExerciseCompleted(true);
+    } catch (error) {
+      console.error("Error completing exercise:", error);
+      toast({
+        title: "Erro ao concluir exercício",
+        description: "Ocorreu um erro ao tentar concluir o exercício. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Function to handle exercise reset
+  const handleResetExercise = async () => {
+    setIsResetting(true);
+    try {
+      // Call API to reset exercise
+      const { data, error } = await supabase
+        .from('treinos_exercicios')
+        .update({
+          concluido: false,
+          tempo_real: null
+        })
+        .eq('id', selectedExercise?.id)
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Exercício reiniciado!",
+        description: `O exercício ${selectedExercise?.exercicio.nome} foi reiniciado.`,
+        duration: 3000
+      });
+      
+      setIsExerciseCompleted(false);
+      resetTimer();
+    } catch (error) {
+      console.error("Error resetting exercise:", error);
+      toast({
+        title: "Erro ao reiniciar exercício",
+        description: "Ocorreu um erro ao tentar reiniciar o exercício. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+  
+  // Get name initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      <div>
-        <h2 className="text-lg font-semibold">
-          {exercise.exercicio?.nome || "Exercício"}
-        </h2>
-        <p className="text-sm text-muted-foreground mb-3">
-          Avaliação qualitativa em tempo real
-        </p>
-      </div>
-      
-      {/* Fundamentos tabs */}
-      <div className="overflow-x-auto pb-2">
-        <div className="flex space-x-2 w-max">
-          {fundamentosQualitativos.map((fundamento) => (
-            <Button
-              key={fundamento}
-              variant={activeFundamento === fundamento ? "default" : "outline"}
-              size="sm"
-              className={cn(
-                "rounded-full px-3 py-1", 
-                activeFundamento === fundamento 
-                  ? "bg-primary" 
-                  : "bg-background"
-              )}
-              onClick={() => setActiveFundamento(fundamento)}
-            >
-              {fundamento}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Painel de avaliação qualitativa */}
-      <div className="bg-muted/30 rounded-md p-3 my-3">
-        <div className="text-sm">
-          <p className="font-medium">{activeFundamento}</p>
-          <p className="text-xs text-muted-foreground">
-            {selectedAtleta ? "Atleta selecionado para avaliação" : "Selecione um atleta abaixo"}
-          </p>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Left Panel - Athletes and Exercises */}
+      <div className="space-y-6">
+        {/* Athlete Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Selecione o Atleta</CardTitle>
+            <CardDescription>Escolha o atleta para avaliar o exercício.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoadingAthletes ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : athletes && athletes.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {athletes.map(atleta => (
+                  <Button
+                    key={atleta.id}
+                    variant={selectedAthlete?.id === atleta.id ? "default" : "outline"}
+                    className="justify-start"
+                    onClick={() => handleAthleteSelect(atleta)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className={`${atleta.time === 'Masculino' ? 'bg-blue-600' : 'bg-red-600'} text-white`}>
+                        {atleta.foto_url ? (
+                          <AvatarImage src={atleta.foto_url} alt={atleta.nome} />
+                        ) : (
+                          <AvatarFallback>{getInitials(atleta.nome)}</AvatarFallback>
+                        )}
+                      </Avatar>
+                      <span>{atleta.nome}</span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Nenhum atleta encontrado.</p>
+            )}
+          </CardContent>
+        </Card>
         
-        {selectedAtleta && configFundamento && (
-          <div className="mt-3 space-y-2">
-            {/* Campo de observações */}
-            <Input
-              placeholder="Observações sobre este evento..."
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              className="text-sm"
-            />
-            
-            {/* Botões para eventos qualitativos */}
-            <div className="grid grid-cols-2 gap-2">
-              {configFundamento.eventos.map((evento) => (
-                <TooltipProvider key={evento.tipo}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        onClick={() => registrarEventoQualificado(selectedAtleta, evento.tipo, evento.peso)}
-                        variant={evento.peso > 0 ? "default" : "destructive"}
-                        className="h-9 flex items-center justify-between w-full px-3"
-                        size="sm"
-                      >
-                        <span>{evento.tipo}</span>
-                        <Badge 
-                          variant={evento.peso > 0 ? "outline" : "destructive"} 
-                          className="ml-1"
-                        >
-                          {evento.peso.toFixed(1)}
-                        </Badge>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{evento.descricao || evento.tipo}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="mt-2" 
-              onClick={() => setSelectedAtleta(null)}
-            >
-              <X className="h-4 w-4 mr-1" /> Cancelar seleção
-            </Button>
-          </div>
-        )}
+        {/* Exercise Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Selecione o Exercício</CardTitle>
+            <CardDescription>Escolha o exercício para avaliar o atleta.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoadingExercises ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : trainingExercises && trainingExercises.length > 0 ? (
+              <div className="space-y-3">
+                {trainingExercises.map(exercise => (
+                  <Button
+                    key={exercise.id}
+                    variant={selectedExercise?.id === exercise.id ? "default" : "outline"}
+                    className="w-full justify-start"
+                    onClick={() => handleExerciseSelect(exercise)}
+                    disabled={exercise.concluido}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>{exercise.exercicio.nome}</span>
+                      {exercise.concluido && (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Nenhum exercício encontrado.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
       
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar atleta..."
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          className="pl-8"
-        />
-      </div>
-
-      {/* Athletes list */}
-      <div className="space-y-3 flex-1 overflow-y-auto pb-4">
-        {filteredAthletes.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            Nenhum atleta encontrado
-          </div>
-        ) : (
-          filteredAthletes.map(({ atleta }) => {
-            // Busca dados de avaliação para este atleta no fundamento atual
-            const avaliacoesFundamento = eventosPorAtleta[atleta.id]?.[activeFundamento];
-            
-            return (
-              <div 
-                key={atleta.id} 
-                className={cn(
-                  "border rounded-lg p-3 flex items-center justify-between bg-background cursor-pointer",
-                  selectedAtleta === atleta.id && "border-primary"
-                )}
-                onClick={() => setSelectedAtleta(atleta.id)}
-              >
-                <div className="flex items-center flex-grow">
-                  <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src={atleta.imagem_url} alt={atleta.nome} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {atleta.nome.charAt(0)}
-                    </AvatarFallback>
+      {/* Right Panel - Evaluation Form and Timer */}
+      <div className="space-y-6">
+        {/* Evaluation Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Avaliação em Tempo Real</CardTitle>
+            <CardDescription>Registre o desempenho do atleta no exercício.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedAthlete && selectedExercise ? (
+              <>
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-10 w-10">
+                    {selectedAthlete.foto_url ? (
+                      <AvatarImage src={selectedAthlete.foto_url} alt={selectedAthlete.nome} />
+                    ) : (
+                      <AvatarFallback>{selectedAthlete.nome.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    )}
                   </Avatar>
-                  
-                  <div className="flex-grow">
-                    <p className="font-medium">{atleta.nome}</p>
-                    <div className="text-xs text-muted-foreground flex">
-                      <span>{atleta.posicao}</span>
+                  <div>
+                    <h3 className="text-lg font-semibold">{selectedAthlete.nome}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedAthlete.posicao}</p>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <Label htmlFor="fundamento">Fundamento</Label>
+                  <Input
+                    id="fundamento"
+                    name="fundamento"
+                    type="text"
+                    placeholder="Ex: Saque, Recepção, Ataque"
+                    value={evaluationData.fundamento}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="acertos">Acertos</Label>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="outline" size="icon" onClick={() => handleDecrement('acertos')}>
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        id="acertos"
+                        name="acertos"
+                        type="number"
+                        value={evaluationData.acertos.toString()}
+                        readOnly
+                        className="text-center"
+                      />
+                      <Button variant="outline" size="icon" onClick={() => handleIncrement('acertos')}>
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  
-                  {/* Indicadores de avaliação para o fundamento atual */}
-                  {avaliacoesFundamento && avaliacoesFundamento.total > 0 && (
+                  <div>
+                    <Label htmlFor="erros">Erros</Label>
                     <div className="flex items-center space-x-2">
-                      <div className="flex items-center">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
-                        <span className="text-xs">{avaliacoesFundamento.positivos}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                        <span className="text-xs">{avaliacoesFundamento.negativos}</span>
-                      </div>
-                      <Badge 
-                        variant={avaliacoesFundamento.mediaPeso > 0 ? "outline" : "destructive"} 
-                        className="ml-1 text-xs"
-                      >
-                        {avaliacoesFundamento.mediaPeso.toFixed(1)}
-                      </Badge>
+                      <Button variant="outline" size="icon" onClick={() => handleDecrement('erros')}>
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        id="erros"
+                        name="erros"
+                        type="number"
+                        value={evaluationData.erros.toString()}
+                        readOnly
+                        className="text-center"
+                      />
+                      <Button variant="outline" size="icon" onClick={() => handleIncrement('erros')}>
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
                     </div>
+                  </div>
+                </div>
+                <Button className="w-full" onClick={handleSaveEvaluation} disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Avaliação
+                </Button>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Selecione um atleta e um exercício para começar a avaliação.</p>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Timer and Exercise Completion */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Controle do Exercício</CardTitle>
+            <CardDescription>Gerencie o tempo e a conclusão do exercício.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedExercise ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold">{selectedExercise.exercicio.nome}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Tempo Estimado: {selectedExercise.exercicio.tempo_estimado} minutos
+                    </p>
+                  </div>
+                  <Timer className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div className="text-4xl font-bold text-center">
+                  {formatTime(timeElapsed)}
+                </div>
+                <div className="flex space-x-2">
+                  <Button className="flex-1" onClick={toggleTimer} disabled={isExerciseCompleted}>
+                    {isTimerRunning ? 'Parar' : 'Iniciar'}
+                  </Button>
+                  {!isExerciseCompleted ? (
+                    <Button className="flex-1" variant="secondary" onClick={handleCompleteExercise} disabled={isSaving}>
+                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Concluir
+                    </Button>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="flex-1" variant="destructive" disabled={isResetting}>
+                          {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Reiniciar
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Reiniciar Exercício</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza de que deseja reiniciar este exercício? O tempo e a conclusão serão resetados.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => {
+                            handleResetExercise();
+                          }}>Confirmar</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
-              </div>
-            );
-          })
-        )}
+              </>
+            ) : (
+              <p className="text-muted-foreground">Selecione um exercício para controlar o tempo.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      <Button 
-        className="mt-4"
-        onClick={onBack}
-      >
-        Voltar ao cronômetro
-      </Button>
     </div>
   );
 };
 
 export default RealTimeEvaluation;
-

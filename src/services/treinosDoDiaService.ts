@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { JustificativaTipo } from '@/hooks/attendance-hooks';
 
@@ -298,5 +297,232 @@ export const updateAthleteEffortIndex = async (atletaId: string): Promise<number
   } catch (error) {
     console.error('Error calculating effort index:', error);
     return 0; // Default to neutral if error
+  }
+};
+
+/**
+ * Set a training for the day - used by the Trainings page
+ */
+export const definirTreinoDoDia = async (treinoId: string): Promise<{ id: string } | null> => {
+  try {
+    // Get training data to get the date
+    const { data: treino, error: treinoError } = await supabase
+      .from('treinos')
+      .select('data')
+      .eq('id', treinoId)
+      .single();
+    
+    if (treinoError || !treino) {
+      console.error('Error fetching training:', treinoError);
+      throw new Error(treinoError?.message || 'Erro ao buscar dados do treino');
+    }
+
+    // Insert new record in treinos_do_dia
+    const { data, error } = await supabase
+      .from('treinos_do_dia')
+      .insert({
+        treino_id: treinoId,
+        data: treino.data,
+        aplicado: false
+      })
+      .select('id')
+      .single();
+      
+    if (error) {
+      console.error('Error setting training for the day:', error);
+      throw new Error(error.message);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in definirTreinoDoDia:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch training data for the specified date
+ */
+export const getTreinoDoDia = async (date: Date): Promise<any> => {
+  try {
+    // Format date to YYYY-MM-DD
+    const formattedDate = date.toISOString().split('T')[0];
+    
+    // Fetch the training day for the specific date
+    const { data, error } = await supabase
+      .from('treinos_do_dia')
+      .select(`
+        id, 
+        data, 
+        aplicado,
+        treino:treino_id(id, nome, local, horario, time)
+      `)
+      .eq('data', formattedDate)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') { // Not found error code
+      console.error("Error fetching training day:", error);
+      throw error;
+    }
+    
+    return data || null;
+  } catch (error) {
+    console.error("Error in getTreinoDoDia:", error);
+    return null;
+  }
+};
+
+/**
+ * Set a training for a specific date
+ */
+export const setTreinoParaDia = async (treinoId: string, data?: Date): Promise<any> => {
+  try {
+    const dateToUse = data || new Date();
+    const formattedDate = dateToUse.toISOString().split('T')[0];
+    
+    // Check if there's already a training for this date
+    const { data: existingTreino, error: checkError } = await supabase
+      .from('treinos_do_dia')
+      .select('id')
+      .eq('data', formattedDate);
+      
+    if (checkError) {
+      console.error("Error checking existing training:", checkError);
+      throw checkError;
+    }
+    
+    // If exists, update
+    if (existingTreino && existingTreino.length > 0) {
+      const { data: updatedData, error: updateError } = await supabase
+        .from('treinos_do_dia')
+        .update({ treino_id: treinoId })
+        .eq('data', formattedDate)
+        .select();
+        
+      if (updateError) {
+        throw updateError;
+      }
+      
+      return updatedData;
+    }
+    
+    // If not exists, create
+    const { data: newData, error: insertError } = await supabase
+      .from('treinos_do_dia')
+      .insert({
+        treino_id: treinoId,
+        data: formattedDate
+      })
+      .select();
+      
+    if (insertError) {
+      throw insertError;
+    }
+    
+    return newData;
+  } catch (error) {
+    console.error("Error setting training for day:", error);
+    throw error;
+  }
+};
+
+// Add these missing functions that are imported by other components
+export const fetchTreinoAtual = async (): Promise<any> => {
+  try {
+    const today = new Date();
+    return await getTreinoDoDia(today);
+  } catch (error) {
+    console.error("Error fetching current training:", error);
+    return null;
+  }
+};
+
+export const concluirExercicio = async (exercicioId: string, tempo: number): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos_exercicios')
+      .update({ 
+        concluido: true,
+        tempo_real: tempo
+      })
+      .eq('id', exercicioId)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error completing exercise:", error);
+    throw error;
+  }
+};
+
+export const desmarcarExercicio = async (exercicioId: string): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from('treinos_exercicios')
+      .update({ concluido: false })
+      .eq('id', exercicioId)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error unmarking exercise:", error);
+    throw error;
+  }
+};
+
+export const salvarAvaliacaoExercicio = async (avaliacaoData: any): Promise<any> => {
+  try {
+    const { data, error } = await supabase
+      .from('training_evaluations')
+      .insert(avaliacaoData)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error saving exercise evaluation:", error);
+    throw error;
+  }
+};
+
+export const getExerciciosTreinoDoDia = async (treinoDoDiaId: string): Promise<any[]> => {
+  try {
+    // First, get the treino_id from the treino_do_dia
+    const { data: treinoDoDia, error: treinoDoDiaError } = await supabase
+      .from('treinos_do_dia')
+      .select('treino_id')
+      .eq('id', treinoDoDiaId)
+      .single();
+      
+    if (treinoDoDiaError || !treinoDoDia) {
+      console.error("Error fetching training day:", treinoDoDiaError);
+      return [];
+    }
+    
+    // Now fetch the exercises for that training
+    const { data: exercicios, error: exerciciosError } = await supabase
+      .from('treinos_exercicios')
+      .select(`
+        id,
+        ordem,
+        tempo_real,
+        concluido,
+        observacao,
+        exercicio:exercicio_id(id, nome, descricao, categoria, tempo_estimado, imagem_url)
+      `)
+      .eq('treino_id', treinoDoDia.treino_id)
+      .order('ordem');
+      
+    if (exerciciosError) {
+      console.error("Error fetching exercises:", exerciciosError);
+      return [];
+    }
+    
+    return exercicios || [];
+  } catch (error) {
+    console.error("Error getting exercises for training day:", error);
+    return [];
   }
 };

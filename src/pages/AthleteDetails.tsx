@@ -1,185 +1,307 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, User } from 'lucide-react';
-import { HistoricoTreinosAtleta } from '@/components/atleta/HistoricoTreinosAtleta';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { fetchAthleteById } from "@/services/athletesService";
+import { getAthletePerformance } from "@/services/performanceService";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Clipboard, Calendar, Award, UserRound } from "lucide-react";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
+import { buscarFaltasPorAtleta } from "@/services/presencaService";
 
-// Simplified placeholder component
-const Placeholder = ({ children }: { children: React.ReactNode }) => (
-  <div className="border border-dashed border-gray-300 rounded-md p-4 flex items-center justify-center bg-gray-50 h-40">
-    <p className="text-gray-500">{children}</p>
-  </div>
+// Create simple placeholder components for the missing chart components
+const PerformanceChart = ({ data }: { data: any }) => (
+  <Card className="w-full h-60">
+    <CardHeader>
+      <CardTitle className="text-lg">Desempenho</CardTitle>
+    </CardHeader>
+    <CardContent className="flex items-center justify-center">
+      <div className="text-muted-foreground">Dados de desempenho do atleta</div>
+    </CardContent>
+  </Card>
+);
+
+const PerformanceRadarChart = ({ data }: { data: any }) => (
+  <Card className="w-full h-60">
+    <CardHeader>
+      <CardTitle className="text-lg">Fundamentos</CardTitle>
+    </CardHeader>
+    <CardContent className="flex items-center justify-center">
+      <div className="text-muted-foreground">Distribuição de fundamentos</div>
+    </CardContent>
+  </Card>
+);
+
+const PerformanceMetricCard = ({ title, value, trend }: { title: string; value: string | number; trend?: number }) => (
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      {trend !== undefined && (
+        <p className={`text-xs ${trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+          {trend > 0 ? "+" : ""}{trend}% em relação à média
+        </p>
+      )}
+    </CardContent>
+  </Card>
 );
 
 const AthleteDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [athlete, setAthlete] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [historicoTreinos, setHistoricoTreinos] = useState<any[]>([]);
+  const { toast } = useToast();
+  const [attendanceStats, setAttendanceStats] = useState<any>({ totalFaltas: 0 });
 
+  // Fetch athlete data
+  const { data: athlete, isLoading: isLoadingAthlete } = useQuery({
+    queryKey: ["athlete", id],
+    queryFn: () => fetchAthleteById(id!),
+    enabled: !!id,
+  });
+
+  // Fetch performance data
+  const { data: performanceData, isLoading: isLoadingPerformance } = useQuery({
+    queryKey: ["performance", id],
+    queryFn: () => getAthletePerformance(id!),
+    enabled: !!id,
+  });
+
+  // Mocked training history for now
+  const trainings = [
+    {
+      id: "1",
+      data: "2025-04-30",
+      treino: { id: "1", nome: "Treino Tático", local: "Quadra Principal" },
+    },
+    {
+      id: "2",
+      data: "2025-04-28",
+      treino: { id: "2", nome: "Treino Físico", local: "Academia" },
+    },
+    {
+      id: "3",
+      data: "2025-04-25",
+      treino: { id: "3", nome: "Treino de Fundamentos", local: "Quadra Auxiliar" },
+    },
+  ];
+
+  // Load attendance stats
   useEffect(() => {
-    const fetchAthleteDetails = async () => {
-      if (!id) return;
+    if (id) {
+      buscarFaltasPorAtleta(id)
+        .then((faltas) => {
+          setAttendanceStats({ totalFaltas: faltas });
+        })
+        .catch((error) => {
+          console.error("Error loading attendance stats:", error);
+          toast({
+            title: "Erro ao carregar estatísticas de presença",
+            description: "Não foi possível carregar os dados de presença do atleta.",
+            variant: "destructive",
+          });
+        });
+    }
+  }, [id, toast]);
 
-      try {
-        setLoading(true);
-        // Fetch athlete details
-        const { data, error } = await supabase
-          .from('athletes')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-        setAthlete(data);
-
-        // Fetch training history
-        const { data: historicoData, error: historicoError } = await supabase
-          .from('treinos_presencas')
-          .select(`
-            id,
-            presente,
-            justificativa,
-            treino_do_dia:treino_do_dia_id(
-              id,
-              data,
-              treino:treino_id(id, nome, local)
-            )
-          `)
-          .eq('atleta_id', id)
-          .order('created_at', { ascending: false });
-
-        if (historicoError) throw historicoError;
-
-        // Format history data for component
-        const formattedHistorico = historicoData.map(item => ({
-          treinoId: item.treino_do_dia?.id || '',
-          nomeTreino: item.treino_do_dia?.treino?.nome || 'Treino sem nome',
-          data: item.treino_do_dia?.data || '',
-          local: item.treino_do_dia?.treino?.local || '',
-          presenca: item.presente,
-          justificativa: item.justificativa || '',
-          fundamentos: [] // Empty for now, would be populated with real data
-        }));
-
-        setHistoricoTreinos(formattedHistorico);
-
-      } catch (error) {
-        console.error('Error fetching athlete details:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAthleteDetails();
-  }, [id]);
-
-  if (loading) {
+  if (isLoadingAthlete) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex justify-center">
-          <div className="animate-pulse w-full max-w-4xl">
-            <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-            <div className="h-40 bg-gray-200 rounded mb-4"></div>
-            <div className="h-60 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="container flex items-center justify-center py-20">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   if (!athlete) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container py-10">
         <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Atleta não encontrado</h2>
-          <p className="mb-4">O atleta que você procura não existe ou foi removido.</p>
-          <Button onClick={() => navigate('/atletas')}>Voltar para lista de atletas</Button>
+          <h2 className="text-2xl font-bold">Atleta não encontrado</h2>
+          <p className="text-muted-foreground mt-2">
+            O atleta solicitado não foi encontrado ou não existe.
+          </p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => navigate("/atletas")}
+          >
+            Voltar para lista de atletas
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6">
-      {/* Back button */}
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          <span>Voltar</span>
+    <div className="container py-6 space-y-6">
+      {/* Header with back button */}
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="mr-2"
+        >
+          <ArrowLeft className="h-5 w-5" />
         </Button>
+        <h1 className="text-2xl font-bold">Detalhe do Atleta</h1>
       </div>
 
-      {/* Athlete header card */}
-      <Card className="mb-6">
+      {/* Athlete profile card */}
+      <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={athlete.foto_url || ''} alt={athlete.nome} />
-              <AvatarFallback className="bg-primary text-lg">
-                {athlete.nome?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-              </AvatarFallback>
+              {athlete.foto_url ? (
+                <AvatarImage
+                  src={athlete.foto_url}
+                  alt={athlete.nome}
+                  className="object-cover"
+                />
+              ) : (
+                <AvatarFallback className="text-2xl">
+                  {athlete.nome.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              )}
             </Avatar>
-            
-            <div className="text-center sm:text-left">
-              <h1 className="text-2xl font-bold">{athlete.nome}</h1>
-              <div className="text-muted-foreground mt-1">
-                <p>{athlete.posicao} | Time {athlete.time}</p>
-                <p className="mt-1">Idade: {athlete.idade} | Altura: {athlete.altura}m</p>
+            <div className="space-y-2 flex-1">
+              <h2 className="text-2xl font-bold">{athlete.nome}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-center gap-2">
+                  <UserRound className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">
+                    {athlete.posicao || "Posição não informada"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Award className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">
+                    Time {athlete.time || "Não especificado"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clipboard className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">
+                    {attendanceStats.totalFaltas} faltas no último mês
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">
+                    {athlete.idade ? `${athlete.idade} anos` : "Idade não informada"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabs for different athlete data */}
-      <Tabs defaultValue="historico" className="w-full">
+      {/* Performance Metrics */}
+      <Tabs defaultValue="performance">
         <TabsList className="mb-4">
-          <TabsTrigger value="historico">Histórico de Treinos</TabsTrigger>
-          <TabsTrigger value="desempenho">Desempenho</TabsTrigger>
-          <TabsTrigger value="info">Informações</TabsTrigger>
+          <TabsTrigger value="performance">Desempenho</TabsTrigger>
+          <TabsTrigger value="training-history">Histórico de Treinos</TabsTrigger>
+          <TabsTrigger value="stats">Estatísticas</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="historico">
-          <HistoricoTreinosAtleta historico={historicoTreinos} />
+        <TabsContent value="performance" className="space-y-6">
+          {isLoadingPerformance ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+              <Skeleton className="h-[300px] w-full" />
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <PerformanceMetricCard 
+                  title="Índice de Eficiência" 
+                  value={athlete.indice_esforco ? (athlete.indice_esforco * 100).toFixed(0) + "%" : "N/A"} 
+                  trend={10} 
+                />
+                <PerformanceMetricCard 
+                  title="Média de Presença" 
+                  value="85%" 
+                  trend={5} 
+                />
+                <PerformanceMetricCard 
+                  title="Fundamentos Dominantes" 
+                  value="3" 
+                />
+                <PerformanceMetricCard 
+                  title="Taxa de Evolução" 
+                  value="+12%" 
+                  trend={12} 
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <PerformanceChart data={performanceData || []} />
+                <PerformanceRadarChart data={performanceData || []} />
+              </div>
+            </>
+          )}
         </TabsContent>
 
-        <TabsContent value="desempenho">
+        <TabsContent value="training-history">
           <Card>
             <CardHeader>
-              <CardTitle>Desempenho do Atleta</CardTitle>
+              <CardTitle>Histórico de Treinos</CardTitle>
+              <CardDescription>
+                Últimos treinos que o atleta participou
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Placeholder>
-                Painel de desempenho será implementado em breve
-              </Placeholder>
+              <div className="space-y-4">
+                {trainings.map((training) => (
+                  <div
+                    key={training.id}
+                    className="flex flex-col md:flex-row justify-between border-b pb-4"
+                  >
+                    <div>
+                      <p className="font-medium">{training.treino.nome}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {training.treino.local}
+                      </p>
+                    </div>
+                    <div className="mt-2 md:mt-0">
+                      <p className="text-sm">
+                        {format(new Date(training.data), "PPP", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="info">
+        <TabsContent value="stats">
           <Card>
             <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
+              <CardTitle>Estatísticas Detalhadas</CardTitle>
+              <CardDescription>
+                Estatísticas de desempenho do atleta
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium mb-2">Contato</h3>
-                  <p>Email: {athlete.email || 'Não informado'}</p>
-                  <p>Telefone: {athlete.telefone || 'Não informado'}</p>
-                </div>
-                
-                <div>
-                  <h3 className="font-medium mb-2">Acesso ao Sistema</h3>
-                  <p>Status: {athlete.access_status || 'Não configurado'}</p>
-                </div>
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">
+                  Estatísticas detalhadas serão implementadas em breve.
+                </p>
               </div>
             </CardContent>
           </Card>
