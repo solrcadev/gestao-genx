@@ -1,312 +1,267 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { TeamType } from '@/types';
+import { toast } from 'sonner';
 
-/**
- * Interface for attendance data with justification types
- */
-export interface AthleteWithAttendance {
-  id: string | null;
-  atleta_id: string;
-  presente: boolean;
-  justificativa: string | null;
-  justificativa_tipo: JustificativaTipo | null;
-  indice_esforco: number | null;
-  created_at: string;
-  atleta: {
-    id: string;
-    nome: string;
-    posicao: string;
-    time: string;
-    foto_url?: string;
-  }
-}
-
-/**
- * Enum for justification types
- */
+// Types
 export enum JustificativaTipo {
-  SEM_JUSTIFICATIVA = "sem_justificativa",
-  MOTIVO_PESSOAL = "motivo_pessoal",
-  MOTIVO_ACADEMICO = "motivo_academico",
-  MOTIVO_LOGISTICO = "motivo_logistico",
-  MOTIVO_SAUDE = "motivo_saude"
+  MOTIVO_PESSOAL = 'motivo_pessoal',
+  MOTIVO_ACADEMICO = 'motivo_academico',
+  MOTIVO_LOGISTICO = 'motivo_logistico', 
+  MOTIVO_SAUDE = 'motivo_saude',
+  SEM_JUSTIFICATIVA = 'sem_justificativa'
 }
 
-/**
- * Interface for training item
- */
-export interface TrainingItem {
+export interface AtletaPresenca {
+  id: string;
+  nome: string;
+  posicao: string;
+  time: string;
+  foto_url?: string;
+  presente: boolean;
+  justificativa?: string;
+  justificativa_tipo?: JustificativaTipo;
+  indice_esforco?: number;
+}
+
+export interface TreinoComPresenca {
   id: string;
   data: string;
   nome: string;
-  local: string;
-  horario: string;
-  time: TeamType | string;
+  atletas: AtletaPresenca[];
 }
 
-/**
- * Hook to fetch athlete attendance for a specific training
- * @param treinoDoDiaId ID of the training day to fetch attendance
- * @returns List of athletes with attendance status
- */
-export function useGetAthleteAttendance(treinoDoDiaId: string | undefined) {
+// Função para buscar treinos com dados de presença
+export const useTreinosComPresenca = (limit: number = 20) => {
   return useQuery({
-    queryKey: ['attendance', treinoDoDiaId],
-    queryFn: async () => {
-      if (!treinoDoDiaId) {
-        return [];
-      }
-      
-      // Fetch attendance data from Supabase
-      const { data: presencas, error: presencasError } = await supabase
-        .from('treinos_presencas')
-        .select(`
-          id,
-          atleta_id,
-          presente,
-          justificativa,
-          justificativa_tipo,
-          indice_esforco,
-          created_at,
-          atleta:athletes(id, nome, posicao, time, foto_url)
-        `)
-        .eq('treino_do_dia_id', treinoDoDiaId);
-      
-      if (presencasError) {
-        throw new Error(`Erro ao buscar presenças: ${presencasError.message}`);
-      }
-
-      // If no attendance records, fetch available athletes for the training
-      if (presencas.length === 0) {
-        // First fetch training data to know the team
-        const { data: treinoDoDia, error: treinoError } = await supabase
-          .from('treinos_do_dia')
-          .select(`
-            treino:treino_id(id, time)
-          `)
-          .eq('id', treinoDoDiaId)
-          .single();
-          
-        if (treinoError) {
-          throw new Error(`Erro ao buscar treino: ${treinoError.message}`);
-        }
-          
-        // Get all athletes from the corresponding team
-        const time = treinoDoDia?.treino ? (treinoDoDia.treino as any).time : null;
-        
-        if (!time) {
-          throw new Error('Não foi possível determinar o time do treino');
-        }
-
-        const { data: atletas, error: atletasError } = await supabase
-          .from('athletes')
-          .select('id, nome, posicao, time, foto_url')
-          .eq('time', time);
-          
-        if (atletasError) {
-          throw new Error(`Erro ao buscar atletas: ${atletasError.message}`);
-        }
-
-        // Format athletes as attendance records (all present by default)
-        return atletas.map(atleta => ({
-          id: null, // ID will be generated when saved
-          atleta_id: atleta.id,
-          presente: true, // Default is present
-          justificativa: null,
-          justificativa_tipo: null,
-          indice_esforco: null,
-          created_at: new Date().toISOString(),
-          atleta
-        })) as AthleteWithAttendance[];
-      }
-      
-      return presencas.map(p => ({
-        ...p,
-        atleta: p.atleta as unknown as {
-          id: string;
-          nome: string;
-          posicao: string;
-          time: string;
-          foto_url?: string;
-        }
-      })) as AthleteWithAttendance[];
-    },
-    enabled: !!treinoDoDiaId,
-  });
-}
-
-/**
- * Hook to fetch available trainings
- * @param options Options for filtering such as date or team
- * @returns List of training days
- */
-export function useGetAvailableTrainings(options: { 
-  date?: Date | null;
-  team?: TeamType | null;
-} = {}) {
-  return useQuery({
-    queryKey: ['available-trainings', options],
-    queryFn: async () => {
-      let query = supabase
+    queryKey: ['treinos-presenca', limit],
+    queryFn: async (): Promise<TreinoComPresenca[]> => {
+      // 1. Buscar treinos do dia
+      const { data: treinosDoDia, error: treinosError } = await supabase
         .from('treinos_do_dia')
         .select(`
           id,
           data,
-          treino:treino_id(id, nome, local, horario, time)
+          treino:treino_id (
+            id, 
+            nome,
+            time
+          )
         `)
-        .order('data', { ascending: false });
+        .order('data', { ascending: false })
+        .limit(limit);
         
-      // Filter by specific date if provided
-      if (options.date) {
-        const dateStr = options.date.toISOString().split('T')[0];
-        query = query.eq('data', dateStr);
+      if (treinosError) throw treinosError;
+      if (!treinosDoDia) return [];
+      
+      // 2. Para cada treino, buscar dados de presença
+      const treinosComPresenca: TreinoComPresenca[] = [];
+      
+      for (const treinoDoDia of treinosDoDia) {
+        // Buscar registros de presença para este treino
+        const { data: presencas, error: presencasError } = await supabase
+          .from('treinos_presencas')
+          .select(`
+            id,
+            presente,
+            justificativa,
+            justificativa_tipo,
+            indice_esforco,
+            atleta:atleta_id (
+              id,
+              nome,
+              posicao,
+              time,
+              foto_url,
+              indice_esforco
+            )
+          `)
+          .eq('treino_do_dia_id', treinoDoDia.id);
+          
+        if (presencasError) {
+          console.error('Erro ao buscar presenças:', presencasError);
+          continue;
+        }
+        
+        if (!presencas || presencas.length === 0) {
+          // Se não há registros de presença, buscar atletas do time para criar registros padrão
+          if (!treinoDoDia.treino) continue;
+          
+          const timeDoTreino = (treinoDoDia.treino as any).time;
+          if (!timeDoTreino) continue;
+          
+          const { data: atletas, error: atletasError } = await supabase
+            .from('athletes')
+            .select('id, nome, posicao, time, foto_url, indice_esforco')
+            .eq('time', timeDoTreino);
+            
+          if (atletasError || !atletas) continue;
+          
+          treinosComPresenca.push({
+            id: treinoDoDia.id,
+            data: treinoDoDia.data,
+            nome: (treinoDoDia.treino as any).nome || 'Treino sem nome',
+            atletas: atletas.map(atleta => ({
+              id: atleta.id,
+              nome: atleta.nome,
+              posicao: atleta.posicao,
+              time: atleta.time,
+              foto_url: atleta.foto_url,
+              presente: true, // Valor padrão quando não há registro
+              indice_esforco: atleta.indice_esforco
+            }))
+          });
+        } else {
+          // Se há registros de presença, usar esses dados
+          treinosComPresenca.push({
+            id: treinoDoDia.id,
+            data: treinoDoDia.data,
+            nome: (treinoDoDia.treino as any).nome || 'Treino sem nome',
+            atletas: presencas.map(presenca => ({
+              id: (presenca.atleta as any).id,
+              nome: (presenca.atleta as any).nome,
+              posicao: (presenca.atleta as any).posicao,
+              time: (presenca.atleta as any).time,
+              foto_url: (presenca.atleta as any).foto_url,
+              presente: presenca.presente,
+              justificativa: presenca.justificativa,
+              justificativa_tipo: presenca.justificativa_tipo as JustificativaTipo,
+              indice_esforco: (presenca.atleta as any).indice_esforco
+            }))
+          });
+        }
       }
       
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      // Filter by team if needed
-      let filteredData = data || [];
-      if (options.team) {
-        filteredData = filteredData.filter(item => {
-          // Access team safely using as any
-          const treino = item.treino as any;
-          return treino && treino.time === options.team;
-        });
-      }
-      
-      return filteredData.map(item => {
-        const treino = item.treino as any;
-        return {
-          id: item.id,
-          data: item.data,
-          nome: treino?.nome || 'Treino sem nome',
-          local: treino?.local || 'Local não especificado',
-          horario: treino?.horario || 'Horário não especificado',
-          time: treino?.time || 'Time não especificado'
-        } as TrainingItem;
-      });
+      return treinosComPresenca;
     }
   });
-}
+};
 
-/**
- * Calculate athlete effort index based on attendance history
- * @param atletaId ID of the athlete
- * @returns Effort index between -1 and 1
- */
-export async function calculateAthleteEffortIndex(atletaId: string): Promise<number> {
+// Função para salvar dados de presença
+export const useSalvarPresenca = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      treinoId, 
+      atletaId, 
+      presente, 
+      justificativa, 
+      justificativaTipo 
+    }: { 
+      treinoId: string; 
+      atletaId: string; 
+      presente: boolean; 
+      justificativa?: string;
+      justificativaTipo?: JustificativaTipo;
+    }) => {
+      // 1. Verificar se já existe registro
+      const { data: existente, error: checkError } = await supabase
+        .from('treinos_presencas')
+        .select('id')
+        .eq('treino_do_dia_id', treinoId)
+        .eq('atleta_id', atletaId)
+        .maybeSingle();
+        
+      if (checkError) throw checkError;
+      
+      // Preparar dados para inserção/atualização
+      const presencaData = {
+        treino_do_dia_id: treinoId,
+        atleta_id: atletaId,
+        presente: presente,
+        justificativa: presente ? null : justificativa,
+        justificativa_tipo: presente ? null : justificativaTipo
+      };
+      
+      // 2. Inserir ou atualizar
+      if (existente) {
+        // Atualizar registro existente
+        const { error: updateError } = await supabase
+          .from('treinos_presencas')
+          .update(presencaData)
+          .eq('id', existente.id);
+          
+        if (updateError) throw updateError;
+      } else {
+        // Inserir novo registro
+        const { error: insertError } = await supabase
+          .from('treinos_presencas')
+          .insert([presencaData]);
+          
+        if (insertError) throw insertError;
+      }
+      
+      // 3. Atualizar índice de esforço do atleta
+      await atualizarIndiceEsforco(atletaId);
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast.success('Presença salva com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['treinos-presenca'] });
+    },
+    onError: (error) => {
+      console.error('Erro ao salvar presença:', error);
+      toast.error('Erro ao salvar presença');
+    }
+  });
+};
+
+// Função para calcular e atualizar o índice de esforço do atleta
+export const atualizarIndiceEsforco = async (atletaId: string) => {
   try {
-    // Get all attendance records for the athlete
-    const { data, error } = await supabase
+    // Buscar os últimos 10 treinos do atleta
+    const { data: presencas, error } = await supabase
       .from('treinos_presencas')
-      .select(`presente, justificativa_tipo`)
+      .select('presente, justificativa_tipo')
       .eq('atleta_id', atletaId)
       .order('created_at', { ascending: false })
-      .limit(20); // Consider last 20 trainings for calculation
+      .limit(10);
       
-    if (error || !data || data.length === 0) {
-      console.error('Error fetching attendance for effort index:', error);
-      return 0; // Default to neutral if no data or error
-    }
+    if (error) throw error;
+    if (!presencas || presencas.length === 0) return;
     
-    // Calculate score based on attendance and justification type
-    let totalScore = 0;
-    data.forEach(record => {
-      if (record.presente) {
-        totalScore += 1; // Present = +1
+    // Calcular índice
+    let pontuacaoTotal = 0;
+    presencas.forEach(presenca => {
+      if (presenca.presente) {
+        // Presente = +1
+        pontuacaoTotal += 1;
       } else {
-        // Apply different weights based on justification type
-        switch(record.justificativa_tipo) {
+        // Ausente com justificativa
+        switch (presenca.justificativa_tipo) {
           case JustificativaTipo.MOTIVO_LOGISTICO:
-            totalScore += 0.5; // Logistical reason = +0.5
+            pontuacaoTotal += 0.5; // Meio ponto
             break;
           case JustificativaTipo.MOTIVO_ACADEMICO:
           case JustificativaTipo.MOTIVO_PESSOAL:
           case JustificativaTipo.MOTIVO_SAUDE:
-            totalScore += 0; // Other justified reasons = 0
+            pontuacaoTotal += 0; // Neutro
             break;
+          case JustificativaTipo.SEM_JUSTIFICATIVA:
           default:
-            totalScore -= 1; // Absence without justification = -1
+            pontuacaoTotal -= 1; // Negativo
+            break;
         }
       }
     });
     
-    // Calculate index as average score
-    const effortIndex = totalScore / data.length;
+    // Calcular índice normalizado entre -1 e 1
+    const indiceEsforco = pontuacaoTotal / presencas.length;
+    const indiceNormalizado = Math.max(-1, Math.min(1, indiceEsforco));
     
-    // Ensure index is between -1 and 1
-    return Math.max(-1, Math.min(1, effortIndex));
-  } catch (error) {
-    console.error('Error calculating effort index:', error);
-    return 0; // Default to neutral if error
-  }
-}
-
-/**
- * Function to save attendance records for athletes
- * @param treinoDoDiaId ID of the training day
- * @param presencas Array of attendance records to save
- */
-export async function saveAthleteAttendance(
-  treinoDoDiaId: string,
-  presencas: {
-    atleta_id: string;
-    presente: boolean;
-    justificativa?: string | null;
-    justificativa_tipo?: JustificativaTipo | null;
-    id?: string | null;
-  }[]
-) {
-  // Separate existing records (with ID) from new ones
-  const registrosExistentes = presencas.filter(p => p.id);
-  const novosRegistros = presencas.filter(p => !p.id);
-  
-  const resultados = [];
-  
-  // Update existing records
-  for (const registro of registrosExistentes) {
-    const { id, ...dadosAtualizados } = registro;
-    if (id) { // TypeScript type guard
-      const { data, error } = await supabase
-        .from('treinos_presencas')
-        .update(dadosAtualizados)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      if (data) resultados.push(...data);
-    }
-  }
-  
-  // Insert new records
-  if (novosRegistros.length > 0) {
-    const { data, error } = await supabase
-      .from('treinos_presencas')
-      .insert(novosRegistros.map(registro => ({
-        ...registro,
-        treino_do_dia_id: treinoDoDiaId
-      })))
-      .select();
-    
-    if (error) throw error;
-    if (data) resultados.push(...data);
-  }
-  
-  // Update effort indices for all athletes in this batch
-  const atletaIds = [...new Set(presencas.map(p => p.atleta_id))];
-  for (const atletaId of atletaIds) {
-    const indiceEsforco = await calculateAthleteEffortIndex(atletaId);
-    
-    // Update the effort index in the athletes table
-    await supabase
+    // Atualizar no banco de dados
+    const { error: updateError } = await supabase
       .from('athletes')
-      .update({ indice_esforco: indiceEsforco })
+      .update({ indice_esforco: indiceNormalizado })
       .eq('id', atletaId);
+      
+    if (updateError) throw updateError;
+    
+    return indiceNormalizado;
+  } catch (error) {
+    console.error('Erro ao atualizar índice de esforço:', error);
+    return null;
   }
-  
-  return resultados;
-}
+};

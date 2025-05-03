@@ -12,6 +12,7 @@ export interface TopAtleta {
   pontuacao: number;
   eficiencia: number;
   fundamento?: string;
+  indice_esforco?: number;
 }
 
 /**
@@ -28,7 +29,7 @@ export function useTopAtletas(limit: number = 10, team?: TeamType) {
         let query = supabase
           .from('vw_fundamentos_ranking')
           .select(`
-            atleta:atleta_id(id, nome, posicao, time, foto_url),
+            atleta:atleta_id(id, nome, posicao, time, foto_url, indice_esforco),
             fundamento,
             total_acertos,
             total_erros,
@@ -51,6 +52,7 @@ export function useTopAtletas(limit: number = 10, team?: TeamType) {
           posicao: item.atleta.posicao,
           time: item.atleta.time,
           foto_url: item.atleta.foto_url,
+          indice_esforco: item.atleta.indice_esforco,
           pontuacao: item.total_acertos,
           eficiencia: item.eficiencia * 100,
           fundamento: item.fundamento
@@ -77,7 +79,7 @@ export function useTopAtletasByFundamento(fundamento: string, limit: number = 10
         let query = supabase
           .from('vw_fundamentos_ranking')
           .select(`
-            atleta:atleta_id(id, nome, posicao, time, foto_url),
+            atleta:atleta_id(id, nome, posicao, time, foto_url, indice_esforco),
             total_acertos,
             total_erros,
             eficiencia
@@ -100,6 +102,7 @@ export function useTopAtletasByFundamento(fundamento: string, limit: number = 10
           posicao: item.atleta.posicao,
           time: item.atleta.time,
           foto_url: item.atleta.foto_url,
+          indice_esforco: item.atleta.indice_esforco,
           pontuacao: item.total_acertos,
           eficiencia: item.eficiencia * 100,
           fundamento: fundamento

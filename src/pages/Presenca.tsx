@@ -1,17 +1,48 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  useTreinosComPresenca, 
+  useSalvarPresenca, 
+  JustificativaTipo,
+  TreinoComPresenca,
+  AtletaPresenca
+} from '@/hooks/attendance-hooks';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useToast } from '@/hooks/use-toast';
+import { 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle,
+  CalendarClock,
+  Users,
+  Info
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Spinner } from '@/components/ui/spinner';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Table, 
   TableBody, 
@@ -20,730 +51,462 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, ArrowLeft, CalendarCheck, CalendarIcon, CheckCircle, Filter, Save, XCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useGetAthleteAttendance, useGetAvailableTrainings, saveAthleteAttendance, JustificativaTipo, calculateAthleteEffortIndex } from '@/hooks/attendance-hooks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { TeamType } from '@/types';
-import { Progress } from '@/components/ui/progress';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Presenca = () => {
-  const { treinoDoDiaId } = useParams<{ treinoDoDiaId?: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { profile, isLoading: authLoading } = useAuth();
+  const [selectedTreinoId, setSelectedTreinoId] = useState<string | null>(null);
+  const [editingAtleta, setEditingAtleta] = useState<AtletaPresenca | null>(null);
+  const [justificativa, setJustificativa] = useState<string>('');
+  const [justificativaTipo, setJustificativaTipo] = useState<JustificativaTipo | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
-  // State for data control
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTeam, setSelectedTeam] = useState<TeamType | null>(null);
-  const [selectedTrainingId, setSelectedTrainingId] = useState<string | undefined>(treinoDoDiaId);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [effortIndices, setEffortIndices] = useState<Record<string, number>>({});
-
-  // Load available trainings
+  // Buscar treinos com presença
   const { 
-    data: availableTrainings, 
-    isLoading: isLoadingTrainings
-  } = useGetAvailableTrainings({
-    date: selectedDate,
-    team: selectedTeam
-  });
-
-  // Fetch training day data
-  const { 
-    data: treinoDoDiaInfo, 
-    isLoading: isLoadingTreino 
-  } = useQuery({
-    queryKey: ['treino-do-dia', selectedTrainingId],
-    queryFn: async () => {
-      if (!selectedTrainingId) return null;
-
-      const { data, error } = await supabase
-        .from('treinos_do_dia')
-        .select(`
-          id,
-          data,
-          treino:treino_id(id, nome, local, horario, time)
-        `)
-        .eq('id', selectedTrainingId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedTrainingId
-  });
-
-  // Fetch athlete attendance for selected training
-  const { 
-    data: atletas, 
-    isLoading: isLoadingAttendance,
-    error: attendanceError
-  } = useGetAthleteAttendance(selectedTrainingId);
-
-  // Mutation to save attendance
-  const saveAttendanceMutation = useMutation({
-    mutationFn: async (data: any[]) => {
-      if (!selectedTrainingId) throw new Error('ID do treino não informado');
-      
-      // Format data to save
-      const dadosParaSalvar = data.map(item => ({
-        id: item.id || null,
-        atleta_id: item.atleta_id,
-        presente: item.presente,
-        justificativa: item.presente ? null : (item.justificativa || null),
-        justificativa_tipo: item.presente ? null : (item.justificativa_tipo || null)
-      }));
-      
-      return await saveAthleteAttendance(selectedTrainingId, dadosParaSalvar);
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Presenças salvas com sucesso!',
-        description: 'Os registros de presença e justificativas foram atualizados.',
-        duration: 3000
-      });
-      
-      setHasChanges(false);
-      
-      // Invalidate query to reload data
-      queryClient.invalidateQueries({ queryKey: ['attendance', selectedTrainingId] });
-    },
-    onError: (error) => {
-      console.error('Erro ao salvar presenças:', error);
-      toast({
-        title: 'Erro ao salvar presenças',
-        description: 'Não foi possível salvar as alterações. Por favor, tente novamente.',
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Update local state when data is loaded
-  useEffect(() => {
-    if (atletas) {
-      setAttendanceData(atletas);
-      
-      // Load effort indices for all athletes
-      const loadEffortIndices = async () => {
-        const indices: Record<string, number> = {};
-        
-        for (const atleta of atletas) {
-          if (atleta.atleta_id) {
-            const indice = await calculateAthleteEffortIndex(atleta.atleta_id);
-            indices[atleta.atleta_id] = indice;
-          }
-        }
-        
-        setEffortIndices(indices);
-      };
-      
-      loadEffortIndices();
-    }
-  }, [atletas]);
-
-  // Function to update attendance for an athlete
-  const handleToggleAttendance = (index: number, value: boolean) => {
-    const newData = [...attendanceData];
-    newData[index].presente = value;
-    
-    // If marked as present, clear justification
-    if (value) {
-      newData[index].justificativa = null;
-      newData[index].justificativa_tipo = null;
-    } else if (!value && !newData[index].justificativa_tipo) {
-      // If marked as absent and no justification type, set default
-      newData[index].justificativa_tipo = JustificativaTipo.SEM_JUSTIFICATIVA;
-    }
-    
-    setAttendanceData(newData);
-    setHasChanges(true);
-  };
-
-  // Function to update justification text
-  const handleUpdateJustification = (index: number, value: string) => {
-    const newData = [...attendanceData];
-    newData[index].justificativa = value;
-    setAttendanceData(newData);
-    setHasChanges(true);
+    data: treinos, 
+    isLoading,
+    isError,
+    error 
+  } = useTreinosComPresenca();
+  
+  // Mutation para salvar presença
+  const { mutate: salvarPresenca, isPending } = useSalvarPresenca();
+  
+  // Encontrar o treino selecionado
+  const selectedTreino = treinos?.find(t => t.id === selectedTreinoId);
+  
+  // Ao selecionar um treino
+  const handleTreinoSelect = (treinoId: string) => {
+    setSelectedTreinoId(treinoId);
   };
   
-  // Function to update justification type
-  const handleUpdateJustificationType = (index: number, value: JustificativaTipo) => {
-    const newData = [...attendanceData];
-    newData[index].justificativa_tipo = value;
-    setAttendanceData(newData);
-    setHasChanges(true);
+  // Formatar data
+  const formatarData = (dataString: string) => {
+    try {
+      const data = new Date(dataString);
+      return format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch (e) {
+      return dataString;
+    }
   };
-
-  // Function to save attendance
-  const handleSaveAttendance = () => {
-    saveAttendanceMutation.mutate(attendanceData);
+  
+  // Abrir modal de edição
+  const handleEditAtleta = (atleta: AtletaPresenca) => {
+    setEditingAtleta(atleta);
+    setJustificativa(atleta.justificativa || '');
+    setJustificativaTipo(atleta.justificativa_tipo || null);
+    setDialogOpen(true);
   };
-
-  // Select another training
-  const handleTrainingSelect = (id: string) => {
-    if (hasChanges) {
-      // Confirm with user if they want to leave without saving
-      if (window.confirm('Existem alterações não salvas. Deseja sair sem salvar?')) {
-        setSelectedTrainingId(id);
-        setHasChanges(false);
-      }
+  
+  // Salvar alterações
+  const handleSaveChanges = () => {
+    if (!editingAtleta || !selectedTreinoId) return;
+    
+    salvarPresenca({
+      treinoId: selectedTreinoId,
+      atletaId: editingAtleta.id,
+      presente: editingAtleta.presente,
+      justificativa: justificativa,
+      justificativaTipo: justificativaTipo as JustificativaTipo
+    });
+    
+    setDialogOpen(false);
+    setEditingAtleta(null);
+  };
+  
+  // Alternar presença/ausência
+  const togglePresenca = (atleta: AtletaPresenca) => {
+    const novoStatus = !atleta.presente;
+    
+    if (!novoStatus) {
+      // Se marcar como ausente, abrir diálogo para justificativa
+      setEditingAtleta({...atleta, presente: false});
+      setJustificativa(atleta.justificativa || '');
+      setJustificativaTipo(atleta.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA);
+      setDialogOpen(true);
     } else {
-      setSelectedTrainingId(id);
+      // Se marcar como presente, salvar diretamente
+      salvarPresenca({
+        treinoId: selectedTreinoId!,
+        atletaId: atleta.id,
+        presente: true
+      });
     }
   };
   
-  // Filter athletes based on search
-  const filteredAthletes = attendanceData.filter(item => 
-    item.atleta?.nome?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Calcular cor do índice de esforço
+  const getEsforcoColor = (indice?: number) => {
+    if (indice === undefined || indice === null) return "bg-gray-200";
+    if (indice >= 0.8) return "bg-green-500";
+    if (indice >= 0.5) return "bg-green-300";
+    if (indice >= 0) return "bg-yellow-300";
+    if (indice >= -0.5) return "bg-orange-400";
+    return "bg-red-500";
+  };
   
-  // Count of present and absent
-  const presentCount = attendanceData.filter(p => p.presente).length;
-  const absentCount = attendanceData.length - presentCount;
-  const presentPercentage = attendanceData.length > 0 
-    ? Math.round((presentCount / attendanceData.length) * 100) 
-    : 0;
-  
-  // Count justification types
-  const justificationCounts = attendanceData.reduce((counts: Record<string, number>, item) => {
-    if (!item.presente && item.justificativa_tipo) {
-      counts[item.justificativa_tipo] = (counts[item.justificativa_tipo] || 0) + 1;
+  // Verificar faltas consecutivas
+  const verificarFaltasConsecutivas = (atletas: AtletaPresenca[]) => {
+    // Implementação básica - idealmente isso seria calculado no servidor
+    const atletasComFaltas = atletas.filter(a => !a.presente && 
+      (!a.justificativa_tipo || a.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA));
+      
+    if (atletasComFaltas.length > 0) {
+      return atletasComFaltas.map(a => a.nome);
     }
-    return counts;
-  }, {});
-
-  // Format date
-  const formatarData = (dataStr: string) => {
-    const data = new Date(dataStr);
-    return format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    return [];
   };
   
-  // Start with current date if no training selected
-  useEffect(() => {
-    if (!treinoDoDiaId) {
-      setSelectedDate(new Date());
-    }
-  }, [treinoDoDiaId]);
+  if (authLoading) {
+    return (
+      <div className="container mx-auto p-6 max-w-7xl">
+        <h1 className="text-2xl font-bold mb-6">Carregando...</h1>
+        <Skeleton className="h-[300px] w-full rounded-lg" />
+      </div>
+    );
+  }
   
-  // Check if there is a training for selected date
-  useEffect(() => {
-    if (availableTrainings?.length && !selectedTrainingId) {
-      setSelectedTrainingId(availableTrainings[0].id);
-    }
-  }, [availableTrainings, selectedTrainingId]);
+  // Verificar permissão (apenas técnicos)
+  if (profile && profile.funcao !== 'tecnico') {
+    return (
+      <div className="container mx-auto p-6 max-w-7xl">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Acesso restrito</AlertTitle>
+          <AlertDescription>
+            Somente técnicos podem acessar a gestão de presenças.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
   
-  // Get name initials for avatar
-  const getInitials = (name: string) => {
-    if (!name) return '';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
+  if (isError) {
+    return (
+      <div className="container mx-auto p-6 max-w-7xl">
+        <h1 className="text-2xl font-bold mb-6">Gestão de Presenças</h1>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro ao carregar dados</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Ocorreu um erro ao carregar os treinos.'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
   
-  // Format effort index to display value
-  const formatEffortIndex = (value: number) => {
-    if (value === undefined || value === null) return 'N/A';
-    return value.toFixed(2);
-  };
-  
-  // Get color class based on effort index
-  const getEffortColorClass = (value: number) => {
-    if (value === undefined || value === null) return 'bg-gray-200';
-    if (value >= 0.7) return 'bg-green-500';
-    if (value >= 0.4) return 'bg-green-300';
-    if (value >= 0) return 'bg-yellow-300';
-    if (value >= -0.5) return 'bg-orange-400';
-    return 'bg-red-500';
-  };
-
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-0">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Gerenciar Presenças</h1>
-            <p className="text-muted-foreground">
-              {treinoDoDiaInfo ? (
-                <>
-                  {treinoDoDiaInfo.treino?.nome || 'Treino'} • {formatarData(treinoDoDiaInfo.data)}
-                </>
+    <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
+        <Users className="h-6 w-6" />
+        Gestão de Presenças
+      </h1>
+      
+      <div className="grid md:grid-cols-12 gap-6">
+        {/* Lista de treinos */}
+        <div className="md:col-span-4 lg:col-span-3">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5" />
+                Treinos Recentes
+              </CardTitle>
+              <CardDescription>
+                Selecione um treino para gerenciar presenças
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : treinos && treinos.length > 0 ? (
+                <div className="space-y-2">
+                  {treinos.map(treino => (
+                    <Button 
+                      key={treino.id}
+                      variant={selectedTreinoId === treino.id ? "default" : "outline"} 
+                      className={`w-full justify-start ${selectedTreinoId === treino.id ? '' : 'hover:bg-accent'}`}
+                      onClick={() => handleTreinoSelect(treino.id)}
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{treino.nome}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatarData(treino.data)}
+                        </span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
               ) : (
-                'Selecione um treino'
+                <div className="text-center p-4 text-muted-foreground">
+                  Nenhum treino encontrado
+                </div>
               )}
-            </p>
-          </div>
+            </CardContent>
+          </Card>
         </div>
         
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Date selector */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="min-w-[240px] justify-start">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? (
-                  format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+        {/* Lista de atletas do treino selecionado */}
+        <div className="md:col-span-8 lg:col-span-9">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {selectedTreino ? (
+                  <div className="flex flex-col">
+                    <span>{selectedTreino.nome}</span>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {formatarData(selectedTreino.data)}
+                    </span>
+                  </div>
                 ) : (
-                  <span>Selecionar data</span>
+                  "Selecione um treino"
                 )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                initialFocus
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
-          
-          {/* Team selector */}
-          <Select 
-            value={selectedTeam || undefined} 
-            onValueChange={(value) => setSelectedTeam(value as TeamType || null)}
-          >
-            <SelectTrigger className="min-w-[180px]">
-              <SelectValue placeholder="Filtrar por time" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Todos os times</SelectItem>
-              <SelectItem value="Masculino">Masculino</SelectItem>
-              <SelectItem value="Feminino">Feminino</SelectItem>
-            </SelectContent>
-          </Select>
+              </CardTitle>
+              <CardDescription>
+                Gerencie a presença dos atletas neste treino
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {selectedTreino ? (
+                <>
+                  {/* Alertas */}
+                  {selectedTreino.atletas.some(a => !a.presente && 
+                    (!a.justificativa_tipo || a.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA)) && (
+                    <Alert className="mb-4 border-amber-500">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Ausências sem justificativa</AlertTitle>
+                      <AlertDescription>
+                        Existem atletas ausentes sem justificativa neste treino.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {/* Tabela de atletas */}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[250px]">Atleta</TableHead>
+                        <TableHead>Presença</TableHead>
+                        <TableHead>Justificativa</TableHead>
+                        <TableHead>Índice de Esforço</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedTreino.atletas.map((atleta) => (
+                        <TableRow key={atleta.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                {atleta.foto_url ? (
+                                  <AvatarImage src={atleta.foto_url} alt={atleta.nome} />
+                                ) : (
+                                  <AvatarFallback>{atleta.nome.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div>
+                                <div>{atleta.nome}</div>
+                                <div className="text-xs text-muted-foreground">{atleta.posicao}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`flex items-center gap-1 ${atleta.presente ? 'text-green-600' : 'text-red-600'}`}
+                              onClick={() => togglePresenca(atleta)}
+                            >
+                              {atleta.presente ? (
+                                <>
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span>Presente</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-4 w-4" />
+                                  <span>Ausente</span>
+                                </>
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            {!atleta.presente && (
+                              <>
+                                {atleta.justificativa_tipo ? (
+                                  <Badge variant="outline" className="font-normal">
+                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_PESSOAL && 'Motivo Pessoal'}
+                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_ACADEMICO && 'Motivo Acadêmico'}
+                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_LOGISTICO && 'Motivo Logístico'}
+                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_SAUDE && 'Motivo de Saúde'}
+                                    {atleta.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA && 'Sem Justificativa'}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="font-normal">Sem Justificativa</Badge>
+                                )}
+                                {atleta.justificativa && (
+                                  <p className="text-xs text-muted-foreground mt-1 truncate max-w-xs">
+                                    {atleta.justificativa}
+                                  </p>
+                                )}
+                              </>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {atleta.indice_esforco !== null && atleta.indice_esforco !== undefined ? (
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className={`h-3 w-3 rounded-full ${getEsforcoColor(atleta.indice_esforco)}`}
+                                ></div>
+                                <span>
+                                  {(atleta.indice_esforco * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Não calculado</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditAtleta(atleta)}
+                              disabled={isPending}
+                            >
+                              <Info className="h-4 w-4" />
+                              <span className="sr-only">Editar</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
+              ) : (
+                <div className="text-center p-6 text-muted-foreground">
+                  Selecione um treino para ver a lista de atletas
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
       
-      {/* List of available trainings */}
-      {isLoadingTrainings ? (
-        <div className="mb-6">
-          <Skeleton className="h-10 w-full mb-2" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : availableTrainings && availableTrainings.length > 0 ? (
-        <div className="mb-6 overflow-x-auto">
-          <div className="flex space-x-2 pb-2">
-            {availableTrainings.map((training) => (
-              <Button 
-                key={training.id}
-                variant={selectedTrainingId === training.id ? "default" : "outline"}
-                onClick={() => handleTrainingSelect(training.id)}
-                className="whitespace-nowrap"
-              >
-                <span className="flex items-center gap-2">
-                  <CalendarCheck className="h-4 w-4" />
-                  <span>{format(new Date(training.data), 'dd/MM')}</span>
-                  <span className="hidden sm:inline"> - {training.nome}</span>
-                </span>
-              </Button>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <Card className="mb-6">
-          <CardContent className="flex flex-col items-center justify-center py-6">
-            <CalendarIcon className="h-12 w-12 text-muted-foreground mb-2" />
-            <p className="text-center text-muted-foreground">
-              Nenhum treino encontrado para esta data ou filtro.
-            </p>
-            <Button 
-              variant="outline" 
-              className="mt-4" 
-              onClick={() => {
-                setSelectedDate(undefined);
-                setSelectedTeam(null);
-              }}
-            >
-              Limpar filtros
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarCheck className="h-5 w-5" />
-              Lista de Presença
-              {attendanceData.length > 0 && (
-                <Badge className="ml-2">{attendanceData.length} atletas</Badge>
+      {/* Modal de Edição */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingAtleta && (
+                <>
+                  {editingAtleta.presente ? 'Editar Presença' : 'Editar Justificativa'}:
+                  {' '}{editingAtleta.nome}
+                </>
               )}
-            </CardTitle>
-            <CardDescription>
-              Marque os atletas presentes e justifique as ausências
-            </CardDescription>
-          </div>
+            </DialogTitle>
+            <DialogDescription>
+              {editingAtleta?.presente ? (
+                'Gerencie os detalhes da presença deste atleta'
+              ) : (
+                'Informe a justificativa para a ausência deste atleta'
+              )}
+            </DialogDescription>
+          </DialogHeader>
           
-          {/* Quick stats */}
-          {attendanceData.length > 0 && (
-            <div className="hidden md:flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-green-50">
-                  <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" />
-                  <span>{presentCount} presentes ({presentPercentage}%)</span>
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-red-50">
-                  <XCircle className="h-3.5 w-3.5 mr-1 text-red-500" />
-                  <span>{absentCount} ausentes</span>
-                </Badge>
-              </div>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {/* Search bar */}
-          <div className="mb-4 relative">
-            <Input
-              placeholder="Buscar atleta..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
-            />
-            <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            {searchQuery && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="absolute right-1 top-1.5 h-7 w-7 p-0" 
-                onClick={() => setSearchQuery('')}
-              >
-                <XCircle className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          
-          {/* Justification type stats */}
-          {attendanceData.length > 0 && absentCount > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {Object.entries(justificationCounts).map(([type, count]) => {
-                let label = "";
-                let bgColor = "";
-                
-                switch(type) {
-                  case JustificativaTipo.SEM_JUSTIFICATIVA:
-                    label = "Sem justificativa";
-                    bgColor = "bg-red-100 border-red-300";
-                    break;
-                  case JustificativaTipo.MOTIVO_PESSOAL:
-                    label = "Motivo pessoal";
-                    bgColor = "bg-blue-100 border-blue-300";
-                    break;
-                  case JustificativaTipo.MOTIVO_ACADEMICO:
-                    label = "Motivo acadêmico";
-                    bgColor = "bg-purple-100 border-purple-300";
-                    break;
-                  case JustificativaTipo.MOTIVO_LOGISTICO:
-                    label = "Motivo logístico";
-                    bgColor = "bg-yellow-100 border-yellow-300";
-                    break;
-                  case JustificativaTipo.MOTIVO_SAUDE:
-                    label = "Motivo de saúde";
-                    bgColor = "bg-green-100 border-green-300";
-                    break;
-                }
-                
-                return (
-                  <Badge key={type} variant="outline" className={`${bgColor} text-gray-700`}>
-                    {label}: {count}
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
-          
-          {/* Mobile stats */}
-          {attendanceData.length > 0 && (
-            <div className="flex md:hidden items-center gap-2 mb-4">
-              <Badge variant="outline" className="bg-green-50">
-                <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" />
-                <span>{presentCount} ({presentPercentage}%)</span>
-              </Badge>
-              <Badge variant="outline" className="bg-red-50">
-                <XCircle className="h-3.5 w-3.5 mr-1 text-red-500" />
-                <span>{absentCount}</span>
-              </Badge>
-            </div>
-          )}
-          
-          {/* Loading and errors */}
-          {isLoadingAttendance || isLoadingTreino ? (
-            <div className="flex flex-col space-y-3 pt-1">
-              {Array(5).fill(0).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 border p-3 rounded-lg">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-40 mb-1" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <Skeleton className="h-6 w-6" />
+          <div className="grid gap-4 py-4">
+            {/* Status de Presença */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="status" className="text-right">Status</label>
+              <div className="col-span-3">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={editingAtleta?.presente ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditingAtleta(prev => prev ? {...prev, presente: true} : null)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Presente
+                  </Button>
+                  <Button
+                    variant={!editingAtleta?.presente ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditingAtleta(prev => prev ? {...prev, presente: false} : null)}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Ausente
+                  </Button>
                 </div>
-              ))}
-            </div>
-          ) : attendanceError ? (
-            <div className="flex flex-col items-center gap-4 py-8">
-              <AlertCircle className="h-12 w-12 text-red-500" />
-              <div className="text-center">
-                <h3 className="font-semibold text-lg">Erro ao carregar presenças</h3>
-                <p className="text-muted-foreground">
-                  Não foi possível carregar os dados de presença para este treino.
-                </p>
               </div>
-              <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['attendance'] })}>
-                Tentar novamente
-              </Button>
             </div>
-          ) : attendanceData.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Não há atletas disponíveis para este treino.
-              </p>
-              {selectedTrainingId && (
-                <Button 
-                  variant="outline" 
-                  className="mt-4" 
-                  onClick={() => setSelectedTrainingId(undefined)}
-                >
-                  Selecionar outro treino
-                </Button>
-              )}
-            </div>
-          ) : (
-            <>
-              {/* View on larger devices */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12 text-center">Status</TableHead>
-                      <TableHead>Atleta</TableHead>
-                      <TableHead>Índice de Esforço</TableHead>
-                      <TableHead>Justificativa (se ausente)</TableHead>
-                      <TableHead>Tipo de Ausência</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAthletes.map((registro, index) => {
-                      const atletaIndex = attendanceData.findIndex(a => a.atleta_id === registro.atleta_id);
-                      const effortIndex = effortIndices[registro.atleta_id] || 0;
-                      return (
-                        <TableRow key={registro.atleta_id} className={!registro.presente ? "bg-muted/30" : ""}>
-                          <TableCell className="text-center">
-                            <div className="flex justify-center">
-                              <Checkbox
-                                checked={registro.presente}
-                                onCheckedChange={(value) => handleToggleAttendance(atletaIndex, !!value)}
-                                className={registro.presente ? "border-green-500 text-green-500" : "border-red-300"}
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className={`${registro.atleta?.time === 'Masculino' ? 'bg-blue-600' : 'bg-red-600'} text-white`}>
-                                <AvatarImage src={registro.atleta?.foto_url || ''} alt={registro.atleta?.nome} />
-                                <AvatarFallback>{getInitials(registro.atleta?.nome)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">{registro.atleta?.nome}</div>
-                                <div className="text-sm text-muted-foreground">{registro.atleta?.posicao}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2">
-                                    <Progress value={(effortIndex + 1) * 50} className={`w-24 ${getEffortColorClass(effortIndex)}`} />
-                                    <span className="text-sm">{formatEffortIndex(effortIndex)}</span>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Índice de Esforço: {formatEffortIndex(effortIndex)}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Baseado nos últimos treinos e justificativas
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              placeholder={registro.presente ? 'Presente' : 'Informe a justificativa...'}
-                              value={registro.justificativa || ''}
-                              onChange={(e) => handleUpdateJustification(atletaIndex, e.target.value)}
-                              disabled={registro.presente}
-                              className={!registro.presente && !registro.justificativa ? "border-red-200" : ""}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={registro.justificativa_tipo || ""}
-                              onValueChange={(value) => handleUpdateJustificationType(atletaIndex, value as JustificativaTipo)}
-                              disabled={registro.presente}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecione o tipo" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>
-                                  Falta sem justificativa
-                                </SelectItem>
-                                <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>
-                                  Falta justificada - motivo pessoal
-                                </SelectItem>
-                                <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>
-                                  Falta justificada - motivo acadêmico
-                                </SelectItem>
-                                <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>
-                                  Falta justificada - motivo logístico
-                                </SelectItem>
-                                <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>
-                                  Falta justificada - motivo de saúde
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* View on mobile devices */}
-              <div className="md:hidden space-y-3">
-                {filteredAthletes.map((registro, index) => {
-                  const atletaIndex = attendanceData.findIndex(a => a.atleta_id === registro.atleta_id);
-                  const effortIndex = effortIndices[registro.atleta_id] || 0;
-                  return (
-                    <div 
-                      key={registro.atleta_id} 
-                      className={`border rounded-lg transition-colors ${
-                        registro.presente ? "bg-card" : "bg-muted/30"
-                      }`}
+            
+            {/* Justificativa (se ausente) */}
+            {editingAtleta && !editingAtleta.presente && (
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="tipo" className="text-right">Tipo</label>
+                  <div className="col-span-3">
+                    <Select 
+                      value={justificativaTipo || undefined}
+                      onValueChange={(value) => setJustificativaTipo(value as JustificativaTipo)}
                     >
-                      <div className="p-3">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center">
-                            <div className="mr-3">
-                              <Avatar className={`${registro.atleta?.time === 'Masculino' ? 'bg-blue-600' : 'bg-red-600'} text-white`}>
-                                <AvatarImage src={registro.atleta?.foto_url || ''} alt={registro.atleta?.nome} />
-                                <AvatarFallback>{getInitials(registro.atleta?.nome)}</AvatarFallback>
-                              </Avatar>
-                            </div>
-                            <div>
-                              <p className="font-medium">{registro.atleta?.nome}</p>
-                              <p className="text-sm text-muted-foreground">{registro.atleta?.posicao}</p>
-                              <div className="flex items-center mt-1">
-                                <div className="w-16 mr-2">
-                                  <Progress value={(effortIndex + 1) * 50} className={`h-1.5 ${getEffortColorClass(effortIndex)}`} />
-                                </div>
-                                <span className="text-xs">Esforço: {formatEffortIndex(effortIndex)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center">
-                            {registro.presente ? (
-                              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500 mr-2" />
-                            )}
-                            <Checkbox 
-                              checked={registro.presente}
-                              onCheckedChange={(value) => handleToggleAttendance(atletaIndex, !!value)}
-                              className={registro.presente ? "border-green-500 text-green-500" : "border-red-300"}
-                            />
-                          </div>
-                        </div>
-                        
-                        {!registro.presente && (
-                          <>
-                            <div className="mt-3">
-                              <Select
-                                value={registro.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA}
-                                onValueChange={(value) => handleUpdateJustificationType(atletaIndex, value as JustificativaTipo)}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Tipo de ausência" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>
-                                    Falta sem justificativa
-                                  </SelectItem>
-                                  <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>
-                                    Falta justificada - motivo pessoal
-                                  </SelectItem>
-                                  <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>
-                                    Falta justificada - motivo acadêmico
-                                  </SelectItem>
-                                  <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>
-                                    Falta justificada - motivo logístico
-                                  </SelectItem>
-                                  <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>
-                                    Falta justificada - motivo de saúde
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="mt-3">
-                              <Input
-                                placeholder="Justificativa da ausência..."
-                                className={!registro.justificativa ? "border-red-200" : ""}
-                                value={registro.justificativa || ''}
-                                onChange={(e) => handleUpdateJustification(atletaIndex, e.target.value)}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Save button */}
-      {attendanceData.length > 0 && (
-        <div className="flex justify-end mt-6">
-          <Button 
-            onClick={handleSaveAttendance} 
-            disabled={!hasChanges || saveAttendanceMutation.isPending}
-            className="gap-2"
-            size="lg"
-          >
-            {saveAttendanceMutation.isPending ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              <Save className="h-4 w-4" />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de justificativa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>
+                          Motivo Pessoal
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>
+                          Motivo Acadêmico
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>
+                          Motivo Logístico
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>
+                          Motivo de Saúde
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>
+                          Sem Justificativa
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="justificativa" className="text-right align-top pt-2">
+                    Justificativa
+                  </label>
+                  <Textarea
+                    id="justificativa"
+                    placeholder="Descreva o motivo da ausência..."
+                    className="col-span-3"
+                    value={justificativa}
+                    onChange={(e) => setJustificativa(e.target.value)}
+                  />
+                </div>
+              </>
             )}
-            Salvar Presenças
-          </Button>
-        </div>
-      )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveChanges} disabled={isPending}>
+              {isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
