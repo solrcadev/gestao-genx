@@ -52,6 +52,7 @@ export type Database = {
           id: string
           idade: number
           imagem_url: string | null
+          indice_esforco: number | null
           nome: string
           posicao: string
           telefone: string | null
@@ -68,6 +69,7 @@ export type Database = {
           id?: string
           idade: number
           imagem_url?: string | null
+          indice_esforco?: number | null
           nome: string
           posicao: string
           telefone?: string | null
@@ -84,6 +86,7 @@ export type Database = {
           id?: string
           idade?: number
           imagem_url?: string | null
+          indice_esforco?: number | null
           nome?: string
           posicao?: string
           telefone?: string | null
@@ -1552,7 +1555,9 @@ export type Database = {
           atleta_id: string
           created_at: string
           id: string
+          indice_esforco: number | null
           justificativa: string | null
+          justificativa_tipo: string | null
           presente: boolean
           treino_do_dia_id: string
         }
@@ -1560,7 +1565,9 @@ export type Database = {
           atleta_id: string
           created_at?: string
           id?: string
+          indice_esforco?: number | null
           justificativa?: string | null
+          justificativa_tipo?: string | null
           presente?: boolean
           treino_do_dia_id: string
         }
@@ -1568,7 +1575,9 @@ export type Database = {
           atleta_id?: string
           created_at?: string
           id?: string
+          indice_esforco?: number | null
           justificativa?: string | null
+          justificativa_tipo?: string | null
           presente?: boolean
           treino_do_dia_id?: string
         }

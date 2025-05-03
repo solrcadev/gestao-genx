@@ -573,7 +573,7 @@ const Presenca = () => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-2">
-                                    <Progress value={(effortIndex + 1) * 50} className="w-24" />
+                                    <Progress value={(effortIndex + 1) * 50} className={`w-24 ${getEffortColorClass(effortIndex)}`} />
                                     <span className="text-sm">{formatEffortIndex(effortIndex)}</span>
                                   </div>
                                 </TooltipTrigger>
@@ -656,7 +656,7 @@ const Presenca = () => {
                               <p className="text-sm text-muted-foreground">{registro.atleta?.posicao}</p>
                               <div className="flex items-center mt-1">
                                 <div className="w-16 mr-2">
-                                  <Progress value={(effortIndex + 1) * 50} className="h-1.5" />
+                                  <Progress value={(effortIndex + 1) * 50} className={`h-1.5 ${getEffortColorClass(effortIndex)}`} />
                                 </div>
                                 <span className="text-xs">Esforço: {formatEffortIndex(effortIndex)}</span>
                               </div>
@@ -681,7 +681,7 @@ const Presenca = () => {
                           <>
                             <div className="mt-3">
                               <Select
-                                value={registro.justificativa_tipo || ""}
+                                value={registro.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA}
                                 onValueChange={(value) => handleUpdateJustificationType(atletaIndex, value as JustificativaTipo)}
                               >
                                 <SelectTrigger className="w-full">

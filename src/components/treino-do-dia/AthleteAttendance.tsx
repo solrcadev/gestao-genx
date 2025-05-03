@@ -9,13 +9,23 @@ import { toast } from "../ui/use-toast";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { JustificativaTipo } from "@/hooks/attendance-hooks";
+import { Progress } from "../ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
-const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
+interface AthleteAttendanceProps {
+  treinoDoDiaId: string;
+  onSaved: () => void;
+}
+
+const AthleteAttendance: React.FC<AthleteAttendanceProps> = ({ treinoDoDiaId, onSaved }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [athletes, setAthletes] = useState([]);
+  const [athletes, setAthletes] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [presences, setPresences] = useState([]);
+  const [presences, setPresences] = useState<any[]>([]);
+  const [effortIndices, setEffortIndices] = useState<Record<string, number>>({});
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -25,15 +35,27 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
         const data = await fetchPresencasAtletas(treinoDoDiaId);
         setAthletes(data);
         
-        // Initialize presences from fetched data
+        // Initialize presences from fetched data and load effort indices
         const initialPresences = data.map(item => ({
           atleta_id: item.atleta.id,
           presente: item.presente,
           justificativa: item.justificativa || '',
+          justificativa_tipo: item.justificativa_tipo || (item.presente ? null : JustificativaTipo.SEM_JUSTIFICATIVA),
           id: item.id
         }));
         
         setPresences(initialPresences);
+        
+        // Load effort indices
+        const indices: Record<string, number> = {};
+        data.forEach(item => {
+          if (item.atleta && typeof item.indice_esforco === 'number') {
+            indices[item.atleta.id] = item.indice_esforco;
+          } else {
+            indices[item.atleta.id] = 0; // Default value
+          }
+        });
+        setEffortIndices(indices);
       } catch (error) {
         console.error("Error loading athletes:", error);
         toast({
@@ -49,21 +71,36 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
     loadAthletes();
   }, [treinoDoDiaId]);
 
-  const handleTogglePresence = (atletaId) => {
+  const handleTogglePresence = (atletaId: string) => {
     setPresences(prev => 
       prev.map(p => 
         p.atleta_id === atletaId 
-          ? { ...p, presente: !p.presente, justificativa: !p.presente ? '' : p.justificativa } 
+          ? { 
+              ...p, 
+              presente: !p.presente, 
+              justificativa: !p.presente ? '' : p.justificativa,
+              justificativa_tipo: !p.presente ? null : p.justificativa_tipo
+            } 
           : p
       )
     );
   };
 
-  const handleJustificativaChange = (atletaId, value) => {
+  const handleJustificativaChange = (atletaId: string, value: string) => {
     setPresences(prev => 
       prev.map(p => 
         p.atleta_id === atletaId 
           ? { ...p, justificativa: value } 
+          : p
+      )
+    );
+  };
+
+  const handleJustificativaTipoChange = (atletaId: string, value: JustificativaTipo) => {
+    setPresences(prev => 
+      prev.map(p => 
+        p.atleta_id === atletaId 
+          ? { ...p, justificativa_tipo: value } 
           : p
       )
     );
@@ -74,7 +111,10 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
       setSaving(true);
       await registrarPresencasEmLote({
         treinoDoDiaId,
-        presences
+        presences: presences.map(p => ({
+          ...p,
+          justificativa_tipo: p.presente ? null : (p.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA)
+        }))
       });
       
       toast({
@@ -106,6 +146,22 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
   const presentCount = presences.filter(p => p.presente).length;
   const totalCount = athletes.length;
   const presentPercentage = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+
+  // Format effort index for display
+  const formatEffortIndex = (value: number) => {
+    if (value === undefined || value === null) return 'N/A';
+    return value.toFixed(2);
+  };
+  
+  // Get color class based on effort index
+  const getEffortColorClass = (value: number) => {
+    if (value === undefined || value === null) return 'bg-gray-200';
+    if (value >= 0.7) return 'bg-green-500';
+    if (value >= 0.4) return 'bg-green-300';
+    if (value >= 0) return 'bg-yellow-300';
+    if (value >= -0.5) return 'bg-orange-400';
+    return 'bg-red-500';
+  };
 
   return (
     <div className="space-y-4">
@@ -139,7 +195,7 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
             onClick={() => {
               // Set all to present
               setPresences(prev => 
-                prev.map(p => ({ ...p, presente: true, justificativa: '' }))
+                prev.map(p => ({ ...p, presente: true, justificativa: '', justificativa_tipo: null }))
               );
             }}
           >
@@ -162,6 +218,7 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
           {filteredAthletes.map((item) => {
             const presence = presences.find(p => p.atleta_id === item.atleta.id);
             const isPresent = presence?.presente ?? true;
+            const effortIndex = effortIndices[item.atleta.id] || 0;
             
             return (
               <div 
@@ -190,6 +247,28 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
                     <div>
                       <p className="font-medium">{item.atleta.nome}</p>
                       <p className="text-sm text-muted-foreground">{item.atleta.posicao}</p>
+                      
+                      {/* Effort Index */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center mt-1 gap-1">
+                              <div className="w-16">
+                                <Progress value={(effortIndex + 1) * 50} className={`h-1.5 ${getEffortColorClass(effortIndex)}`} />
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                Índice: {formatEffortIndex(effortIndex)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-medium">Índice de Esforço: {formatEffortIndex(effortIndex)}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Baseado nos últimos treinos e justificativas
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
                   
@@ -207,7 +286,33 @@ const AthleteAttendance = ({ treinoDoDiaId, onSaved }) => {
                 </div>
                 
                 {!isPresent && (
-                  <div className="mt-3">
+                  <div className="mt-3 space-y-3">
+                    <Select
+                      value={presence?.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA}
+                      onValueChange={(value) => handleJustificativaTipoChange(item.atleta.id, value as JustificativaTipo)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Tipo de ausência" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>
+                          Falta sem justificativa
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>
+                          Falta justificada - motivo pessoal
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>
+                          Falta justificada - motivo acadêmico
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>
+                          Falta justificada - motivo logístico
+                        </SelectItem>
+                        <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>
+                          Falta justificada - motivo de saúde
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
                     <Textarea
                       placeholder="Justificativa da ausência..."
                       className="text-sm resize-none"
