@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 interface Athlete {
@@ -65,13 +67,27 @@ interface Evaluation {
   erros: number;
 }
 
-const RealTimeEvaluation = () => {
-  const { treinoDoDiaId } = useParams<{ treinoDoDiaId: string }>();
+interface RealTimeEvaluationProps {
+  exercise?: any;
+  treinoDoDiaId: string;
+  onComplete?: (data: any) => void;
+  onBack?: () => void;
+  initialData?: any;
+}
+
+export const RealTimeEvaluation: React.FC<RealTimeEvaluationProps> = ({ 
+  exercise,
+  treinoDoDiaId,
+  onComplete,
+  onBack,
+  initialData = {}
+}) => {
+  const { toast } = useToast();
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<TrainingExercise | null>(null);
   const [evaluationData, setEvaluationData] = useState<Evaluation>({
-    treino_do_dia_id: treinoDoDiaId || '',
-    exercicio_id: '',
+    treino_do_dia_id: treinoDoDiaId,
+    exercicio_id: exercise?.id || '',
     atleta_id: '',
     fundamento: '',
     acertos: 0,
@@ -81,10 +97,9 @@ const RealTimeEvaluation = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isExerciseCompleted, setIsExerciseCompleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-	const [isResetting, setIsResetting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
   
   // Fetch athletes
   const { data: athletes, isLoading: isLoadingAthletes } = useQuery({
@@ -118,10 +133,29 @@ const RealTimeEvaluation = () => {
         .order('ordem');
       
       if (error) throw error;
-      return data as TrainingExercise[];
+      return data as unknown as TrainingExercise[];
     },
     enabled: !!treinoDoDiaId
   });
+
+  // Initialize with the exercise passed as prop if available
+  useEffect(() => {
+    if (exercise) {
+      setSelectedExercise(exercise);
+      setEvaluationData(prev => ({
+        ...prev,
+        exercicio_id: exercise.id
+      }));
+    }
+    
+    // Initialize with data from props if available
+    if (initialData && Object.keys(initialData).length > 0) {
+      setEvaluationData(prev => ({
+        ...prev,
+        ...initialData
+      }));
+    }
+  }, [exercise, initialData]);
   
   // Function to start the timer
   const startTimer = () => {
@@ -172,6 +206,13 @@ const RealTimeEvaluation = () => {
       ...prev,
       atleta_id: athlete.id
     }));
+    
+    if (onComplete) {
+      onComplete({
+        ...evaluationData,
+        atleta_id: athlete.id
+      });
+    }
   };
   
   // Function to handle exercise selection
@@ -181,6 +222,13 @@ const RealTimeEvaluation = () => {
       ...prev,
       exercicio_id: exercise.id
     }));
+    
+    if (onComplete) {
+      onComplete({
+        ...evaluationData,
+        exercicio_id: exercise.id
+      });
+    }
   };
   
   // Function to handle input change
@@ -190,6 +238,13 @@ const RealTimeEvaluation = () => {
       ...prev,
       [name]: value
     }));
+    
+    if (onComplete) {
+      onComplete({
+        ...evaluationData,
+        [name]: value
+      });
+    }
   };
   
   // Function to handle increment
@@ -198,6 +253,13 @@ const RealTimeEvaluation = () => {
       ...prev,
       [field]: prev[field] + 1
     }));
+    
+    if (onComplete) {
+      onComplete({
+        ...evaluationData,
+        [field]: evaluationData[field] + 1
+      });
+    }
   };
   
   // Function to handle decrement
@@ -206,6 +268,13 @@ const RealTimeEvaluation = () => {
       ...prev,
       [field]: Math.max(0, prev[field] - 1)
     }));
+    
+    if (onComplete) {
+      onComplete({
+        ...evaluationData,
+        [field]: Math.max(0, evaluationData[field] - 1)
+      });
+    }
   };
   
   // Function to handle save evaluation
@@ -240,8 +309,8 @@ const RealTimeEvaluation = () => {
       
       // Reset form
       setEvaluationData({
-        treino_do_dia_id: treinoDoDiaId || '',
-        exercicio_id: '',
+        treino_do_dia_id: treinoDoDiaId,
+        exercicio_id: exercise?.id || '',
         atleta_id: '',
         fundamento: '',
         acertos: 0,
@@ -347,6 +416,13 @@ const RealTimeEvaluation = () => {
       .join('')
       .toUpperCase()
       .substring(0, 2);
+  };
+
+  // Handle back button click
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    }
   };
 
   return (
@@ -577,6 +653,13 @@ const RealTimeEvaluation = () => {
             )}
           </CardContent>
         </Card>
+        
+        {/* Back Button */}
+        {onBack && (
+          <Button variant="outline" onClick={handleBack} className="w-full">
+            Voltar
+          </Button>
+        )}
       </div>
     </div>
   );

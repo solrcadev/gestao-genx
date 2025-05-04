@@ -1,174 +1,84 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Save, ClipboardList } from "lucide-react";
-import ExerciseSelection from "./ExerciseSelection";
-import RealTimeEvaluation from "./RealTimeEvaluation";
-import EvaluationSummary from "./EvaluationSummary";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import { fetchTreinoAtual } from "@/services/treinosDoDiaService";
+
+import React, { useState } from 'react';
+import ExerciseSelection from './ExerciseSelection';
+import RealTimeEvaluation from './RealTimeEvaluation';
+import EvaluationSummary from './EvaluationSummary';
 
 interface EvaluationFlowProps {
   treinoDoDiaId: string;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
-type Step = "select-exercise" | "evaluate" | "summary";
-
 export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) {
-  const [step, setStep] = useState<Step>("select-exercise");
+  const [step, setStep] = useState(1);
   const [selectedExercise, setSelectedExercise] = useState<any>(null);
-  const [evaluationData, setEvaluationData] = useState<{}>({});
-  const { toast } = useToast();
-
-  // Fetch exercises for this treino do dia
-  const { data: treinoData, isLoading } = useQuery({
-    queryKey: ["treino-atual", treinoDoDiaId],
-    queryFn: () => fetchTreinoAtual(treinoDoDiaId),
-  });
-
+  const [evaluationData, setEvaluationData] = useState<any>({});
+  
+  // Handle exercise selection
   const handleExerciseSelect = (exercise: any) => {
     setSelectedExercise(exercise);
-    setStep("evaluate");
+    setStep(2);
   };
-
-  const handleBackToExercises = () => {
-    setStep("select-exercise");
+  
+  // Handle back from evaluation
+  const handleBackFromEvaluation = () => {
+    setStep(1);
   };
-
-  const handleFinishEvaluation = (evaluationResults: any) => {
-    // Apenas para compatibilidade com o componente anterior
-    setEvaluationData(evaluationResults);
-    setStep("summary");
+  
+  // Handle evaluation completion
+  const handleEvaluationComplete = (data: any) => {
+    setEvaluationData(data);
   };
-
-  const handleEditEvaluation = () => {
-    setStep("evaluate");
+  
+  // Handle evaluation edit
+  const handleEvaluationEdit = () => {
+    setStep(2);
   };
-
-  const handleSaveComplete = () => {
-    toast({
-      title: "Avaliação salva",
-      description: "A avaliação foi salva com sucesso!",
-      duration: 3000,
-    });
-    onClose();
+  
+  // Handle save and close
+  const handleSaveAndClose = () => {
+    if (onClose) {
+      onClose();
+    }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <LoadingSpinner />
-        <p className="mt-4 text-muted-foreground">Carregando treino...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Progress indicator */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex flex-1 items-center">
-          <div
-            className={`h-2 flex-1 rounded-full ${
-              step === "select-exercise"
-                ? "bg-primary"
-                : "bg-primary/30"
-            }`}
-          ></div>
-          <div
-            className={`h-2 flex-1 rounded-full mx-1 ${
-              step === "evaluate" ? "bg-primary" : "bg-primary/30"
-            }`}
-          ></div>
-          <div
-            className={`h-2 flex-1 rounded-full ${
-              step === "summary" ? "bg-primary" : "bg-primary/30"
-            }`}
-          ></div>
-        </div>
-        <div className="ml-4 text-sm text-muted-foreground">
-          {step === "select-exercise" && "Passo 1/3"}
-          {step === "evaluate" && "Passo 2/3"}
-          {step === "summary" && "Passo 3/3"}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        {step === "select-exercise" && (
+  
+  // Render based on current step
+  const renderStep = () => {
+    switch (step) {
+      case 1: // Exercise selection
+        return (
           <ExerciseSelection
-            exercises={treinoData?.exercicios || []}
-            onSelect={handleExerciseSelect}
-            onClose={onClose}
+            treinoDoDiaId={treinoDoDiaId}
+            onExerciseSelect={handleExerciseSelect}
           />
-        )}
-
-        {step === "evaluate" && selectedExercise && (
-          <RealTimeEvaluation
+        );
+      case 2: // Real-time evaluation
+        return (
+          <RealTimeEvaluation 
             exercise={selectedExercise}
             treinoDoDiaId={treinoDoDiaId}
-            onBack={handleBackToExercises}
-            onComplete={handleFinishEvaluation}
+            onBack={handleBackFromEvaluation}
+            onComplete={handleEvaluationComplete}
           />
-        )}
-
-        {step === "summary" && (
+        );
+      case 3: // Evaluation summary
+        return (
           <EvaluationSummary
-            exercise={selectedExercise}
             treinoDoDiaId={treinoDoDiaId}
-            evaluationData={{}} // Não utilizamos mais dados binários
-            onEdit={handleEditEvaluation}
-            onSave={handleSaveComplete}
+            exercise={selectedExercise}
+            evaluationData={evaluationData}
+            onEdit={handleEvaluationEdit}
+            onSave={handleSaveAndClose}
           />
-        )}
-      </div>
-
-      {/* Navigation footer */}
-      <div className="pt-4 flex items-center justify-between border-t mt-4">
-        {step !== "select-exercise" ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={
-              step === "evaluate"
-                ? handleBackToExercises
-                : handleEditEvaluation
-            }
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {step === "evaluate" ? "Voltar" : "Editar"}
-          </Button>
-        ) : (
-          <Button variant="outline" size="sm" onClick={onClose}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Cancelar
-          </Button>
-        )}
-
-        {step === "evaluate" && (
-          <Button
-            size="sm"
-            onClick={() => setStep("summary")}
-          >
-            Revisar
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        )}
-
-        {step === "summary" && (
-          <Button
-            size="sm"
-            onClick={handleSaveComplete}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Salvar
-          </Button>
-        )}
-      </div>
+        );
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <div className="h-full flex flex-col overflow-auto">
+      {renderStep()}
     </div>
   );
 }
-
-export default EvaluationFlow;

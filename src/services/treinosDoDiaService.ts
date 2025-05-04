@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { JustificativaTipo } from '@/hooks/attendance-hooks';
 
@@ -438,15 +437,20 @@ export const fetchTreinoAtual = async (): Promise<any> => {
   }
 };
 
-export const concluirExercicio = async (exercicioId: string, tempo: number): Promise<any> => {
+/**
+ * Marks an exercise as completed
+ * @param params Object containing exercise data
+ * @returns Promise with updated exercise data
+ */
+export const concluirExercicio = async (params: { exercicioId: string; tempoReal: number; treinoDoDiaId?: string }): Promise<any> => {
   try {
     const { data, error } = await supabase
       .from('treinos_exercicios')
       .update({ 
         concluido: true,
-        tempo_real: tempo
+        tempo_real: params.tempoReal
       })
-      .eq('id', exercicioId)
+      .eq('id', params.exercicioId)
       .select();
       
     if (error) throw error;
