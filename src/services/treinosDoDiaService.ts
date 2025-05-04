@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { JustificativaTipo } from '@/hooks/attendance-hooks';
 

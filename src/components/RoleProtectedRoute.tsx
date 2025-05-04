@@ -1,37 +1,46 @@
 
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import React, { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import LoadingSpinner from './LoadingSpinner';
+import { Navigate } from 'react-router-dom';
 
-interface RoleProtectedRouteProps {
+export interface RoleProtectedRouteProps {
+  children: ReactNode;
   allowedRoles: string[];
 }
 
-const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({ allowedRoles }) => {
+/**
+ * A route that only allows access to users with specific roles
+ * @param children Component to render if user has appropriate role
+ * @param allowedRoles Array of allowed role names
+ */
+const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRouteProps) => {
   const { user, profile, isLoading } = useAuth();
-
-  // While loading, show a spinner
+  
+  // While loading, show nothing
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
-
-  // If no user, redirect to login
+  
+  // If not authenticated, redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
-  // If user has a profile with an allowed role, render the route
-  if (profile && 'funcao' in profile && allowedRoles.includes(profile.funcao)) {
-    return <Outlet />;
+  
+  // If profile is loaded but user doesn't have required role, show access denied
+  if (profile && !allowedRoles.includes(profile.funcao)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
+        <h1 className="text-2xl font-bold mb-3">Acesso Restrito</h1>
+        <p className="text-gray-600 mb-6">
+          Você não tem permissão para acessar esta página.
+          Esta área é restrita para {allowedRoles.join(', ')}.
+        </p>
+      </div>
+    );
   }
-
-  // If none of the above, redirect to unauthorized page
-  return <Navigate to="/unauthorized" replace />;
+  
+  // If user role is allowed, render the children
+  return <>{children}</>;
 };
 
 export default RoleProtectedRoute;

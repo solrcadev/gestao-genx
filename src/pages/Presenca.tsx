@@ -34,7 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -57,6 +56,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 
 const Presenca = () => {
   const { profile, isLoading: authLoading } = useAuth();
@@ -71,7 +71,8 @@ const Presenca = () => {
     data: treinos, 
     isLoading,
     isError,
-    error 
+    error,
+    refetch
   } = useTreinosComPresenca();
   
   // Mutation para salvar presença
@@ -99,7 +100,7 @@ const Presenca = () => {
   const handleEditAtleta = (atleta: AtletaPresenca) => {
     setEditingAtleta(atleta);
     setJustificativa(atleta.justificativa || '');
-    setJustificativaTipo(atleta.justificativa_tipo || null);
+    setJustificativaTipo(atleta.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA);
     setDialogOpen(true);
   };
   
@@ -113,10 +114,13 @@ const Presenca = () => {
       presente: editingAtleta.presente,
       justificativa: justificativa,
       justificativaTipo: justificativaTipo as JustificativaTipo
+    }, {
+      onSuccess: () => {
+        refetch();
+        setDialogOpen(false);
+        setEditingAtleta(null);
+      }
     });
-    
-    setDialogOpen(false);
-    setEditingAtleta(null);
   };
   
   // Alternar presença/ausência
@@ -135,6 +139,10 @@ const Presenca = () => {
         treinoId: selectedTreinoId!,
         atletaId: atleta.id,
         presente: true
+      }, {
+        onSuccess: () => {
+          refetch();
+        }
       });
     }
   };
@@ -152,13 +160,16 @@ const Presenca = () => {
   // Verificar faltas consecutivas
   const verificarFaltasConsecutivas = (atletas: AtletaPresenca[]) => {
     // Implementação básica - idealmente isso seria calculado no servidor
-    const atletasComFaltas = atletas.filter(a => !a.presente && 
-      (!a.justificativa_tipo || a.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA));
-      
-    if (atletasComFaltas.length > 0) {
-      return atletasComFaltas.map(a => a.nome);
-    }
-    return [];
+    return atletas.filter(a => !a.presente && 
+      (!a.justificativa_tipo || a.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA))
+      .map(a => a.nome);
+  };
+  
+  // Converter índice em percentual
+  const getIndiceAsPercentage = (indice: number | undefined) => {
+    if (indice === undefined || indice === null) return 50;
+    // Convert from -1..1 to 0..100
+    return (indice + 1) * 50;
   };
   
   if (authLoading) {
@@ -361,12 +372,13 @@ const Presenca = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            {atleta.indice_esforco !== null && atleta.indice_esforco !== undefined ? (
+                            {typeof atleta.indice_esforco === 'number' ? (
                               <div className="flex items-center gap-2">
-                                <div 
-                                  className={`h-3 w-3 rounded-full ${getEsforcoColor(atleta.indice_esforco)}`}
-                                ></div>
-                                <span>
+                                <Progress 
+                                  value={getIndiceAsPercentage(atleta.indice_esforco)} 
+                                  className={`h-2 w-16 ${getEsforcoColor(atleta.indice_esforco)}`}
+                                />
+                                <span className="text-sm">
                                   {(atleta.indice_esforco * 100).toFixed(0)}%
                                 </span>
                               </div>
@@ -400,109 +412,133 @@ const Presenca = () => {
         </div>
       </div>
       
-      {/* Modal de Edição */}
+      {/* Modal de edição */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingAtleta && (
-                <>
-                  {editingAtleta.presente ? 'Editar Presença' : 'Editar Justificativa'}:
-                  {' '}{editingAtleta.nome}
-                </>
-              )}
+              {editingAtleta ? `Editar presença - ${editingAtleta.nome}` : 'Editar presença'}
             </DialogTitle>
             <DialogDescription>
-              {editingAtleta?.presente ? (
-                'Gerencie os detalhes da presença deste atleta'
-              ) : (
-                'Informe a justificativa para a ausência deste atleta'
-              )}
+              Atualize a presença e justificativa do atleta neste treino.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            {/* Status de Presença */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="status" className="text-right">Status</label>
-              <div className="col-span-3">
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant={editingAtleta?.presente ? "default" : "outline"}
+          {editingAtleta && (
+            <div className="space-y-4 py-2">
+              {/* Status de Presença */}
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Status:</span>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant={editingAtleta.presente ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setEditingAtleta(prev => prev ? {...prev, presente: true} : null)}
+                    onClick={() => setEditingAtleta({...editingAtleta, presente: true})}
+                    className="gap-1"
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <CheckCircle className="h-4 w-4" />
                     Presente
                   </Button>
-                  <Button
-                    variant={!editingAtleta?.presente ? "default" : "outline"}
+                  <Button 
+                    variant={!editingAtleta.presente ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setEditingAtleta(prev => prev ? {...prev, presente: false} : null)}
+                    onClick={() => setEditingAtleta({...editingAtleta, presente: false})}
+                    className="gap-1"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
+                    <XCircle className="h-4 w-4" />
                     Ausente
                   </Button>
                 </div>
               </div>
-            </div>
-            
-            {/* Justificativa (se ausente) */}
-            {editingAtleta && !editingAtleta.presente && (
-              <>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="tipo" className="text-right">Tipo</label>
-                  <div className="col-span-3">
-                    <Select 
-                      value={justificativaTipo || undefined}
-                      onValueChange={(value) => setJustificativaTipo(value as JustificativaTipo)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo de justificativa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>
-                          Motivo Pessoal
-                        </SelectItem>
-                        <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>
-                          Motivo Acadêmico
-                        </SelectItem>
-                        <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>
-                          Motivo Logístico
-                        </SelectItem>
-                        <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>
-                          Motivo de Saúde
-                        </SelectItem>
-                        <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>
-                          Sem Justificativa
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              
+              {/* Tipo de Justificativa */}
+              {!editingAtleta.presente && (
+                <div className="space-y-2">
+                  <label className="font-medium">Tipo de Justificativa:</label>
+                  <Select 
+                    value={justificativaTipo || JustificativaTipo.SEM_JUSTIFICATIVA} 
+                    onValueChange={(value) => setJustificativaTipo(value as JustificativaTipo)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de justificativa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>Motivo Pessoal</SelectItem>
+                      <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>Motivo Acadêmico</SelectItem>
+                      <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>Motivo Logístico</SelectItem>
+                      <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>Motivo de Saúde</SelectItem>
+                      <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>Sem Justificativa</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="justificativa" className="text-right align-top pt-2">
-                    Justificativa
-                  </label>
-                  <Textarea
-                    id="justificativa"
-                    placeholder="Descreva o motivo da ausência..."
-                    className="col-span-3"
+              )}
+              
+              {/* Justificativa */}
+              {!editingAtleta.presente && (
+                <div className="space-y-2">
+                  <label className="font-medium">Justificativa:</label>
+                  <Textarea 
+                    placeholder="Descreva a justificativa da ausência"
                     value={justificativa}
                     onChange={(e) => setJustificativa(e.target.value)}
+                    rows={3}
                   />
                 </div>
-              </>
-            )}
-          </div>
+              )}
+              
+              {/* Índice de Esforço */}
+              <div className="space-y-2 border-t pt-4">
+                <label className="font-medium">Índice de Esforço Atual:</label>
+                {typeof editingAtleta.indice_esforco === 'number' ? (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Progress 
+                        value={getIndiceAsPercentage(editingAtleta.indice_esforco)} 
+                        className={`h-2.5 ${getEsforcoColor(editingAtleta.indice_esforco)}`}
+                      />
+                      <span>
+                        {(editingAtleta.indice_esforco * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Este valor é calculado com base nas presenças e tipos de justificativa nos últimos treinos.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Não há dados suficientes para calcular o índice de esforço.
+                  </p>
+                )}
+              </div>
+              
+              {/* Impacto da Alteração */}
+              {!editingAtleta.presente && (
+                <div className="bg-muted p-3 rounded-md">
+                  <h4 className="font-medium text-sm mb-1">Impacto desta alteração:</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {justificativaTipo === JustificativaTipo.SEM_JUSTIFICATIVA && (
+                      "Esta ausência sem justificativa terá impacto negativo no índice de esforço."
+                    )}
+                    {justificativaTipo === JustificativaTipo.MOTIVO_LOGISTICO && (
+                      "Esta ausência por motivo logístico terá impacto parcial no índice de esforço."
+                    )}
+                    {(justificativaTipo === JustificativaTipo.MOTIVO_PESSOAL || 
+                      justificativaTipo === JustificativaTipo.MOTIVO_ACADEMICO || 
+                      justificativaTipo === JustificativaTipo.MOTIVO_SAUDE) && (
+                      "Esta ausência com justificativa válida não terá impacto no índice de esforço."
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSaveChanges} disabled={isPending}>
-              {isPending ? 'Salvando...' : 'Salvar'}
+              {isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
