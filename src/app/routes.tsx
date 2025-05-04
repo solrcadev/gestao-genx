@@ -1,107 +1,93 @@
+import { Home } from '@/pages/Home';
+import { Login } from '@/pages/Login';
+import { Register } from '@/pages/Register';
+import { Dashboard } from '@/pages/Dashboard';
+import { ForgotPassword } from '@/pages/ForgotPassword';
+import { ResetPassword } from '@/pages/ResetPassword';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { RoleProtectedRoute } from '@/components/RoleProtectedRoute';
+import AvaliacaoFisica from '@/pages/AvaliacaoFisica';
+import TreinoDoDia from '@/pages/TreinoDoDia';
+import Atletas from '@/pages/Atletas';
+import Performance from '@/pages/Performance';
+import EvaluationManagement from '@/pages/EvaluationManagement';
+import MonitorManagement from '@/pages/MonitorManagement';
 
-import { createBrowserRouter, Navigate } from "react-router-dom";
-import { Suspense, lazy } from "react";
-
-// Create simple placeholder components for missing pages
-const Layout = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen flex flex-col">
-    <header className="bg-primary text-white p-4">
-      <h1 className="text-xl font-bold">GenX Painel</h1>
-    </header>
-    <main className="flex-1">
-      {children}
-    </main>
-    <footer className="bg-gray-100 p-4 text-center text-sm text-gray-600">
-      GenX Panel © {new Date().getFullYear()}
-    </footer>
-  </div>
-);
-
-const ErrorPage = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="text-center p-6">
-      <h1 className="text-2xl font-bold mb-2">Erro</h1>
-      <p>Ocorreu um erro ao carregar esta página.</p>
-    </div>
-  </div>
-);
-
-const LoadingPage = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="text-center p-6">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
-      <p>Carregando...</p>
-    </div>
-  </div>
-);
-
-const HomePage = () => (
-  <div className="container mx-auto p-6">
-    <h1 className="text-2xl font-bold mb-4">Bem-vindo ao GenX Painel</h1>
-    <p>Selecione uma opção no menu para começar.</p>
-  </div>
-);
-
-// Import actual implemented pages
-import Presenca from "@/pages/Presenca";
-
-// Lazy-loaded pages
-const Treinos = lazy(() => import("@/pages/Treinos"));
-const TreinoDoDia = lazy(() => import("@/pages/TreinoDoDia"));
-const Atletas = lazy(() => import("@/pages/Atletas"));
-const AthleteDetails = lazy(() => import("@/pages/AthleteDetails"));
-
-// Define routes
-export const routes = createBrowserRouter([
+export const appRoutes = [
   {
     path: "/",
-    element: <Layout />,
-    errorElement: <ErrorPage />,
-    children: [
-      { index: true, element: <HomePage /> },
-      { 
-        path: "treinos", 
-        element: (
-          <Suspense fallback={<LoadingPage />}>
-            <Treinos />
-          </Suspense>
-        ) 
-      },
-      { 
-        path: "treino-do-dia", 
-        element: (
-          <Suspense fallback={<LoadingPage />}>
-            <TreinoDoDia />
-          </Suspense>
-        ) 
-      },
-      { 
-        path: "treino-do-dia/:id", 
-        element: (
-          <Suspense fallback={<LoadingPage />}>
-            <TreinoDoDia />
-          </Suspense>
-        ) 
-      },
-      { path: "presenca", element: <Presenca /> },
-      { path: "presenca/:treinoDoDiaId", element: <Presenca /> },
-      { 
-        path: "atletas", 
-        element: (
-          <Suspense fallback={<LoadingPage />}>
-            <Atletas />
-          </Suspense>
-        ) 
-      },
-      { 
-        path: "atleta/:id", 
-        element: (
-          <Suspense fallback={<LoadingPage />}>
-            <AthleteDetails />
-          </Suspense>
-        ) 
-      },
-      { path: "atletas/:id", element: <Navigate to="/atleta/:id" replace /> },
-    ],
+    element: <Home />,
   },
-]);
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPassword />,
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/avaliacao-fisica",
+    element: (
+      <ProtectedRoute>
+        <AvaliacaoFisica />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/treino-do-dia",
+    element: (
+      <ProtectedRoute>
+        <TreinoDoDia />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/atletas",
+    element: (
+      <RoleProtectedRoute allowedRoles={['tecnico']}>
+        <Atletas />
+      </RoleProtectedRoute>
+    ),
+  },
+  {
+    path: "/performance",
+    element: (
+      <RoleProtectedRoute allowedRoles={['tecnico']}>
+        <Performance />
+      </RoleProtectedRoute>
+    ),
+  },
+  {
+    path: "/evaluation-management",
+    element: (
+      <RoleProtectedRoute allowedRoles={['tecnico']}>
+        <EvaluationManagement />
+      </RoleProtectedRoute>
+    ),
+  },
+  {
+    path: "/monitor-management",
+    element: (
+      <RoleProtectedRoute allowedRoles={['tecnico']}>
+        <MonitorManagement />
+      </RoleProtectedRoute>
+    ),
+  },
+];

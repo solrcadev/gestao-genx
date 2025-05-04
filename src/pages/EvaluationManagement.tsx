@@ -1,20 +1,24 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   getAvaliacoesParaAprovar, 
   aprovarAvaliacao, 
   rejeitarAvaliacao 
 } from '@/services/athletes/evaluations';
-import { PageTitle } from '@/components/PageTitle';
+import PageTitle from '@/components/PageTitle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { 
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
+} from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { format } from 'date-fns';
-import { pt } from 'date-fns/locale';
-import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 
 interface Avaliacao {
   id: string;
@@ -38,280 +42,189 @@ interface Avaliacao {
 }
 
 const EvaluationManagement = () => {
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState<Avaliacao | null>(null);
-  const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [processando, setProcessando] = useState(false);
-  const { profile } = useAuth();
-  
-  // Verificar se usuário é técnico
-  const isTecnico = profile?.funcao === 'tecnico';
 
-  // Carregar avaliações pendentes
   useEffect(() => {
+    // Verificar se o usuário é técnico
+    if (profile && profile.funcao !== 'tecnico') {
+      toast({
+        title: "Acesso restrito",
+        description: "Esta página é restrita para técnicos.",
+        variant: "destructive"
+      });
+      navigate('/dashboard');
+      return;
+    }
+
+    // Carregar avaliações pendentes
     const carregarAvaliacoes = async () => {
-      setLoading(true);
       try {
+        setLoading(true);
         const data = await getAvaliacoesParaAprovar();
-        setAvaliacoes(data || []);
+        setAvaliacoes(data as Avaliacao[]);
       } catch (error) {
-        console.error('Erro ao carregar avaliações:', error);
+        console.error("Erro ao carregar avaliações:", error);
         toast({
-          title: 'Erro',
-          description: 'Não foi possível carregar as avaliações pendentes.',
-          variant: 'destructive',
+          title: "Erro",
+          description: "Não foi possível carregar as avaliações pendentes.",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
       }
     };
 
-    if (isTecnico) {
-      carregarAvaliacoes();
-    }
-  }, [isTecnico]);
+    carregarAvaliacoes();
+  }, [profile, navigate]);
 
-  // Formatar data
-  const formatarData = (dataString: string) => {
+  const handleAprovar = async (id: string) => {
     try {
-      return format(new Date(dataString), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: pt });
-    } catch (e) {
-      return dataString;
-    }
-  };
-
-  // Abrir diálogo de aprovação
-  const abrirDialogoAprovacao = (avaliacao: Avaliacao) => {
-    setAvaliacaoSelecionada(avaliacao);
-    setShowApproveDialog(true);
-  };
-
-  // Abrir diálogo de rejeição
-  const abrirDialogoRejeicao = (avaliacao: Avaliacao) => {
-    setAvaliacaoSelecionada(avaliacao);
-    setShowRejectDialog(true);
-  };
-
-  // Aprovar avaliação
-  const handleAprovarAvaliacao = async () => {
-    if (!avaliacaoSelecionada) return;
-    
-    setProcessando(true);
-    try {
-      await aprovarAvaliacao(avaliacaoSelecionada.id);
+      await aprovarAvaliacao(id);
+      setAvaliacoes(avaliacoes.filter(av => av.id !== id));
       toast({
-        title: 'Avaliação aprovada',
-        description: `A avaliação de ${avaliacaoSelecionada.atleta.nome} foi aprovada com sucesso.`,
+        title: "Avaliação aprovada",
+        description: "A avaliação foi aprovada com sucesso e será contabilizada."
       });
-      
-      // Remove this evaluation from the list
-      setAvaliacoes(prev => prev.filter(a => a.id !== avaliacaoSelecionada.id));
-      setShowApproveDialog(false);
     } catch (error) {
-      console.error('Erro ao aprovar avaliação:', error);
+      console.error("Erro ao aprovar avaliação:", error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível aprovar a avaliação.',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Não foi possível aprovar a avaliação.",
+        variant: "destructive"
       });
-    } finally {
-      setProcessando(false);
     }
   };
 
-  // Rejeitar avaliação
-  const handleRejeitarAvaliacao = async () => {
-    if (!avaliacaoSelecionada) return;
-    
-    setProcessando(true);
+  const handleRejeitar = async (id: string) => {
     try {
-      await rejeitarAvaliacao(avaliacaoSelecionada.id);
+      await rejeitarAvaliacao(id);
+      setAvaliacoes(avaliacoes.filter(av => av.id !== id));
       toast({
-        title: 'Avaliação rejeitada',
-        description: `A avaliação de ${avaliacaoSelecionada.atleta.nome} foi rejeitada e removida do sistema.`,
+        title: "Avaliação rejeitada",
+        description: "A avaliação foi rejeitada e removida do sistema."
       });
-      
-      // Remove this evaluation from the list
-      setAvaliacoes(prev => prev.filter(a => a.id !== avaliacaoSelecionada.id));
-      setShowRejectDialog(false);
     } catch (error) {
-      console.error('Erro ao rejeitar avaliação:', error);
+      console.error("Erro ao rejeitar avaliação:", error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível rejeitar a avaliação.',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Não foi possível rejeitar a avaliação.",
+        variant: "destructive"
       });
-    } finally {
-      setProcessando(false);
     }
-  };
-
-  // Calcular eficiência
-  const calcularEficiencia = (acertos: number, erros: number) => {
-    const total = acertos + erros;
-    if (total === 0) return 0;
-    return Math.round((acertos / total) * 100);
-  };
-
-  // Verificar a cor da eficiência baseada na porcentagem
-  const getClasseEficiencia = (eficiencia: number) => {
-    if (eficiencia >= 80) return 'text-green-600';
-    if (eficiencia >= 60) return 'text-yellow-600';
-    return 'text-red-600';
   };
 
   return (
-    <RoleProtectedRoute allowedRoles={['tecnico']}>
-      <div className="container py-6">
-        <PageTitle title="Aprovação de Avaliações" />
-        
+    <div className="container mx-auto py-6">
+      <div className="flex flex-col space-y-2 mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">Aprovação de Avaliações</h1>
+        <p className="text-muted-foreground">
+          Revise e aprove avaliações realizadas pelos monitores
+        </p>
+      </div>
+
+      <Card className="p-6">
         {loading ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Carregando avaliações...</p>
+          <div className="flex justify-center p-8">
+            <p>Carregando avaliações pendentes...</p>
           </div>
         ) : avaliacoes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">Nenhuma avaliação pendente</h2>
-            <p className="text-muted-foreground">
-              Todas as avaliações foram processadas. Novas avaliações feitas por monitores aparecerão aqui para sua aprovação.
+          <div className="text-center py-10">
+            <h3 className="text-lg font-medium">Nenhuma avaliação pendente</h3>
+            <p className="text-muted-foreground mt-2">
+              Não há avaliações aguardando sua aprovação no momento.
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {avaliacoes.map((avaliacao) => (
-              <Card key={avaliacao.id} className="p-4 overflow-hidden">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-medium text-lg">{avaliacao.atleta.nome}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {avaliacao.atleta.posicao} - {avaliacao.atleta.time}
-                    </p>
-                  </div>
-                  <div className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md text-xs flex items-center">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Pendente
-                  </div>
-                </div>
-                
-                <div className="bg-muted/40 p-3 rounded-md mb-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Fundamento</p>
-                      <p className="font-medium">{avaliacao.fundamento}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Eficiência</p>
-                      <p className={`font-medium ${getClasseEficiencia(calcularEficiencia(avaliacao.acertos, avaliacao.erros))}`}>
-                        {calcularEficiencia(avaliacao.acertos, avaliacao.erros)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Acertos</p>
-                      <p className="font-medium text-green-600">{avaliacao.acertos}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Erros</p>
-                      <p className="font-medium text-red-600">{avaliacao.erros}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-muted-foreground mb-4">
-                  <p>Monitor: {avaliacao.monitor.nome}</p>
-                  <p>Data: {formatarData(avaliacao.timestamp)}</p>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-green-200 text-green-700 hover:bg-green-50"
-                    onClick={() => abrirDialogoAprovacao(avaliacao)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" /> Aprovar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
-                    onClick={() => abrirDialogoRejeicao(avaliacao)}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" /> Rejeitar
-                  </Button>
-                </div>
-              </Card>
-            ))}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Atleta</TableHead>
+                  <TableHead>Fundamento</TableHead>
+                  <TableHead>Acertos</TableHead>
+                  <TableHead>Erros</TableHead>
+                  <TableHead>Eficiência</TableHead>
+                  <TableHead>Monitor</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {avaliacoes.map((avaliacao) => {
+                  const total = avaliacao.acertos + avaliacao.erros;
+                  const eficiencia = total > 0 
+                    ? Math.round((avaliacao.acertos / total) * 100) 
+                    : 0;
+                  
+                  return (
+                    <TableRow key={avaliacao.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{avaliacao.atleta.nome}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {avaliacao.atleta.time} - {avaliacao.atleta.posicao}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{avaliacao.fundamento}</TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        {avaliacao.acertos}
+                      </TableCell>
+                      <TableCell className="text-red-600 font-medium">
+                        {avaliacao.erros}
+                      </TableCell>
+                      <TableCell>
+                        <span className={
+                          eficiencia >= 80 ? "text-green-600" : 
+                          eficiencia >= 60 ? "text-amber-600" : "text-red-600"
+                        }>
+                          {eficiencia}%
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{avaliacao.monitor.nome}</p>
+                          <p className="text-xs text-muted-foreground">{avaliacao.monitor.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(avaliacao.timestamp).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleAprovar(avaliacao.id)}
+                          >
+                            Aprovar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => handleRejeitar(avaliacao.id)}
+                          >
+                            Rejeitar
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
-        
-        {/* Diálogo de aprovação */}
-        <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Aprovar Avaliação</DialogTitle>
-              <DialogDescription>
-                Você está aprovando a avaliação de {avaliacaoSelecionada?.atleta?.nome}.
-                Esta ação não pode ser desfeita.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {avaliacaoSelecionada && (
-              <div className="bg-green-50 p-4 rounded-md my-4">
-                <p><strong>Fundamento:</strong> {avaliacaoSelecionada.fundamento}</p>
-                <p><strong>Acertos:</strong> {avaliacaoSelecionada.acertos}</p>
-                <p><strong>Erros:</strong> {avaliacaoSelecionada.erros}</p>
-                <p><strong>Eficiência:</strong> {calcularEficiencia(avaliacaoSelecionada.acertos, avaliacaoSelecionada.erros)}%</p>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowApproveDialog(false)} disabled={processando}>
-                Cancelar
-              </Button>
-              <Button onClick={handleAprovarAvaliacao} disabled={processando}>
-                {processando ? 'Processando...' : 'Confirmar Aprovação'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        {/* Diálogo de rejeição */}
-        <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Rejeitar Avaliação</DialogTitle>
-              <DialogDescription>
-                Você está rejeitando a avaliação de {avaliacaoSelecionada?.atleta?.nome}.
-                A avaliação será removida permanentemente.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {avaliacaoSelecionada && (
-              <div className="bg-red-50 p-4 rounded-md my-4">
-                <p><strong>Fundamento:</strong> {avaliacaoSelecionada.fundamento}</p>
-                <p><strong>Acertos:</strong> {avaliacaoSelecionada.acertos}</p>
-                <p><strong>Erros:</strong> {avaliacaoSelecionada.erros}</p>
-                <p><strong>Eficiência:</strong> {calcularEficiencia(avaliacaoSelecionada.acertos, avaliacaoSelecionada.erros)}%</p>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowRejectDialog(false)} disabled={processando}>
-                Cancelar
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleRejeitarAvaliacao} 
-                disabled={processando}
-              >
-                {processando ? 'Processando...' : 'Confirmar Rejeição'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </RoleProtectedRoute>
+      </Card>
+    </div>
   );
 };
 
