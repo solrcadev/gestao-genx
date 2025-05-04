@@ -1,738 +1,317 @@
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { 
-  Search, Filter, Calendar, User, X, Edit, Trash2, Eye, 
-  Sliders, ArrowUpDown, ChevronLeft, ChevronRight, RefreshCw
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
-import { Input } from '@/components/ui/input';
+  getAvaliacoesParaAprovar, 
+  aprovarAvaliacao, 
+  rejeitarAvaliacao 
+} from '@/services/athletes/evaluations';
+import { PageTitle } from '@/components/PageTitle';
 import { Button } from '@/components/ui/button';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
-import { AthleteEvaluation } from '@/types';
-import {
-  getAthletesEvaluations,
-  getEvaluationById,
-  updateEvaluation,
-  deleteEvaluation,
-  getFundamentos
-} from '@/services/athletes/evaluationManagement';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { format } from 'date-fns';
+import { pt } from 'date-fns/locale';
+import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 
-// Componente principal
+interface Avaliacao {
+  id: string;
+  atleta_id: string;
+  treino_id: string;
+  fundamento: string;
+  acertos: number;
+  erros: number;
+  timestamp: string;
+  precisaAprovacao: boolean;
+  monitor_id: string;
+  atleta: {
+    nome: string;
+    time: string;
+    posicao: string;
+  };
+  monitor: {
+    nome: string;
+    email: string;
+  };
+}
+
 const EvaluationManagement = () => {
-  // Estados para filtros
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateRange, setDateRange] = useState<{
-    from: Date;
-    to: Date;
-  }>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date()
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedFundamento, setSelectedFundamento] = useState<string>('');
-  const [scoreRange, setScoreRange] = useState([0, 100]);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    acertos: 0,
-    erros: 0,
-    timestamp: ''
-  });
+  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState<Avaliacao | null>(null);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [processando, setProcessando] = useState(false);
+  const { profile } = useAuth();
   
-  const { user } = useAuth();
-  const { profile } = useProfile();
-  const isAdmin = profile?.role === 'admin';
-  const isCoach = profile?.role === 'coach';
-  const canEdit = isAdmin || isCoach;
-  
-  // Buscar avaliações com filtros
-  const { data: evaluationsData, isLoading, refetch } = useQuery({
-    queryKey: ['athleteEvaluations', page, pageSize, searchQuery, dateRange, selectedFundamento, scoreRange],
-    queryFn: async () => {
-      const filters: any = {};
-      
-      if (searchQuery) {
-        // A pesquisa por nome é tratada no frontend por enquanto
-        // Futuramente pode-se implementar uma busca mais sofisticada no backend
+  // Verificar se usuário é técnico
+  const isTecnico = profile?.funcao === 'tecnico';
+
+  // Carregar avaliações pendentes
+  useEffect(() => {
+    const carregarAvaliacoes = async () => {
+      setLoading(true);
+      try {
+        const data = await getAvaliacoesParaAprovar();
+        setAvaliacoes(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar avaliações:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar as avaliações pendentes.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      if (dateRange.from) {
-        filters.data_inicio = format(dateRange.from, 'yyyy-MM-dd');
-      }
-      
-      if (dateRange.to) {
-        filters.data_fim = format(dateRange.to, 'yyyy-MM-dd');
-      }
-      
-      if (selectedFundamento) {
-        filters.fundamento = selectedFundamento;
-      }
-      
-      const result = await getAthletesEvaluations(filters, page, pageSize);
-      return result;
+    };
+
+    if (isTecnico) {
+      carregarAvaliacoes();
     }
-  });
-  
-  // Buscar detalhes de uma avaliação específica
-  const { data: selectedEvaluation, refetch: refetchEvaluation } = useQuery({
-    queryKey: ['evaluationDetail', selectedEvaluationId],
-    queryFn: () => getEvaluationById(selectedEvaluationId || ''),
-    enabled: !!selectedEvaluationId,
-  });
-  
-  // Buscar lista de fundamentos para o filtro
-  const { data: fundamentos } = useQuery({
-    queryKey: ['fundamentos'],
-    queryFn: getFundamentos
-  });
-  
-  // Filtra avaliações com base na pesquisa de texto
-  const filteredEvaluations = evaluationsData?.data.filter(evaluation => {
-    const matchesSearch = !searchQuery || 
-      (evaluation.atleta?.nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       evaluation.exercicio?.nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       evaluation.fundamento?.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const percentual = evaluation.percentual_acerto || 0;
-    const matchesScore = percentual >= scoreRange[0] && percentual <= scoreRange[1];
-    
-    return matchesSearch && matchesScore;
-  }) || [];
-  
-  // Função para visualizar detalhes
-  const handleViewEvaluation = (id: string) => {
-    setSelectedEvaluationId(id);
-    setIsViewModalOpen(true);
-  };
-  
-  // Função para abrir modal de edição
-  const handleEditEvaluation = (evaluation: AthleteEvaluation) => {
-    setSelectedEvaluationId(evaluation.id);
-    setEditFormData({
-      acertos: evaluation.acertos,
-      erros: evaluation.erros,
-      timestamp: evaluation.timestamp
-    });
-    setIsEditModalOpen(true);
-  };
-  
-  // Função para abrir diálogo de exclusão
-  const handleDeletePrompt = (id: string) => {
-    setSelectedEvaluationId(id);
-    setIsDeleteDialogOpen(true);
-  };
-  
-  // Função para salvar edição
-  const handleSaveEdit = async () => {
-    if (!selectedEvaluationId || !user?.id) return;
-    
+  }, [isTecnico]);
+
+  // Formatar data
+  const formatarData = (dataString: string) => {
     try {
-      const success = await updateEvaluation(
-        selectedEvaluationId,
-        {
-          acertos: editFormData.acertos,
-          erros: editFormData.erros,
-          timestamp: editFormData.timestamp
-        },
-        user.id
-      );
-      
-      if (success) {
-        toast({
-          title: "Avaliação atualizada",
-          description: "Os dados da avaliação foram atualizados com sucesso.",
-        });
-        refetch();
-        refetchEvaluation();
-        setIsEditModalOpen(false);
-      } else {
-        toast({
-          title: "Erro ao atualizar",
-          description: "Não foi possível atualizar a avaliação.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao atualizar avaliação:", error);
+      return format(new Date(dataString), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: pt });
+    } catch (e) {
+      return dataString;
+    }
+  };
+
+  // Abrir diálogo de aprovação
+  const abrirDialogoAprovacao = (avaliacao: Avaliacao) => {
+    setAvaliacaoSelecionada(avaliacao);
+    setShowApproveDialog(true);
+  };
+
+  // Abrir diálogo de rejeição
+  const abrirDialogoRejeicao = (avaliacao: Avaliacao) => {
+    setAvaliacaoSelecionada(avaliacao);
+    setShowRejectDialog(true);
+  };
+
+  // Aprovar avaliação
+  const handleAprovarAvaliacao = async () => {
+    if (!avaliacaoSelecionada) return;
+    
+    setProcessando(true);
+    try {
+      await aprovarAvaliacao(avaliacaoSelecionada.id);
       toast({
-        title: "Erro ao atualizar",
-        description: "Ocorreu um erro ao tentar atualizar a avaliação.",
-        variant: "destructive",
+        title: 'Avaliação aprovada',
+        description: `A avaliação de ${avaliacaoSelecionada.atleta.nome} foi aprovada com sucesso.`,
       });
-    }
-  };
-  
-  // Função para confirmar exclusão
-  const handleConfirmDelete = async () => {
-    if (!selectedEvaluationId || !user?.id) return;
-    
-    try {
-      const success = await deleteEvaluation(selectedEvaluationId, user.id);
       
-      if (success) {
-        toast({
-          title: "Avaliação excluída",
-          description: "A avaliação foi excluída com sucesso.",
-        });
-        refetch();
-        setIsDeleteDialogOpen(false);
-      } else {
-        toast({
-          title: "Erro ao excluir",
-          description: "Não foi possível excluir a avaliação.",
-          variant: "destructive",
-        });
-      }
+      // Remove this evaluation from the list
+      setAvaliacoes(prev => prev.filter(a => a.id !== avaliacaoSelecionada.id));
+      setShowApproveDialog(false);
     } catch (error) {
-      console.error("Erro ao excluir avaliação:", error);
+      console.error('Erro ao aprovar avaliação:', error);
       toast({
-        title: "Erro ao excluir",
-        description: "Ocorreu um erro ao tentar excluir a avaliação.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível aprovar a avaliação.',
+        variant: 'destructive',
       });
+    } finally {
+      setProcessando(false);
     }
   };
-  
-  // Função para formatar data
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return format(date, 'dd/MM/yyyy HH:mm');
-    } catch (error) {
-      return dateStr;
-    }
-  };
-  
-  // Função para renderizar indicador colorido baseado na porcentagem
-  const renderPercentIndicator = (percent: number) => {
-    let color = 'bg-red-500';
-    if (percent >= 80) color = 'bg-green-500';
-    else if (percent >= 60) color = 'bg-yellow-500';
+
+  // Rejeitar avaliação
+  const handleRejeitarAvaliacao = async () => {
+    if (!avaliacaoSelecionada) return;
     
-    return (
-      <div className="flex items-center">
-        <div className={`h-2 w-2 rounded-full ${color} mr-2`}></div>
-        <span>{percent.toFixed(1)}%</span>
-      </div>
-    );
+    setProcessando(true);
+    try {
+      await rejeitarAvaliacao(avaliacaoSelecionada.id);
+      toast({
+        title: 'Avaliação rejeitada',
+        description: `A avaliação de ${avaliacaoSelecionada.atleta.nome} foi rejeitada e removida do sistema.`,
+      });
+      
+      // Remove this evaluation from the list
+      setAvaliacoes(prev => prev.filter(a => a.id !== avaliacaoSelecionada.id));
+      setShowRejectDialog(false);
+    } catch (error) {
+      console.error('Erro ao rejeitar avaliação:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível rejeitar a avaliação.',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  // Calcular eficiência
+  const calcularEficiencia = (acertos: number, erros: number) => {
+    const total = acertos + erros;
+    if (total === 0) return 0;
+    return Math.round((acertos / total) * 100);
+  };
+
+  // Verificar a cor da eficiência baseada na porcentagem
+  const getClasseEficiencia = (eficiencia: number) => {
+    if (eficiencia >= 80) return 'text-green-600';
+    if (eficiencia >= 60) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   return (
-    <div className="container py-6 space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold">Gerência de Avaliações</h1>
+    <RoleProtectedRoute allowedRoles={['tecnico']}>
+      <div className="container py-6">
+        <PageTitle title="Aprovação de Avaliações" />
         
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => refetch()}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
-          
-          <Button 
-            variant={showFilters ? "secondary" : "outline"} 
-            size="sm" 
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-        </div>
-      </div>
-      
-      <div className="flex flex-col gap-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por atleta, exercício ou fundamento..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-md bg-background/50">
-            <div className="space-y-2">
-              <Label htmlFor="date-range">Período</Label>
-              <DatePickerWithRange
-                date={{
-                  from: dateRange.from,
-                  to: dateRange.to,
-                }}
-                onDateChange={(range) => {
-                  if (range?.from) {
-                    setDateRange({
-                      from: range.from,
-                      to: range.to || new Date()
-                    });
-                  }
-                }}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="fundamento">Fundamento</Label>
-              <Select
-                value={selectedFundamento}
-                onValueChange={setSelectedFundamento}
-              >
-                <SelectTrigger id="fundamento">
-                  <SelectValue placeholder="Selecione o fundamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  {fundamentos?.map((fundamento, index) => (
-                    <SelectItem key={index} value={fundamento}>
-                      {fundamento}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Nota</Label>
-                <span className="text-xs text-muted-foreground">
-                  {scoreRange[0]}% - {scoreRange[1]}%
-                </span>
-              </div>
-              <Slider
-                defaultValue={[0, 100]}
-                max={100}
-                step={1}
-                value={scoreRange}
-                onValueChange={setScoreRange}
-                className="py-4"
-              />
-            </div>
-            
-            <div className="flex items-end">
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  setSelectedFundamento('');
-                  setScoreRange([0, 100]);
-                  setDateRange({
-                    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-                    to: new Date()
-                  });
-                }}
-              >
-                Limpar Filtros
-              </Button>
-            </div>
+        {loading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Carregando avaliações...</p>
           </div>
-        )}
-        
-        <div className="rounded-md border bg-background">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Atleta</TableHead>
-                <TableHead>Fundamento</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Acertos/Erros</TableHead>
-                <TableHead>% Acerto</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Carregando avaliações...
-                  </TableCell>
-                </TableRow>
-              ) : filteredEvaluations.length > 0 ? (
-                filteredEvaluations.map((evaluation) => (
-                  <TableRow key={evaluation.id}>
-                    <TableCell className="font-medium">
-                      {evaluation.atleta?.nome || 'Atleta não encontrado'}
-                      {evaluation.atleta?.time && (
-                        <Badge variant="outline" className="ml-2">
-                          {evaluation.atleta.time}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{evaluation.fundamento}</TableCell>
-                    <TableCell>{formatDate(evaluation.timestamp)}</TableCell>
-                    <TableCell>{evaluation.acertos}/{evaluation.acertos + evaluation.erros}</TableCell>
-                    <TableCell>
-                      {renderPercentIndicator(evaluation.percentual_acerto || 0)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleViewEvaluation(evaluation.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        
-                        {canEdit && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditEvaluation(evaluation)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeletePrompt(evaluation.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Nenhuma avaliação encontrada.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        
-        {evaluationsData && evaluationsData.count > pageSize && (
-          <div className="flex items-center justify-between px-2">
-            <div className="text-sm text-muted-foreground">
-              Mostrando {page * pageSize + 1} - {Math.min((page + 1) * pageSize, evaluationsData.count)} 
-              de {evaluationsData.count} resultados
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={(page + 1) * pageSize >= (evaluationsData.count || 0)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+        ) : avaliacoes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+            <h2 className="text-2xl font-semibold mb-2">Nenhuma avaliação pendente</h2>
+            <p className="text-muted-foreground">
+              Todas as avaliações foram processadas. Novas avaliações feitas por monitores aparecerão aqui para sua aprovação.
+            </p>
           </div>
-        )}
-      </div>
-      
-      {/* Modal de Visualização */}
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Avaliação</DialogTitle>
-            <DialogDescription>
-              Informações completas sobre esta avaliação.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedEvaluation && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Atleta</h4>
-                  <p>{selectedEvaluation.atleta?.nome}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Time</h4>
-                  <p>{selectedEvaluation.atleta?.time}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Posição</h4>
-                  <p>{selectedEvaluation.atleta?.posicao}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Treino</h4>
-                  <p>{selectedEvaluation.treino?.nome || "N/A"}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Fundamento</h4>
-                  <p>{selectedEvaluation.fundamento}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Data</h4>
-                  <p>{formatDate(selectedEvaluation.timestamp)}</p>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Desempenho</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Acertos:</span>
-                    <span className="font-medium">{selectedEvaluation.acertos}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Erros:</span>
-                    <span className="font-medium">{selectedEvaluation.erros}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total execuções:</span>
-                    <span className="font-medium">{selectedEvaluation.acertos + selectedEvaluation.erros}</span>
-                  </div>
-                  
-                  <div className="pt-2">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Percentual de acerto:</span>
-                      <span className="font-medium">
-                        {(selectedEvaluation.percentual_acerto || 0).toFixed(1)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={selectedEvaluation.percentual_acerto || 0} 
-                      className="h-2"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {selectedEvaluation.historico_edicoes && selectedEvaluation.historico_edicoes.length > 0 && (
-                <>
-                  <Separator />
-                  
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {avaliacoes.map((avaliacao) => (
+              <Card key={avaliacao.id} className="p-4 overflow-hidden">
+                <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Histórico de Edições</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {selectedEvaluation.historico_edicoes.map((historico, index) => (
-                        <div key={index} className="text-xs p-2 bg-muted rounded-md">
-                          <div className="flex justify-between">
-                            <span>{formatDate(historico.data)}</span>
-                            <span>{historico.tecnico}</span>
-                          </div>
-                          <div>
-                            Alterado de {historico.acertos_anterior}/{historico.acertos_anterior + historico.erros_anterior}
-                          </div>
-                        </div>
-                      ))}
+                    <h3 className="font-medium text-lg">{avaliacao.atleta.nome}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {avaliacao.atleta.posicao} - {avaliacao.atleta.time}
+                    </p>
+                  </div>
+                  <div className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-md text-xs flex items-center">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Pendente
+                  </div>
+                </div>
+                
+                <div className="bg-muted/40 p-3 rounded-md mb-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Fundamento</p>
+                      <p className="font-medium">{avaliacao.fundamento}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Eficiência</p>
+                      <p className={`font-medium ${getClasseEficiencia(calcularEficiencia(avaliacao.acertos, avaliacao.erros))}`}>
+                        {calcularEficiencia(avaliacao.acertos, avaliacao.erros)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Acertos</p>
+                      <p className="font-medium text-green-600">{avaliacao.acertos}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Erros</p>
+                      <p className="font-medium text-red-600">{avaliacao.erros}</p>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>
-              Fechar
-            </Button>
-            
-            {canEdit && selectedEvaluation && (
-              <Button 
-                onClick={() => {
-                  setIsViewModalOpen(false);
-                  handleEditEvaluation(selectedEvaluation);
-                }}
-              >
-                Editar
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Modal de Edição */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Avaliação</DialogTitle>
-            <DialogDescription>
-              Edite os dados da avaliação. Esta ação será registrada no histórico.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="acertos">Acertos</Label>
-                <Input
-                  id="acertos"
-                  type="number"
-                  min="0"
-                  value={editFormData.acertos}
-                  onChange={(e) => setEditFormData({
-                    ...editFormData,
-                    acertos: parseInt(e.target.value) || 0
-                  })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="erros">Erros</Label>
-                <Input
-                  id="erros"
-                  type="number"
-                  min="0"
-                  value={editFormData.erros}
-                  onChange={(e) => setEditFormData({
-                    ...editFormData,
-                    erros: parseInt(e.target.value) || 0
-                  })}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="timestamp">Data e Hora</Label>
-              <Input
-                id="timestamp"
-                type="datetime-local"
-                value={editFormData.timestamp.split('.')[0]}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  timestamp: e.target.value
-                })}
-              />
-            </div>
-            
-            <div className="pt-2">
-              <div className="flex justify-between text-sm mb-1">
-                <span>Percentual de acerto após edição:</span>
-                <span className="font-medium">
-                  {editFormData.acertos + editFormData.erros > 0
-                    ? ((editFormData.acertos / (editFormData.acertos + editFormData.erros)) * 100).toFixed(1)
-                    : "0.0"}%
-                </span>
-              </div>
-              <Progress 
-                value={editFormData.acertos + editFormData.erros > 0
-                  ? (editFormData.acertos / (editFormData.acertos + editFormData.erros)) * 100
-                  : 0} 
-                className="h-2"
-              />
-            </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground mb-4">
+                  <p>Monitor: {avaliacao.monitor.nome}</p>
+                  <p>Data: {formatarData(avaliacao.timestamp)}</p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={() => abrirDialogoAprovacao(avaliacao)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" /> Aprovar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={() => abrirDialogoRejeicao(avaliacao)}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" /> Rejeitar
+                  </Button>
+                </div>
+              </Card>
+            ))}
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveEdit}>
-              Salvar Alterações
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Diálogo de Confirmação de Exclusão */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Esta avaliação será permanentemente removida
-              do sistema e afetará os rankings e relatórios de desempenho.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleConfirmDelete}
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        )}
+        
+        {/* Diálogo de aprovação */}
+        <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Aprovar Avaliação</DialogTitle>
+              <DialogDescription>
+                Você está aprovando a avaliação de {avaliacaoSelecionada?.atleta?.nome}.
+                Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {avaliacaoSelecionada && (
+              <div className="bg-green-50 p-4 rounded-md my-4">
+                <p><strong>Fundamento:</strong> {avaliacaoSelecionada.fundamento}</p>
+                <p><strong>Acertos:</strong> {avaliacaoSelecionada.acertos}</p>
+                <p><strong>Erros:</strong> {avaliacaoSelecionada.erros}</p>
+                <p><strong>Eficiência:</strong> {calcularEficiencia(avaliacaoSelecionada.acertos, avaliacaoSelecionada.erros)}%</p>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowApproveDialog(false)} disabled={processando}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAprovarAvaliacao} disabled={processando}>
+                {processando ? 'Processando...' : 'Confirmar Aprovação'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Diálogo de rejeição */}
+        <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rejeitar Avaliação</DialogTitle>
+              <DialogDescription>
+                Você está rejeitando a avaliação de {avaliacaoSelecionada?.atleta?.nome}.
+                A avaliação será removida permanentemente.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {avaliacaoSelecionada && (
+              <div className="bg-red-50 p-4 rounded-md my-4">
+                <p><strong>Fundamento:</strong> {avaliacaoSelecionada.fundamento}</p>
+                <p><strong>Acertos:</strong> {avaliacaoSelecionada.acertos}</p>
+                <p><strong>Erros:</strong> {avaliacaoSelecionada.erros}</p>
+                <p><strong>Eficiência:</strong> {calcularEficiencia(avaliacaoSelecionada.acertos, avaliacaoSelecionada.erros)}%</p>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRejectDialog(false)} disabled={processando}>
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleRejeitarAvaliacao} 
+                disabled={processando}
+              >
+                {processando ? 'Processando...' : 'Confirmar Rejeição'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </RoleProtectedRoute>
   );
 };
 

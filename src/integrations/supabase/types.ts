@@ -196,8 +196,10 @@ export type Database = {
           exercicio_id: string | null
           fundamento: string
           id: string
+          monitor_id: string | null
           observacoes: string | null
           origem: string | null
+          precisaaprovacao: boolean | null
           timestamp: string | null
           treino_id: string
         }
@@ -210,8 +212,10 @@ export type Database = {
           exercicio_id?: string | null
           fundamento: string
           id?: string
+          monitor_id?: string | null
           observacoes?: string | null
           origem?: string | null
+          precisaaprovacao?: boolean | null
           timestamp?: string | null
           treino_id: string
         }
@@ -224,8 +228,10 @@ export type Database = {
           exercicio_id?: string | null
           fundamento?: string
           id?: string
+          monitor_id?: string | null
           observacoes?: string | null
           origem?: string | null
+          precisaaprovacao?: boolean | null
           timestamp?: string | null
           treino_id?: string
         }
@@ -1552,33 +1558,45 @@ export type Database = {
       }
       treinos_presencas: {
         Row: {
+          aprovado_por: string | null
           atleta_id: string
           created_at: string
+          data_aprovacao: string | null
           id: string
           indice_esforco: number | null
           justificativa: string | null
           justificativa_tipo: string | null
+          precisaaprovacao: boolean | null
           presente: boolean
+          status_aprovacao: string | null
           treino_do_dia_id: string
         }
         Insert: {
+          aprovado_por?: string | null
           atleta_id: string
           created_at?: string
+          data_aprovacao?: string | null
           id?: string
           indice_esforco?: number | null
           justificativa?: string | null
           justificativa_tipo?: string | null
+          precisaaprovacao?: boolean | null
           presente?: boolean
+          status_aprovacao?: string | null
           treino_do_dia_id: string
         }
         Update: {
+          aprovado_por?: string | null
           atleta_id?: string
           created_at?: string
+          data_aprovacao?: string | null
           id?: string
           indice_esforco?: number | null
           justificativa?: string | null
           justificativa_tipo?: string | null
+          precisaaprovacao?: boolean | null
           presente?: boolean
+          status_aprovacao?: string | null
           treino_do_dia_id?: string
         }
         Relationships: [
@@ -1941,8 +1959,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_perfis_por_funcao: {
+        Args: { funcao_param: string }
+        Returns: {
+          atleta_id: string | null
+          funcao: string
+          id: string
+          status: string
+          user_id: string | null
+        }[]
+      }
       user_has_role: {
         Args: { requested_role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
+      usuario_tem_funcao: {
+        Args: { usuario_id: string; funcao_param: string }
         Returns: boolean
       }
     }

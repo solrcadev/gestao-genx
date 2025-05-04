@@ -1,71 +1,99 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { CheckCircle, Edit, AlertTriangle } from 'lucide-react';
 
-interface EvaluationSummaryProps {
-  atleta: {
-    id: string;
-    nome: string;
-    posicao: string;
-    time: string;
-    foto_url?: string;
+export interface EvaluationSummaryProps {
+  exercise: any;
+  evaluationData: {
+    fundamento: string;
+    acertos: number;
+    erros: number;
   };
-  totalAcertos: number;
-  totalErros: number;
-  observacoes?: string;
+  onEdit: () => void;
+  onSave: () => void;
+  isMonitor?: boolean;
+  needsApproval?: boolean;
 }
 
-const EvaluationSummary: React.FC<EvaluationSummaryProps> = ({ atleta, totalAcertos, totalErros, observacoes }) => {
-  const eficiencia = totalAcertos + totalErros > 0 ? (totalAcertos / (totalAcertos + totalErros) * 100).toFixed(0) : '0';
+export default function EvaluationSummary({
+  exercise,
+  evaluationData,
+  onEdit,
+  onSave,
+  isMonitor = false,
+  needsApproval = false
+}: EvaluationSummaryProps) {
+  const { fundamento, acertos, erros } = evaluationData;
+  const total = acertos + erros;
+  const percentAcertos = total > 0 ? Math.round((acertos / total) * 100) : 0;
+
+  // Get class based on percentage
+  const getPercentClass = () => {
+    if (percentAcertos >= 80) return "text-green-500";
+    if (percentAcertos >= 60) return "text-yellow-500";
+    return "text-red-500";
+  };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Resumo da Avaliação</CardTitle>
-        <CardDescription>
-          Detalhes da avaliação do atleta
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="flex items-center space-x-4">
-          <Avatar className="h-8 w-8">
-            {atleta.foto_url ? (
-              <AvatarImage src={atleta.foto_url} alt={atleta.nome} />
-            ) : (
-              <AvatarFallback>{atleta.nome.substring(0, 2).toUpperCase()}</AvatarFallback>
-            )}
-          </Avatar>
-          <div>
-            <p className="text-sm font-medium leading-none">{atleta.nome}</p>
-            <p className="text-sm text-muted-foreground">
-              {atleta.posicao} • {atleta.time}
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium">Total de Acertos</p>
-            <p className="text-2xl font-bold">{totalAcertos}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Total de Erros</p>
-            <p className="text-2xl font-bold">{totalErros}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Eficiência</p>
-            <p className="text-2xl font-bold">{eficiencia}%</p>
-          </div>
-        </div>
-        {observacoes && (
-          <div>
-            <p className="text-sm font-medium">Observações</p>
-            <p className="text-sm text-muted-foreground">{observacoes}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold">Resumo da Avaliação</h2>
+        <Button variant="ghost" size="sm" onClick={onEdit}>
+          <Edit className="h-4 w-4 mr-2" />
+          Editar
+        </Button>
+      </div>
 
-export default EvaluationSummary;
+      {needsApproval && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-300 rounded-lg flex items-start">
+          <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-yellow-700">
+            <p className="font-medium">Avaliação pendente de aprovação</p>
+            <p>Esta avaliação precisa ser aprovada por um técnico antes de ser contabilizada no sistema.</p>
+          </div>
+        </div>
+      )}
+
+      <Card className="p-5 mb-6">
+        <h3 className="font-medium text-lg mb-4">{exercise?.nome || "Exercício"}</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Fundamento:</span>
+            <span className="font-medium">{fundamento || "Não especificado"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Acertos:</span>
+            <span className="font-medium text-green-600">{acertos}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Erros:</span>
+            <span className="font-medium text-red-600">{erros}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total de execuções:</span>
+            <span className="font-medium">{total}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Eficiência:</span>
+            <span className={`font-medium ${getPercentClass()}`}>{percentAcertos}%</span>
+          </div>
+        </div>
+      </Card>
+
+      <div className="mt-auto">
+        <Button className="w-full" onClick={onSave}>
+          <CheckCircle className="h-4 w-4 mr-2" />
+          {isMonitor ? "Concluir e enviar para aprovação" : "Salvar avaliação"}
+        </Button>
+        
+        {isMonitor && (
+          <p className="text-sm text-muted-foreground text-center mt-3">
+            Esta avaliação será revisada por um técnico.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
