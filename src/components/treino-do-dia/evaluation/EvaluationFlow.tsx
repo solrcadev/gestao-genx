@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import ExerciseSelection from './ExerciseSelection';
 import RealTimeEvaluation from './RealTimeEvaluation';
 import EvaluationSummary from './EvaluationSummary';
+import { useAuth } from '@/hooks/useAuth';
 
 interface EvaluationFlowProps {
   treinoDoDiaId: string;
@@ -13,6 +14,10 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
   const [step, setStep] = useState(1);
   const [selectedExercise, setSelectedExercise] = useState<any>(null);
   const [evaluationData, setEvaluationData] = useState<any>({});
+  const { profile } = useAuth();
+  
+  // Verificar se o usuário é técnico
+  const isTecnico = profile?.funcao === 'tecnico';
   
   // Handle exercise selection
   const handleExerciseSelect = (exercise: any) => {
@@ -28,6 +33,7 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
   // Handle evaluation completion
   const handleEvaluationComplete = (data: any) => {
     setEvaluationData(data);
+    setStep(3);
   };
   
   // Handle evaluation edit
@@ -48,7 +54,6 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
       case 1: // Exercise selection
         return (
           <ExerciseSelection
-            treinoDoDiaId={treinoDoDiaId}
             onExerciseSelect={handleExerciseSelect}
           />
         );
@@ -59,16 +64,18 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
             treinoDoDiaId={treinoDoDiaId}
             onBack={handleBackFromEvaluation}
             onComplete={handleEvaluationComplete}
+            isMonitor={!isTecnico}
           />
         );
       case 3: // Evaluation summary
         return (
           <EvaluationSummary
-            treinoDoDiaId={treinoDoDiaId}
             exercise={selectedExercise}
             evaluationData={evaluationData}
             onEdit={handleEvaluationEdit}
             onSave={handleSaveAndClose}
+            isMonitor={!isTecnico}
+            needsApproval={!isTecnico}
           />
         );
       default:

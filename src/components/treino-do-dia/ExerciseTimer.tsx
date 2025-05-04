@@ -6,9 +6,10 @@ import { toast } from "../ui/use-toast";
 import { Clock, Play, Pause, Check, X, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { cn } from "@/lib/utils";
-import RealTimeEvaluation from "./evaluation/RealTimeEvaluation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useAuth } from "@/hooks/useAuth";
+import { EvaluationFlow } from "./evaluation/EvaluationFlow";
 
 interface ExerciseTimerProps {
   exerciseData: any;
@@ -30,6 +31,10 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [activeTab, setActiveTab] = useState<"timer" | "evaluation">("timer");
   const [evaluationData, setEvaluationData] = useState({});
+  const { profile } = useAuth();
+  
+  // Verificar se o usuário é técnico
+  const isTecnico = profile?.funcao === 'tecnico';
 
   // Time display formatting
   const formatTime = (timeInSeconds: number): string => {
@@ -73,11 +78,11 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   // Finish exercise handler
   const handleFinishExercise = async () => {
     try {
-      await concluirExercicio({
+      await concluirExercicio(
         treinoDoDiaId,
-        exercicioId: exerciseData.id,
-        tempoReal: elapsedTime,
-      });
+        exerciseData.id,
+        elapsedTime
+      );
 
       toast({
         title: "Exercício concluído",
@@ -199,12 +204,9 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
               </Button>
             </div>
           }>
-            <RealTimeEvaluation
-              exercise={exerciseData}
+            <EvaluationFlow
               treinoDoDiaId={treinoDoDiaId}
-              onComplete={handleEvaluationUpdate}
-              onBack={() => setActiveTab("timer")}
-              initialData={evaluationData}
+              onClose={() => setActiveTab("timer")}
             />
           </ErrorBoundary>
         </TabsContent>
@@ -219,6 +221,13 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
           <p>
             Tempo registrado: <span className="font-medium">{formatTime(elapsedTime)}</span>
           </p>
+          {!isTecnico && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md mt-2">
+              <p className="text-sm text-yellow-700">
+                <strong>Nota:</strong> Como monitor, suas avaliações serão marcadas para revisão por um técnico.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
               Cancelar

@@ -66,6 +66,10 @@ const Presenca = () => {
   const [justificativaTipo, setJustificativaTipo] = useState<JustificativaTipo | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
+  // Verificar se o usuário é técnico
+  const isTecnico = profile?.funcao === 'tecnico';
+  const isMonitor = profile?.funcao === 'monitor';
+  
   // Buscar treinos com presença
   const { 
     data: treinos, 
@@ -108,17 +112,26 @@ const Presenca = () => {
   const handleSaveChanges = () => {
     if (!editingAtleta || !selectedTreinoId) return;
     
-    salvarPresenca({
+    const data = {
       treinoId: selectedTreinoId,
       atletaId: editingAtleta.id,
       presente: editingAtleta.presente,
       justificativa: justificativa,
-      justificativaTipo: justificativaTipo as JustificativaTipo
-    }, {
+      justificativaTipo: justificativaTipo as JustificativaTipo,
+      precisaAprovacao: isMonitor // Marcar para aprovação se for monitor
+    };
+    
+    salvarPresenca(data, {
       onSuccess: () => {
         refetch();
         setDialogOpen(false);
         setEditingAtleta(null);
+        
+        if (isMonitor) {
+          toast.success('Alteração salva e enviada para aprovação do técnico');
+        } else {
+          toast.success('Alteração salva com sucesso');
+        }
       }
     });
   };
@@ -135,13 +148,21 @@ const Presenca = () => {
       setDialogOpen(true);
     } else {
       // Se marcar como presente, salvar diretamente
-      salvarPresenca({
+      const data = {
         treinoId: selectedTreinoId!,
         atletaId: atleta.id,
-        presente: true
-      }, {
+        presente: true,
+        precisaAprovacao: isMonitor // Marcar para aprovação se for monitor
+      };
+      
+      salvarPresenca(data, {
         onSuccess: () => {
           refetch();
+          if (isMonitor) {
+            toast.success('Alteração salva e enviada para aprovação do técnico');
+          } else {
+            toast.success('Alteração salva com sucesso');
+          }
         }
       });
     }
@@ -181,15 +202,15 @@ const Presenca = () => {
     );
   }
   
-  // Verificar permissão (apenas técnicos)
-  if (profile && profile.funcao !== 'tecnico') {
+  // Verificar permissão (apenas técnicos ou monitores)
+  if (profile && !['tecnico', 'monitor'].includes(profile.funcao)) {
     return (
       <div className="container mx-auto p-6 max-w-7xl">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Acesso restrito</AlertTitle>
           <AlertDescription>
-            Somente técnicos podem acessar a gestão de presenças.
+            Somente técnicos e monitores podem acessar a gestão de presenças.
           </AlertDescription>
         </Alert>
       </div>
@@ -217,6 +238,16 @@ const Presenca = () => {
         <Users className="h-6 w-6" />
         Gestão de Presenças
       </h1>
+      
+      {isMonitor && (
+        <Alert className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Modo Monitor</AlertTitle>
+          <AlertDescription>
+            Como monitor, suas alterações serão enviadas para aprovação dos técnicos.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="grid md:grid-cols-12 gap-6">
         {/* Lista de treinos */}
@@ -296,6 +327,17 @@ const Presenca = () => {
                       <AlertTitle>Ausências sem justificativa</AlertTitle>
                       <AlertDescription>
                         Existem atletas ausentes sem justificativa neste treino.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {/* Indicador de monitor */}
+                  {isMonitor && (
+                    <Alert className="mb-4 border-blue-100">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>Modo de Aprovação</AlertTitle>
+                      <AlertDescription>
+                        Como monitor, suas alterações serão enviadas para aprovação.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -529,6 +571,17 @@ const Presenca = () => {
                     )}
                   </p>
                 </div>
+              )}
+              
+              {/* Aviso de aprovação para monitores */}
+              {isMonitor && (
+                <Alert className="mt-4 border-blue-100">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Nota para monitores</AlertTitle>
+                  <AlertDescription>
+                    Suas alterações serão enviadas para aprovação do técnico.
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           )}
