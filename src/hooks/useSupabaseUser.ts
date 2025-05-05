@@ -1,7 +1,7 @@
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseAuth } from './useSupabaseAuth';
 
 export const useSupabaseUser = () => {
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   return user;
 }; 

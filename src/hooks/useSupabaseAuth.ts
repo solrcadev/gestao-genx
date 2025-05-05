@@ -10,7 +10,7 @@ export interface Profile {
   status: string;
 }
 
-export function useAuth() {
+export function useSupabaseAuth() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +103,7 @@ export function useAuth() {
     user,
     profile,
     isLoading,
-    signOut, // Export the signOut function
+    signOut,
     isTecnico: profile?.funcao === 'tecnico',
     isMonitor: profile?.funcao === 'monitor',
     isAtleta: profile?.funcao === 'atleta',

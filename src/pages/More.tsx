@@ -18,11 +18,11 @@ import {
   Users
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useAuth } from "@/hooks/useAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 
 const More = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut } = useSupabaseAuth();
   const isTecnico = profile?.funcao === 'tecnico';
 
   // Itens de menu específicos para técnicos

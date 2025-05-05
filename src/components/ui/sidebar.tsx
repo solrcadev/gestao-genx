@@ -10,13 +10,13 @@ import {
   Users,
   Settings,
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar() {
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile } = useSupabaseAuth();
   const isTecnico = profile?.funcao === 'tecnico';
 
   return (
