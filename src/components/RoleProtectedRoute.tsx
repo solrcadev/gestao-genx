@@ -1,6 +1,6 @@
 
 import React, { ReactNode } from 'react';
-import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { useConsolidatedAuth } from '@/hooks/useConsolidatedAuth';
 import { Navigate } from 'react-router-dom';
 
 export interface RoleProtectedRouteProps {
@@ -14,7 +14,7 @@ export interface RoleProtectedRouteProps {
  * @param allowedRoles Array of allowed role names
  */
 const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRouteProps) => {
-  const { user, profile, isLoading } = useSupabaseAuth();
+  const { user, profile, isLoading } = useConsolidatedAuth();
   
   // While loading, show nothing
   if (isLoading) {

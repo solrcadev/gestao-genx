@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -18,12 +17,11 @@ import {
   Users
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { useConsolidatedAuth } from "@/hooks/useConsolidatedAuth";
 
 const More = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut } = useSupabaseAuth();
-  const isTecnico = profile?.funcao === 'tecnico';
+  const { user, profile, signOut, isTecnico } = useConsolidatedAuth();
 
   // Itens de menu específicos para técnicos
   const tecnicoItems = [

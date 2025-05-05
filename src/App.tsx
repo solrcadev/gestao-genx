@@ -1,3 +1,4 @@
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
@@ -6,6 +7,7 @@ import NotificationsManager from '@/components/NotificationsManager';
 import { useState, useEffect } from 'react';
 import { isRunningAsPWA, isFirstVisitAfterInstall } from './services/pwaService';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import AuthDebugger from './components/AuthDebugger';
 
 // Import BrowserRouter separately to avoid nesting issues
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -264,6 +266,7 @@ function App() {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <AuthDebugger />
             <Toaster />
             {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
           </RouterPersistence>

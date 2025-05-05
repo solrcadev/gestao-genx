@@ -10,14 +10,13 @@ import {
   Users,
   Settings,
 } from 'lucide-react';
-import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { useConsolidatedAuth } from '@/hooks/useConsolidatedAuth';
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar() {
   const location = useLocation();
-  const { profile } = useSupabaseAuth();
-  const isTecnico = profile?.funcao === 'tecnico';
+  const { profile, isTecnico } = useConsolidatedAuth();
 
   return (
     <div className="flex h-full max-w-[280px] flex-col border-r bg-secondary/50 py-4">

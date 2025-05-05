@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { supabase } from '@/lib/supabase';
 import PageTitle from '@/components/PageTitle';
 import { Button } from '@/components/ui/button';
@@ -36,9 +36,9 @@ interface Monitor {
 }
 
 const MonitorManagement = () => {
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading } = useSupabaseAuth();
   const navigate = useNavigate();
-  const [monitors, setMonitors] = useState<Monitor[]>([]);
+  const [monitors, setMonitors] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newMonitor, setNewMonitor] = useState({
