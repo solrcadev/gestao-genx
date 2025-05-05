@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Card, 
@@ -32,9 +32,10 @@ import {
   excluirMeta,
   getHistoricoProgresso
 } from '@/services/metasService';
-import { ArrowLeft, CalendarIcon, CheckCircle, Clock, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, CheckCircle, Clock, AlertCircle, Edit, Trash2, FileDown, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { exportMetaToPdf, exportMetaToPng } from '@/services/pdfExportService';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,12 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DadosGrafico {
   data: string;
@@ -80,6 +87,8 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
     observacoes: ''
   });
   const isMobile = useIsMobile();
+  const printRef = useRef<HTMLDivElement>(null);
+  const [exportando, setExportando] = useState(false);
 
   // Buscar dados da meta
   const { 
@@ -249,6 +258,58 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
     return name.substring(0, 2).toUpperCase();
   };
 
+  // New function to handle PDF export
+  const handleExportPDF = async () => {
+    if (!meta) return;
+    
+    try {
+      setExportando(true);
+      await exportMetaToPdf(meta, meta.nome_atleta || 'Atleta', historicoProgresso || []);
+      
+      toast({
+        title: "Meta exportada com sucesso",
+        description: "O arquivo PDF foi baixado.",
+      });
+    } catch (error) {
+      console.error('Erro ao exportar para PDF:', error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar o PDF da meta.",
+        variant: "destructive"
+      });
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  // New function to handle PNG export
+  const handleExportPNG = async () => {
+    if (!meta || !printRef.current) return;
+    
+    try {
+      setExportando(true);
+      await exportMetaToPng(
+        'meta-export-container', 
+        meta.titulo, 
+        meta.nome_atleta || 'Atleta'
+      );
+      
+      toast({
+        title: "Meta exportada com sucesso",
+        description: "A imagem PNG foi baixada.",
+      });
+    } catch (error) {
+      console.error('Erro ao exportar para PNG:', error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível gerar a imagem da meta.",
+        variant: "destructive"
+      });
+    } finally {
+      setExportando(false);
+    }
+  };
+
   if (carregandoMeta) {
     return (
       <div className="flex justify-center items-center h-40">
@@ -306,6 +367,32 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
           </Button>
           
           <div className="flex items-center gap-2">
+            {/* Add export dropdown button */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={exportando}
+                  className="touch-feedback"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Exportar Meta
+                  {exportando && <span className="ml-2">...</span>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Exportar como PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPNG}>
+                  <Image className="h-4 w-4 mr-2" />
+                  Exportar como PNG
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <AlertDialog open={modalExcluirAberto} onOpenChange={setModalExcluirAberto}>
               <AlertDialogTrigger asChild>
                 <Button 
@@ -355,11 +442,115 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
         </div>
       </div>
       
-      {/* Detalhes da Meta */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      {/* Exportable content container - This is what will be exported as PNG */}
+      <div id="meta-export-container" ref={printRef} className="relative bg-white p-6 rounded-lg border">
+        <div className="absolute top-0 left-0 w-full bg-primary h-10 flex items-center px-4">
+          <h3 className="text-white font-semibold">Relatório de Meta Individual</h3>
+        </div>
+        <div className="pt-12 pb-4">
+          {/* Cabeçalho do relatório */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold">{meta?.titulo}</h2>
+              <div className="flex items-center mt-1">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarFallback>{meta?.nome_atleta ? getInitials(meta.nome_atleta) : 'NA'}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium">{meta?.nome_atleta}</span>
+              </div>
+            </div>
+            <Badge className={statusClass} variant="outline">
+              <div className="flex items-center gap-1">
+                {statusIcon}
+                <span>{statusText}</span>
+              </div>
+            </Badge>
+          </div>
+          
+          {/* Progresso */}
+          <div className="mb-6">
+            <div className="flex justify-between mb-1">
+              <span className="text-sm font-medium">Progresso</span>
+              <span className="text-sm">{meta.progresso}%</span>
+            </div>
+            <Progress value={meta.progresso} className="h-3" />
+          </div>
+          
+          {/* Informações da meta */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <h4 className="text-sm text-muted-foreground">Data de Criação</h4>
+              <p className="text-sm font-medium">
+                {format(new Date(meta.created_at), "dd/MM/yyyy", { locale: ptBR })}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm text-muted-foreground">Data Alvo</h4>
+              <p className="text-sm font-medium">
+                {format(new Date(meta.data_alvo), "dd/MM/yyyy", { locale: ptBR })}
+              </p>
+            </div>
+          </div>
+          
+          {/* Descrição */}
+          <div className="mb-6">
+            <h4 className="font-medium mb-1">Descrição</h4>
+            <p className="text-sm text-muted-foreground">
+              {meta.descricao || "Nenhuma descrição fornecida."}
+            </p>
+          </div>
+          
+          {/* Observações do Técnico */}
+          {meta.observacoes && (
+            <div className="mb-6">
+              <h4 className="font-medium mb-1">Observações do Técnico</h4>
+              <p className="text-sm text-muted-foreground">
+                {meta.observacoes}
+              </p>
+            </div>
+          )}
+          
+          {/* Histórico de Atualizações (simplificado para o relatório) */}
+          <div>
+            <h4 className="font-medium mb-2">Histórico de Atualizações</h4>
+            {historicoProgresso && historicoProgresso.length > 0 ? (
+              <div className="space-y-3">
+                {historicoProgresso.slice(0, 3).map((registro, index) => (
+                  <div key={index} className="border-b pb-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">{format(new Date(registro.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      <Badge variant="outline">{registro.progresso}%</Badge>
+                    </div>
+                    {registro.observacao && (
+                      <p className="text-xs text-muted-foreground mt-1">{registro.observacao}</p>
+                    )}
+                  </div>
+                ))}
+                {historicoProgresso.length > 3 && (
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    ... e mais {historicoProgresso.length - 3} atualizações
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma atualização de progresso registrada.
+              </p>
+            )}
+          </div>
+          
+          <div className="mt-6 text-xs text-muted-foreground text-center">
+            Relatório gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+          </div>
+        </div>
+      </div>
+      
+      {/* Detalhes da Meta (fora da área de exportação) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Status da Meta</CardTitle>
+          <CardHeader>
+            <CardTitle>Status da Meta</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4">
@@ -397,8 +588,8 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Atleta</CardTitle>
+          <CardHeader>
+            <CardTitle>Atleta</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-start gap-3">
@@ -706,4 +897,4 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
   );
 };
 
-export default MetaDetalhes; 
+export default MetaDetalhes;

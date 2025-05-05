@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import '../styles/meta-export.css';
 import { 
   Card, 
   CardContent, 
@@ -611,4 +612,4 @@ const MetasEvolucao = () => {
   );
 };
 
-export default MetasEvolucao; 
+export default MetasEvolucao;

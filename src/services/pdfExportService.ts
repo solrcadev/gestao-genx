@@ -4,6 +4,7 @@ import { Training } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { api } from '@/lib/axios';
+import html2canvas from 'html2canvas';
 
 import { AttendanceRecord, AttendanceFilters } from './attendanceService';
 import { format as formatDate, parse } from 'date-fns';
@@ -181,6 +182,204 @@ export const generateAttendancePDF = (
   
   // Save the PDF
   doc.save('relatorio-presencas.pdf');
+};
+
+// New function to export a meta (goal) to PDF
+export const exportMetaToPdf = async (meta: any, atletaNome: string, historicoProgresso: any[]) => {
+  try {
+    // Create a new jsPDF instance with portrait orientation
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm'
+    });
+
+    // Set up document properties
+    const logoHeight = 10;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let yPos = margin;
+
+    // Add header with logo or title
+    doc.setFillColor(83, 83, 83);
+    doc.rect(0, 0, pageWidth, 25, 'F');
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.text('RELATÓRIO DE META INDIVIDUAL', pageWidth / 2, yPos, { align: 'center' });
+    
+    yPos += 15;
+    
+    // Add atleta information
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Atleta: ${atletaNome}`, margin, yPos);
+    
+    yPos += 10;
+    
+    // Add meta details
+    doc.setFontSize(12);
+    doc.text(`Meta: ${meta.titulo}`, margin, yPos);
+    
+    yPos += 7;
+    
+    // Calculate status
+    const dataAlvo = new Date(meta.data_alvo);
+    const hoje = new Date();
+    let status = '';
+    
+    if (meta.progresso === 100) {
+      status = 'Concluída';
+    } else if (dataAlvo < hoje) {
+      status = 'Atrasada';
+    } else {
+      status = 'Em Progresso';
+    }
+
+    // Add status and dates
+    doc.text(`Status: ${status}`, margin, yPos);
+    
+    yPos += 7;
+    
+    doc.setFontSize(10);
+    doc.text(`Criado em: ${format(new Date(meta.created_at), "dd/MM/yyyy", { locale: ptBR })}`, margin, yPos);
+    
+    yPos += 5;
+    
+    doc.text(`Data alvo: ${format(new Date(meta.data_alvo), "dd/MM/yyyy", { locale: ptBR })}`, margin, yPos);
+    
+    yPos += 10;
+    
+    // Add progress bar
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPos, pageWidth - (margin * 2), 7, 'F');
+    
+    // Progress fill
+    const progressWidth = (pageWidth - (margin * 2)) * (meta.progresso / 100);
+    doc.setFillColor(83, 140, 198);
+    doc.rect(margin, yPos, progressWidth, 7, 'F');
+    
+    // Progress text
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${meta.progresso}%`, pageWidth / 2, yPos + 5, { align: 'center' });
+    
+    yPos += 15;
+    
+    // Add description
+    doc.setFontSize(12);
+    doc.text('Descrição:', margin, yPos);
+    
+    yPos += 7;
+    
+    doc.setFontSize(10);
+    // Handle multi-line descriptions
+    const descriptionLines = doc.splitTextToSize(meta.descricao || 'Nenhuma descrição fornecida.', pageWidth - (margin * 2));
+    doc.text(descriptionLines, margin, yPos);
+    
+    yPos += descriptionLines.length * 5 + 10;
+    
+    // Add observações if available
+    if (meta.observacoes) {
+      doc.setFontSize(12);
+      doc.text('Observações do Técnico:', margin, yPos);
+      
+      yPos += 7;
+      
+      doc.setFontSize(10);
+      const observationLines = doc.splitTextToSize(meta.observacoes, pageWidth - (margin * 2));
+      doc.text(observationLines, margin, yPos);
+      
+      yPos += observationLines.length * 5 + 10;
+    }
+    
+    // Add histórico table
+    doc.setFontSize(12);
+    doc.text('Histórico de Atualizações:', margin, yPos);
+    
+    yPos += 7;
+    
+    if (historicoProgresso && historicoProgresso.length > 0) {
+      const tableHeaders = [['Data', 'Progresso', 'Observação']];
+      
+      const tableData = historicoProgresso.map(item => [
+        format(new Date(item.created_at), "dd/MM/yyyy", { locale: ptBR }),
+        `${item.progresso}%`,
+        item.observacao || '-'
+      ]);
+      
+      autoTable(doc, {
+        head: tableHeaders,
+        body: tableData,
+        startY: yPos,
+        margin: { horizontal: margin },
+        styles: { fontSize: 9 },
+        headStyles: {
+          fillColor: [83, 140, 198],
+          textColor: [255, 255, 255]
+        }
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.text('Nenhuma atualização registrada.', margin, yPos);
+    }
+    
+    // Add footer with date of generation
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      const footerText = `Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`;
+      doc.text(footerText, pageWidth - margin, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+    }
+    
+    // Save the PDF
+    doc.save(`meta_${meta.titulo.replace(/\s+/g, '_')}_${atletaNome.replace(/\s+/g, '_')}.pdf`);
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao exportar meta para PDF:', error);
+    throw error;
+  }
+};
+
+// Function to export a meta as PNG using html2canvas
+export const exportMetaToPng = async (elementId: string, metaTitle: string, atletaNome: string) => {
+  try {
+    // Get the element to convert
+    const element = document.getElementById(elementId);
+    
+    if (!element) {
+      throw new Error('Elemento não encontrado para exportação.');
+    }
+    
+    // Use html2canvas to convert the element to canvas
+    const canvas = await html2canvas(element, {
+      scale: 2, // Higher scale for better quality
+      useCORS: true, // Allow loading of external images
+      backgroundColor: '#ffffff', // White background
+      logging: false // Disable logging
+    });
+    
+    // Convert canvas to data URL
+    const imgData = canvas.toDataURL('image/png');
+    
+    // Create a download link
+    const link = document.createElement('a');
+    link.download = `meta_${metaTitle.replace(/\s+/g, '_')}_${atletaNome.replace(/\s+/g, '_')}.png`;
+    link.href = imgData;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao exportar meta para PNG:', error);
+    throw error;
+  }
 };
 
 // New function to export training details with exercises to PDF
