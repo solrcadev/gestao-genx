@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -13,14 +14,26 @@ import {
   CheckSquare,
   Clipboard,
   PieChart,
-  Award
+  Award,
+  Users
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const More = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
+  const isTecnico = profile?.funcao === 'tecnico';
+
+  // Itens de menu específicos para técnicos
+  const tecnicoItems = [
+    {
+      icon: <Users className="h-5 w-5" />,
+      title: "Gerenciar Monitores",
+      description: "Cadastrar e gerenciar acesso de monitores",
+      path: "/monitor-management"
+    },
+  ];
 
   const menuItems = [
     {
@@ -85,6 +98,9 @@ const More = () => {
     }
   ];
 
+  // Combinar os itens de menu, adicionando os específicos para técnicos no início
+  const allMenuItems = isTecnico ? [...tecnicoItems, ...menuItems] : menuItems;
+
   const handleItemClick = (item: any) => {
     if (item.action) {
       item.action();
@@ -102,7 +118,7 @@ const More = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {menuItems.map((item, index) => (
+        {allMenuItems.map((item, index) => (
           <Card 
             key={index}
             className="p-4 cursor-pointer hover:bg-accent transition-colors"
