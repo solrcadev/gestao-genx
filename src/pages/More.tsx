@@ -22,7 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const More = () => {
   const navigate = useNavigate();
-  const { signOut, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const isTecnico = profile?.funcao === 'tecnico';
 
   // Itens de menu específicos para técnicos

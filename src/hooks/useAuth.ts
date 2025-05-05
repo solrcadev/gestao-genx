@@ -36,6 +36,19 @@ export function useAuth() {
     }
   };
 
+  // Add signOut function
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      return { success: true };
+    } catch (error) {
+      console.error('Error signing out:', error);
+      return { success: false, error };
+    }
+  };
+
   // Load authenticated user on mount
   useEffect(() => {
     // Get current auth state
@@ -90,6 +103,7 @@ export function useAuth() {
     user,
     profile,
     isLoading,
+    signOut, // Export the signOut function
     isTecnico: profile?.funcao === 'tecnico',
     isMonitor: profile?.funcao === 'monitor',
     isAtleta: profile?.funcao === 'atleta',
