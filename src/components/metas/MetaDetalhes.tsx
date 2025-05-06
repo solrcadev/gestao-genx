@@ -443,87 +443,75 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
       </div>
       
       {/* Exportable content container - This is what will be exported as PNG */}
-      <div id="meta-export-container" ref={printRef} className="relative bg-white p-6 rounded-lg border">
-        <div className="absolute top-0 left-0 w-full bg-primary h-10 flex items-center px-4">
-          <h3 className="text-white font-semibold">Relatório de Meta Individual</h3>
+      <div id="meta-export-container" ref={printRef} className="relative">
+        <div className="header">
+          <h3>Relatório de Meta Individual</h3>
         </div>
-        <div className="pt-12 pb-4">
-          {/* Cabeçalho do relatório */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold">{meta?.titulo}</h2>
-              <div className="flex items-center mt-1">
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarFallback>{meta?.nome_atleta ? getInitials(meta.nome_atleta) : 'NA'}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">{meta?.nome_atleta}</span>
-              </div>
+        
+        <div className="pt-4">
+          {/* Informações do Atleta */}
+          <div className="athlete-info">
+            <div className="avatar">
+              {meta?.nome_atleta ? getInitials(meta.nome_atleta) : 'NA'}
             </div>
-            <Badge className={statusClass} variant="outline">
-              <div className="flex items-center gap-1">
-                {statusIcon}
-                <span>{statusText}</span>
-              </div>
-            </Badge>
+            <div className="details">
+              <h2 className="name">{meta?.nome_atleta}</h2>
+              <p className="position">{meta?.posicao_atleta}</p>
+            </div>
+            <div className={`status-badge ${statusClass}`}>
+              {statusIcon}
+              <span>{statusText}</span>
+            </div>
           </div>
           
           {/* Progresso */}
-          <div className="mb-6">
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium">Progresso</span>
-              <span className="text-sm">{meta.progresso}%</span>
+          <div className="progress-container">
+            <div className="progress-label">
+              <span>Progresso</span>
+              <span>{meta.progresso}%</span>
             </div>
-            <Progress value={meta.progresso} className="h-3" />
-          </div>
-          
-          {/* Informações da meta */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <h4 className="text-sm text-muted-foreground">Data de Criação</h4>
-              <p className="text-sm font-medium">
-                {format(new Date(meta.created_at), "dd/MM/yyyy", { locale: ptBR })}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-sm text-muted-foreground">Data Alvo</h4>
-              <p className="text-sm font-medium">
-                {format(new Date(meta.data_alvo), "dd/MM/yyyy", { locale: ptBR })}
-              </p>
+            <div className="progress-bar">
+              <div 
+                className="progress-bar-fill"
+                style={{ width: `${meta.progresso}%` }}
+              ></div>
             </div>
           </div>
           
-          {/* Descrição */}
-          <div className="mb-6">
-            <h4 className="font-medium mb-1">Descrição</h4>
-            <p className="text-sm text-muted-foreground">
-              {meta.descricao || "Nenhuma descrição fornecida."}
-            </p>
+          {/* Detalhes da Meta */}
+          <div className="meta-details">
+            <h4>Detalhes da Meta</h4>
+            <p>{meta.descricao || "Nenhuma descrição fornecida."}</p>
+            
+            <div className="mt-4">
+              <h4>Data Alvo</h4>
+              <p>{format(new Date(meta.data_alvo), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+            </div>
+            
+            {meta.observacoes && (
+              <div className="mt-4">
+                <h4>Observações</h4>
+                <p>{meta.observacoes}</p>
+              </div>
+            )}
           </div>
           
-          {/* Observações do Técnico */}
-          {meta.observacoes && (
-            <div className="mb-6">
-              <h4 className="font-medium mb-1">Observações do Técnico</h4>
-              <p className="text-sm text-muted-foreground">
-                {meta.observacoes}
-              </p>
-            </div>
-          )}
-          
-          {/* Histórico de Atualizações (simplificado para o relatório) */}
-          <div>
-            <h4 className="font-medium mb-2">Histórico de Atualizações</h4>
+          {/* Histórico de Atualizações */}
+          <div className="history">
+            <h4>Histórico de Atualizações</h4>
             {historicoProgresso && historicoProgresso.length > 0 ? (
               <div className="space-y-3">
                 {historicoProgresso.slice(0, 3).map((registro, index) => (
-                  <div key={index} className="border-b pb-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium">{format(new Date(registro.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
-                      <Badge variant="outline">{registro.progresso}%</Badge>
+                  <div key={index} className="history-item">
+                    <div className="date">
+                      {format(new Date(registro.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </div>
-                    {registro.observacao && (
-                      <p className="text-xs text-muted-foreground mt-1">{registro.observacao}</p>
-                    )}
+                    <div className="progress">
+                      Progresso: {registro.progresso}%
+                      {registro.observacao && (
+                        <p className="mt-1">{registro.observacao}</p>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {historicoProgresso.length > 3 && (
@@ -539,7 +527,8 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
             )}
           </div>
           
-          <div className="mt-6 text-xs text-muted-foreground text-center">
+          {/* Rodapé */}
+          <div className="footer">
             Relatório gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </div>
         </div>

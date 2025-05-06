@@ -354,18 +354,32 @@ export const exportMetaToPng = async (elementId: string, metaTitle: string, atle
       throw new Error('Elemento não encontrado para exportação.');
     }
     
-    // Use html2canvas to convert the element to canvas
+    // Configurações otimizadas para html2canvas
     const canvas = await html2canvas(element, {
-      scale: 2, // Higher scale for better quality
-      useCORS: true, // Allow loading of external images
-      backgroundColor: '#ffffff', // White background
-      logging: false // Disable logging
+      scale: 4, // Aumentado para 4x para melhor qualidade
+      useCORS: true, // Permitir carregamento de imagens externas
+      backgroundColor: '#f5f5f5', // Cor de fundo suave
+      logging: false, // Desabilitar logs
+      allowTaint: true, // Permitir imagens de outros domínios
+      removeContainer: true, // Remover container temporário
+      foreignObjectRendering: false, // Melhor compatibilidade
+      imageTimeout: 0, // Sem timeout para imagens
+      onclone: (clonedDoc) => {
+        // Aplicar estilos adicionais ao clone para melhor renderização
+        const clonedElement = clonedDoc.getElementById(elementId);
+        if (clonedElement) {
+          clonedElement.style.width = '800px'; // Largura fixa para melhor qualidade
+          clonedElement.style.height = 'auto';
+          clonedElement.style.transform = 'none';
+          clonedElement.style.position = 'relative';
+        }
+      }
     });
     
-    // Convert canvas to data URL
-    const imgData = canvas.toDataURL('image/png');
+    // Converter canvas para data URL com qualidade máxima
+    const imgData = canvas.toDataURL('image/png', 1.0);
     
-    // Create a download link
+    // Criar link de download
     const link = document.createElement('a');
     link.download = `meta_${metaTitle.replace(/\s+/g, '_')}_${atletaNome.replace(/\s+/g, '_')}.png`;
     link.href = imgData;
