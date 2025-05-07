@@ -579,6 +579,8 @@ export type Database = {
           numero_jogadores: number
           objetivo: string
           tempo_estimado: number
+          video_fim: string | null
+          video_inicio: string | null
           video_url: string | null
         }
         Insert: {
@@ -591,6 +593,8 @@ export type Database = {
           numero_jogadores: number
           objetivo: string
           tempo_estimado: number
+          video_fim?: string | null
+          video_inicio?: string | null
           video_url?: string | null
         }
         Update: {
@@ -603,6 +607,8 @@ export type Database = {
           numero_jogadores?: number
           objetivo?: string
           tempo_estimado?: number
+          video_fim?: string | null
+          video_inicio?: string | null
           video_url?: string | null
         }
         Relationships: []
@@ -1628,7 +1634,7 @@ export type Database = {
           created_at: string | null
           email: string
           encrypted_password: string
-          id: string
+          id: string | null
           nome: string
           role: string
           updated_at: string | null
@@ -1637,7 +1643,7 @@ export type Database = {
           created_at?: string | null
           email: string
           encrypted_password: string
-          id?: string
+          id?: string | null
           nome: string
           role?: string
           updated_at?: string | null
@@ -1646,7 +1652,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           encrypted_password?: string
-          id?: string
+          id?: string | null
           nome?: string
           role?: string
           updated_at?: string | null
@@ -1939,6 +1945,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_user: {
+        Args: { p_email: string; p_password: string; p_user_data?: Json }
+        Returns: Json
+      }
       criar_perfil_atleta: {
         Args: { p_user_id: string; p_atleta_id: string }
         Returns: undefined
@@ -1950,6 +1960,10 @@ export type Database = {
       criar_tabela_eventos_qualificados: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      delete_user: {
+        Args: { user_id_param: string }
+        Returns: Json
       }
       executar_sql: {
         Args: { sql_query: string }
