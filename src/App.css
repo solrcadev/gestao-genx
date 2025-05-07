@@ -1,67 +1,42 @@
-/* Video container styling */
-.video-container {
-  position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
-  height: 0;
-  overflow: hidden;
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-.video-container iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-.instagram-embed-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 500px;
-  max-height: 700px;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* Card hover effect */
-.card-hover {
-  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-.card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Card animations */
-@keyframes scaleIn {
+@keyframes logo-spin {
   from {
-    opacity: 0;
-    transform: scale(0.95);
+    transform: rotate(0deg);
   }
   to {
-    opacity: 1;
-    transform: scale(1);
+    transform: rotate(360deg);
   }
 }
 
-.animate-scaleIn {
-  animation: scaleIn 0.3s ease-out forwards;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-/* Mobile optimizations */
-@media (max-width: 640px) {
-  .card-mobile-friendly {
-    margin-bottom: 1rem;
-  }
-  
-  .mobile-list {
-    padding-bottom: 5rem;
-  }
-  
-  .overflow-container {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
 }

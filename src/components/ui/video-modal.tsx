@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import VideoEmbed from './video-embed';
@@ -55,7 +54,7 @@ const VideoModal: React.FC<VideoModalProps> = ({
   const platform = getVideoPlatform(videoUrl);
   const isInstagram = platform === 'instagram';
   
-  // Função para quando o conteúdo carrega
+  // Função para simular final de carregamento
   const handleContentLoaded = () => {
     // Esconder o loading após o conteúdo carregar
     setTimeout(() => setIsLoading(false), 500);
@@ -66,7 +65,7 @@ const VideoModal: React.FC<VideoModalProps> = ({
     if (isOpen) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 3000); // Fallback para garantir que o loading não fique infinito
+      }, 2000); // Fallback para garantir que o loading não fique infinito
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
@@ -99,7 +98,7 @@ const VideoModal: React.FC<VideoModalProps> = ({
         </div>
         
         {/* Video container */}
-        <div className={isInstagram ? 'instagram-embed-container' : 'video-container'}>
+        <div className={isInstagram ? 'relative' : 'video-container'}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
               <div className="text-center">
@@ -109,13 +108,13 @@ const VideoModal: React.FC<VideoModalProps> = ({
             </div>
           )}
           
-          <div className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}>
+          <div className={isLoading ? 'opacity-0' : 'opacity-100'} onLoad={handleContentLoaded}>
             <VideoEmbed 
               videoUrl={videoUrl}
               inicio={inicio}
               fim={fim}
               title={videoTitle}
-              onLoad={handleContentLoaded}
+              className={isInstagram ? 'w-full' : ''}
             />
           </div>
         </div>
@@ -124,4 +123,4 @@ const VideoModal: React.FC<VideoModalProps> = ({
   );
 };
 
-export default VideoModal;
+export default VideoModal; 

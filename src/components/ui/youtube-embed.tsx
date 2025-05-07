@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { gerarUrlYoutubeEmbed } from '@/utils/video-utils';
 
@@ -37,4 +36,4 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({
   );
 };
 
-export default YouTubeEmbed;
+export default YouTubeEmbed; 

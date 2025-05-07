@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { gerarUrlYoutubeEmbed, gerarUrlInstagramEmbed, getVideoPlatform, extrairInstagramId } from '@/utils/video-utils';
 import { ExternalLink } from 'lucide-react';
@@ -10,7 +9,6 @@ interface VideoEmbedProps {
   fim?: string;
   title?: string;
   className?: string;
-  onLoad?: () => void;
 }
 
 /**
@@ -22,23 +20,14 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
   fim,
   title = 'Vídeo',
   className = '',
-  onLoad
 }) => {
   const [embedError, setEmbedError] = useState(false);
   const platform = getVideoPlatform(videoUrl);
   
   useEffect(() => {
-    // Resetar o estado de erro quando a URL muda
+    // Resetar estado de erro quando a URL muda
     setEmbedError(false);
-    
-    // Chamar callback onLoad, se fornecido
-    if (onLoad) {
-      const timer = setTimeout(() => {
-        onLoad();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [videoUrl, onLoad]);
+  }, [videoUrl]);
   
   if (!videoUrl) return null;
   
@@ -56,7 +45,6 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            onLoad={onLoad}
           ></iframe>
         </div>
       );
@@ -81,7 +69,6 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
             allowFullScreen
             className="w-full h-[600px] rounded border"
             onError={() => setEmbedError(true)}
-            onLoad={onLoad}
             loading="lazy"
           ></iframe>
         </div>
@@ -153,4 +140,4 @@ const FallbackMessage: React.FC = () => (
   </div>
 );
 
-export default VideoEmbed;
+export default VideoEmbed; 

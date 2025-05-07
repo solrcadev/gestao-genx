@@ -1,4 +1,3 @@
-
 /**
  * Converte um tempo no formato MM:SS ou HH:MM:SS para segundos
  * @param tempo String no formato "MM:SS" ou "HH:MM:SS"
@@ -131,4 +130,4 @@ export function gerarUrlInstagramEmbed(videoUrl: string): string | null {
   if (!postId) return null;
   
   return `https://www.instagram.com/p/${postId}/embed`;
-}
+} 
