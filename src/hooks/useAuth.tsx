@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Session, User } from '@supabase/supabase-js';
 
 type Profile = {
   id: string;
@@ -9,13 +10,9 @@ type Profile = {
   status?: string;
 };
 
-type User = {
-  id: string;
-  email?: string;
-};
-
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
@@ -25,6 +22,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   profile: null,
   isLoading: true,
   signIn: async () => {},
@@ -34,79 +32,88 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener
+    // Configurar primeiro o listener de mudança de estado de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event, currentSession) => {
         console.info('Auth state changed:', event);
-        setIsLoading(true);
-
-        if (session) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email
-          });
-
-          // Fetch user profile data
-          const { data: profileData, error } = await supabase
-            .from('perfis')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching user profile:', error);
-          } else if (profileData) {
-            setProfile(profileData);
-          }
+        
+        // Atualizar estado da sessão e usuário
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        
+        // Se temos um usuário, buscar os dados do perfil
+        if (currentSession?.user) {
+          fetchUserProfile(currentSession.user.id);
         } else {
-          setUser(null);
+          // Se não temos usuário, limpar o perfil
           setProfile(null);
+          setIsLoading(false);
         }
-
-        setIsLoading(false);
       }
     );
 
-    // Initial auth check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email
-        });
-
-        // Fetch user profile data
-        supabase
-          .from('perfis')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error('Error fetching user profile:', error);
-            } else if (data) {
-              setProfile(data);
-            }
-            setIsLoading(false);
-          });
-      } else {
+    // Verificação inicial de sessão
+    const initialSessionCheck = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          await fetchUserProfile(currentSession.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking initial session:', error);
         setIsLoading(false);
       }
-    });
+    };
+
+    initialSessionCheck();
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
+  // Função para buscar o perfil do usuário
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setProfile(null);
+      } else if (data) {
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
+      setProfile(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
+      setIsLoading(true);
       setError(null);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -114,35 +121,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         setError(error.message);
+        setIsLoading(false);
         return { success: false, error };
       }
 
+      // A sessão e o usuário serão atualizados pelo listener onAuthStateChange
       return { success: true, data };
     } catch (error: any) {
       setError(error.message);
+      setIsLoading(false);
       return { success: false, error };
     }
   };
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       setError(null);
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         setError(error.message);
+        setIsLoading(false);
         return { success: false, error };
       }
       
+      // A sessão e o usuário serão limpos pelo listener onAuthStateChange
       return { success: true };
     } catch (error: any) {
       setError(error.message);
+      setIsLoading(false);
       return { success: false, error };
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isLoading, signIn, signOut, error }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      profile, 
+      isLoading, 
+      signIn, 
+      signOut, 
+      error 
+    }}>
       {children}
     </AuthContext.Provider>
   );

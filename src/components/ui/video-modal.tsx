@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import VideoEmbed from './video-embed';
@@ -108,13 +109,14 @@ const VideoModal: React.FC<VideoModalProps> = ({
             </div>
           )}
           
-          <div className={isLoading ? 'opacity-0' : 'opacity-100'} onLoad={handleContentLoaded}>
+          <div className={isLoading ? 'opacity-0' : 'opacity-100'}>
             <VideoEmbed 
               videoUrl={videoUrl}
               inicio={inicio}
               fim={fim}
               title={videoTitle}
               className={isInstagram ? 'w-full' : ''}
+              onLoad={handleContentLoaded}
             />
           </div>
         </div>
@@ -123,4 +125,4 @@ const VideoModal: React.FC<VideoModalProps> = ({
   );
 };
 
-export default VideoModal; 
+export default VideoModal;
