@@ -44,9 +44,22 @@ const ExercisesPage = () => {
   const [categoryFilter, setCategoryFilter] = useState("all-categories");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
-  const { isMobile, isSmallScreen, orientation } = useDeviceInfo();
+  const { isMobile } = useDeviceInfo();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Efeito para impedir rolagem quando o modal estiver aberto
+  useEffect(() => {
+    if (isDialogOpen && !isMobile) {
+      document.body.style.overflow = 'hidden';
+    } else if (!isDrawerOpen) {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDialogOpen, isDrawerOpen, isMobile]);
 
   // Fetch exercises
   const { data: exercises = [], isLoading } = useQuery({
@@ -121,22 +134,22 @@ const ExercisesPage = () => {
   };
 
   return (
-    <div className="mobile-container animate-fade-in">
-      <h1 className="text-2xl font-bold mb-6">Biblioteca de Exercícios</h1>
+    <div className="container mx-auto px-4 py-6 animate-fade-in max-w-7xl">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6">Biblioteca de Exercícios</h1>
       
       {/* Search and filter controls */}
-      <div className="flex flex-col md:flex-row gap-2 mb-4">
+      <div className="flex flex-col md:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="Buscar exercício..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10"
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full md:w-[180px]">
+          <SelectTrigger className="w-full md:w-[220px] h-10">
             <SelectValue placeholder="Todas categorias" />
           </SelectTrigger>
           <SelectContent>
@@ -150,10 +163,11 @@ const ExercisesPage = () => {
       
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
+          <span className="ml-3 text-muted-foreground">Carregando exercícios...</span>
         </div>
       ) : filteredExercises.length > 0 ? (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {filteredExercises.map(exercise => (
             <ExerciseCard 
               key={exercise.id} 
@@ -164,59 +178,76 @@ const ExercisesPage = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground mb-2">Nenhum exercício encontrado</p>
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <p className="text-muted-foreground mb-4">Nenhum exercício encontrado</p>
           <Button 
             onClick={() => handleOpenForm()}
-            variant="outline"
+            variant="default"
+            size="lg"
+            className="font-medium"
           >
-            Criar exercício
+            <Plus className="h-5 w-5 mr-2" />
+            Criar Novo Exercício
           </Button>
         </div>
       )}
       
       {/* Mobile: Drawer for exercise form */}
       <Drawer open={isDrawerOpen && isMobile} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="drawer-content-exercise">
-          <button
-            onClick={() => setIsDrawerOpen(false)}
-            className="modal-close-button"
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <ExerciseForm 
-            exercise={editingExercise}
-            onClose={handleFormClose}
-            onSuccess={handleFormSubmitSuccess}
-            categories={CATEGORIES}
-          />
+        <DrawerContent className="max-h-[90vh] h-[90vh] overflow-hidden flex flex-col">
+          <DrawerHeader className="border-b sticky top-0 bg-background z-10">
+            <DrawerTitle>
+              {editingExercise ? 'Editar Exercício' : 'Criar Exercício'}
+            </DrawerTitle>
+            <button
+              onClick={() => setIsDrawerOpen(false)}
+              className="absolute right-4 top-4 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </DrawerHeader>
+          <div className="p-4 pb-20 overflow-y-auto flex-grow">
+            <ExerciseForm 
+              exercise={editingExercise}
+              onClose={handleFormClose}
+              onSuccess={handleFormSubmitSuccess}
+              categories={CATEGORIES}
+            />
+          </div>
         </DrawerContent>
       </Drawer>
 
       {/* Desktop: Dialog for exercise form */}
       <Dialog open={isDialogOpen && !isMobile} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="p-0 modal-exercise-backdrop">
-          <button 
-            onClick={() => setIsDialogOpen(false)}
-            className="modal-close-button"
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <ExerciseForm 
-            exercise={editingExercise}
-            onClose={handleFormClose}
-            onSuccess={handleFormSubmitSuccess}
-            categories={CATEGORIES}
-          />
+        <DialogContent className="max-w-xl w-full max-h-[90vh] p-0 overflow-hidden flex flex-col">
+          <div className="p-6 border-b sticky top-0 bg-background z-10 flex justify-between items-center">
+            <DialogTitle className="text-xl">
+              {editingExercise ? 'Editar Exercício' : 'Criar Exercício'}
+            </DialogTitle>
+            <button 
+              onClick={() => setIsDialogOpen(false)}
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-grow p-6 pt-4">
+            <ExerciseForm 
+              exercise={editingExercise}
+              onClose={handleFormClose}
+              onSuccess={handleFormSubmitSuccess}
+              categories={CATEGORIES}
+            />
+          </div>
         </DialogContent>
       </Dialog>
       
       {/* Floating action button */}
       <button 
         onClick={() => handleOpenForm()}
-        className="floating-action-button"
+        className="fixed right-6 bottom-6 w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 z-10"
         aria-label="Adicionar exercício"
       >
         <Plus className="h-6 w-6" />

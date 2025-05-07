@@ -1,4 +1,3 @@
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
@@ -34,6 +33,7 @@ import Ciclos from './pages/Ciclos';
 import NotificationSettings from './pages/NotificationSettings';
 import MetasEvolucao from './pages/MetasEvolucao';
 import AvaliacaoQualitativa from '@/pages/AvaliacaoQualitativa';
+import DBMigrationPage from '@/pages/DBMigration';
 
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -262,6 +262,13 @@ function App() {
                 <ProtectedRoute>
                   <AtasReuniaoDetalhePage />
                 </ProtectedRoute>
+              } />
+              
+              {/* Página de Migração do Banco de Dados */}
+              <Route path="/admin/migracao-db" element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <DBMigrationPage />
+                </RoleProtectedRoute>
               } />
               
               <Route path="*" element={<NotFound />} />

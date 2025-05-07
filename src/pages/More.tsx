@@ -14,7 +14,8 @@ import {
   Clipboard,
   PieChart,
   Award,
-  Users
+  Users,
+  Database
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useConsolidatedAuth } from "@/hooks/useConsolidatedAuth";
@@ -31,6 +32,12 @@ const More = () => {
       description: "Cadastrar e gerenciar acesso de monitores",
       path: "/monitor-management"
     },
+    {
+      icon: <Database className="h-5 w-5" />,
+      title: "Migração do Banco",
+      description: "Atualizar estrutura do banco de dados",
+      path: "/admin/migracao-db"
+    }
   ];
 
   const menuItems = [

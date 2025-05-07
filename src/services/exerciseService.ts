@@ -9,6 +9,8 @@ export interface Exercise {
   objetivo: string;
   descricao: string;
   video_url?: string;
+  video_inicio?: string;
+  video_fim?: string;
   imagem_url?: string;
 }
 
@@ -20,6 +22,8 @@ export interface ExerciseInput {
   objetivo: string;
   descricao: string;
   video_url?: string;
+  video_inicio?: string;
+  video_fim?: string;
   imagem_url?: string;
 }
 
