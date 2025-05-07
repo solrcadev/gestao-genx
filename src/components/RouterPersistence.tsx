@@ -16,23 +16,28 @@ interface RouterPersistenceProps {
  * das rotas protegidas para garantir que funcione corretamente.
  */
 const RouterPersistence: React.FC<RouterPersistenceProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
-  const { clearPersistedRoute, saveCurrentRoute } = useRoutePersistence(!loading);
+  const { 
+    clearPersistedRoute, 
+    getPersistedRoute,
+    clearAttemptedRoute,
+    clearAllRoutes,
+    getAttemptedRoute
+  } = useRoutePersistence(!isLoading);
   
   // Limpar rota salva quando o usuário faz logout
   useEffect(() => {
-    if (user === null && !loading) {
+    if (user === null && !isLoading) {
       clearPersistedRoute();
     }
-  }, [user, loading, clearPersistedRoute]);
+  }, [user, isLoading, clearPersistedRoute]);
 
   // Salvar rota atual em mudanças específicas
   useEffect(() => {
-    if (user && !loading) {
-      saveCurrentRoute();
-    }
-  }, [location.pathname, user, loading, saveCurrentRoute]);
+    // A persistência de rotas agora será feita internamente pelo hook useRoutePersistence
+    // que já observa as mudanças de localização
+  }, [location.pathname, user, isLoading]);
   
   return <>{children}</>;
 };

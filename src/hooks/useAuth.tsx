@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { useToast } from '@/components/ui/use-toast';
 
 type Profile = {
   id: string;
@@ -36,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Configurar primeiro o listener de mudança de estado de autenticação
@@ -121,6 +123,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         setError(error.message);
+        toast({
+          title: "Erro ao fazer login",
+          description: error.message,
+          variant: "destructive"
+        });
         setIsLoading(false);
         return { success: false, error };
       }
@@ -129,6 +136,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, data };
     } catch (error: any) {
       setError(error.message);
+      toast({
+        title: "Erro ao fazer login",
+        description: error.message,
+        variant: "destructive"
+      });
       setIsLoading(false);
       return { success: false, error };
     }
@@ -143,6 +155,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         setError(error.message);
+        toast({
+          title: "Erro ao fazer logout",
+          description: error.message,
+          variant: "destructive"
+        });
         setIsLoading(false);
         return { success: false, error };
       }
@@ -151,6 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } catch (error: any) {
       setError(error.message);
+      toast({
+        title: "Erro ao fazer logout",
+        description: error.message,
+        variant: "destructive"
+      });
       setIsLoading(false);
       return { success: false, error };
     }

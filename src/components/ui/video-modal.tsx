@@ -55,7 +55,7 @@ const VideoModal: React.FC<VideoModalProps> = ({
   const platform = getVideoPlatform(videoUrl);
   const isInstagram = platform === 'instagram';
   
-  // Função para simular final de carregamento
+  // Função para quando o conteúdo carrega
   const handleContentLoaded = () => {
     // Esconder o loading após o conteúdo carregar
     setTimeout(() => setIsLoading(false), 500);
@@ -66,7 +66,7 @@ const VideoModal: React.FC<VideoModalProps> = ({
     if (isOpen) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 2000); // Fallback para garantir que o loading não fique infinito
+      }, 3000); // Fallback para garantir que o loading não fique infinito
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
@@ -99,7 +99,7 @@ const VideoModal: React.FC<VideoModalProps> = ({
         </div>
         
         {/* Video container */}
-        <div className={isInstagram ? 'relative' : 'video-container'}>
+        <div className={isInstagram ? 'instagram-embed-container' : 'video-container'}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
               <div className="text-center">
@@ -109,13 +109,12 @@ const VideoModal: React.FC<VideoModalProps> = ({
             </div>
           )}
           
-          <div className={isLoading ? 'opacity-0' : 'opacity-100'}>
+          <div className={isLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}>
             <VideoEmbed 
               videoUrl={videoUrl}
               inicio={inicio}
               fim={fim}
               title={videoTitle}
-              className={isInstagram ? 'w-full' : ''}
               onLoad={handleContentLoaded}
             />
           </div>
