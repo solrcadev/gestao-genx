@@ -14,15 +14,15 @@ interface RouterPersistenceProps {
  * das rotas protegidas para garantir que funcione corretamente.
  */
 const RouterPersistence: React.FC<RouterPersistenceProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { session, loading } = useAuth();
   const { clearPersistedRoute } = useRoutePersistence(!loading);
   
   // Limpar rota salva quando o usuário faz logout
   useEffect(() => {
-    if (user === null && !loading) {
+    if (session === null && !loading) {
       clearPersistedRoute();
     }
-  }, [user, loading, clearPersistedRoute]);
+  }, [session, loading, clearPersistedRoute]);
   
   return <>{children}</>;
 };

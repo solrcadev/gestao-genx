@@ -5,7 +5,6 @@ import { Dashboard } from '@/pages/Dashboard';
 import { ForgotPassword } from '@/pages/ForgotPassword';
 import { ResetPassword } from '@/pages/ResetPassword';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { RoleProtectedRoute } from '@/components/RoleProtectedRoute';
 import AvaliacaoFisica from '@/pages/AvaliacaoFisica';
 import TreinoDoDia from '@/pages/TreinoDoDia';
 import Atletas from '@/pages/Atletas';
@@ -61,33 +60,33 @@ export const appRoutes = [
   {
     path: "/atletas",
     element: (
-      <RoleProtectedRoute allowedRoles={['tecnico']}>
+      <ProtectedRoute>
         <Atletas />
-      </RoleProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/performance",
     element: (
-      <RoleProtectedRoute allowedRoles={['tecnico']}>
+      <ProtectedRoute>
         <Performance />
-      </RoleProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/evaluation-management",
     element: (
-      <RoleProtectedRoute allowedRoles={['tecnico']}>
+      <ProtectedRoute>
         <EvaluationManagement />
-      </RoleProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/monitor-management",
     element: (
-      <RoleProtectedRoute allowedRoles={['tecnico']}>
+      <ProtectedRoute>
         <MonitorManagement />
-      </RoleProtectedRoute>
+      </ProtectedRoute>
     ),
   },
 ];

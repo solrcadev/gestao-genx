@@ -13,8 +13,7 @@ import {
  * Hook para persistir a rota atual e restaurá-la quando o usuário retorna
  * ao aplicativo após alternar abas ou minimizar.
  * 
- * Este hook salva a rota atual no localStorage e permite restaurá-la
- * quando necessário.
+ * Esta versão melhorada evita redirecionamentos automáticos indesejados.
  * 
  * @param shouldPersist Booleano que indica se o hook deve persistir rotas
  * @returns Um objeto com métodos para gerenciar rotas persistidas
@@ -27,58 +26,28 @@ export function useRoutePersistence(shouldPersist = true) {
   useEffect(() => {
     if (!shouldPersist) return;
     
-    // Delegamos para o utilitário a verificação de rotas de login
+    // Não salvar rotas de login/autenticação
+    if (location.pathname === '/' || 
+        location.pathname.includes('/login') || 
+        location.pathname.includes('/register') || 
+        location.pathname.includes('/reset-password') ||
+        location.pathname.includes('/forgot-password')) {
+      return;
+    }
+    
+    // Salvar a rota atual
     saveRoute(
       location.pathname,
       location.search,
       location.hash,
       location.state
     );
+    
+    console.log("🔖 Rota persistida pelo hook:", location.pathname);
   }, [location, shouldPersist]);
   
-  // Restaurar a rota quando o foco volta para a janela
-  useEffect(() => {
-    if (!shouldPersist) return;
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        tryRestoreRoute();
-      }
-    };
-    
-    const handleFocus = () => {
-      tryRestoreRoute();
-    };
-    
-    const tryRestoreRoute = () => {
-      // Não restaurar se estivermos na página de login
-      if (location.pathname.includes('/login') || 
-          location.pathname.includes('/register') || 
-          location.pathname.includes('/reset-password') ||
-          location.pathname.includes('/forgot-password')) {
-        return;
-      }
-      
-      // Tentativa de restaurar a última rota
-      const savedRoute = getRoute(ROUTE_STORAGE_KEY);
-      if (!savedRoute) return;
-      
-      // Não restaurar se já estivermos na rota salva
-      if (savedRoute.pathname === location.pathname) return;
-      
-      // Navegar para a rota salva
-      console.log('Restaurando para a rota:', savedRoute.pathname);
-      navigate(savedRoute.pathname + (savedRoute.search || ''));
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [navigate, location.pathname, shouldPersist]);
+  // NÃO restauramos automaticamente a rota quando o foco volta para a janela
+  // Isso é para evitar problemas com o fluxo de navegação normal
   
   return { 
     clearPersistedRoute: () => clearRoute(ROUTE_STORAGE_KEY),

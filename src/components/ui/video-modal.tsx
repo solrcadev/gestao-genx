@@ -48,7 +48,18 @@ const VideoModal: React.FC<VideoModalProps> = ({
     };
   }, [isOpen, onClose]);
   
-  if (!isOpen) return null;
+  // Efeito para simular carregamento - agora chamado sempre, independente do isOpen
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000); // Fallback para garantir que o loading não fique infinito
+      return () => clearTimeout(timer);
+    }
+    // Quando o modal não está aberto, não precisamos fazer nada,
+    // mas o hook sempre é chamado na mesma ordem
+    return undefined;
+  }, [isOpen]);
   
   // Determinar a classe do container com base na plataforma
   const platform = getVideoPlatform(videoUrl);
@@ -60,15 +71,8 @@ const VideoModal: React.FC<VideoModalProps> = ({
     setTimeout(() => setIsLoading(false), 500);
   };
   
-  // Efeito para simular carregamento
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 2000); // Fallback para garantir que o loading não fique infinito
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
+  // Importante: Retorno condicional depois que todos os hooks foram chamados
+  if (!isOpen) return null;
   
   return (
     <div 

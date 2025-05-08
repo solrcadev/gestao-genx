@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import BottomNavbar from '@/components/BottomNavbar';
 import RouterPersistence from '@/components/RouterPersistence';
-import NotificationsManager from '@/components/NotificationsManager';
+// Desativado temporariamente devido a erros de servidor (recursão infinita em políticas)
+// import NotificationsManager from '@/components/NotificationsManager';
 import { useState, useEffect } from 'react';
 import { isRunningAsPWA, isFirstVisitAfterInstall } from './services/pwaService';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -37,7 +38,6 @@ import DBMigrationPage from '@/pages/DBMigration';
 
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
-import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 
 // Atas de Reunião 
 import AtasReuniao from './app/atas-reuniao/page';
@@ -102,7 +102,8 @@ function App() {
         {/* Keep AuthProvider inside BrowserRouter to ensure useNavigate works properly */}
         <AuthProvider>
           <RouterPersistence>
-            <NotificationsManager />
+            {/* Desativado temporariamente devido a erros de servidor */}
+            {/* <NotificationsManager /> */}
             <BottomNavbar />
             <Routes>
               <Route path="/" element={<Index />} />
@@ -203,9 +204,9 @@ function App() {
               <Route
                 path="/gerenciar-avaliacoes"
                 element={
-                  <RoleProtectedRoute allowedRoles={['admin', 'coach']}>
+                  <ProtectedRoute>
                     <EvaluationManagement />
-                  </RoleProtectedRoute>
+                  </ProtectedRoute>
                 }
               />
 
@@ -266,9 +267,9 @@ function App() {
               
               {/* Página de Migração do Banco de Dados */}
               <Route path="/admin/migracao-db" element={
-                <RoleProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute>
                   <DBMigrationPage />
-                </RoleProtectedRoute>
+                </ProtectedRoute>
               } />
               
               <Route path="*" element={<NotFound />} />
