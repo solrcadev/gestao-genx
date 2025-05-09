@@ -1,3 +1,4 @@
+
 -- Script alternativo para corrigir o problema de recursão infinita nas políticas RLS da tabela "perfis"
 -- Esta abordagem usa uma função auxiliar para determinar o papel do usuário sem consultar novamente a tabela 'perfis'
 
@@ -87,4 +88,4 @@ SELECT
   qual,
   with_check
 FROM pg_policies
-WHERE tablename = 'perfis'; 
+WHERE tablename = 'perfis';

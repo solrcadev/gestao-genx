@@ -1,3 +1,4 @@
+
 -- Script para corrigir políticas RLS na tabela avaliacoes_exercicios
 -- Este script modifica as políticas existentes para permitir inserção e seleção por todos os usuários autenticados 
 
@@ -34,4 +35,4 @@ WHERE tablename = 'avaliacoes_exercicios';
 SELECT column_name, data_type 
 FROM information_schema.columns 
 WHERE table_schema = 'public' 
-AND table_name = 'avaliacoes_exercicios'; 
+AND table_name = 'avaliacoes_exercicios';

@@ -1,3 +1,4 @@
+
 -- Script para corrigir o problema de recursão infinita nas políticas RLS da tabela "perfis"
 -- O problema ocorre porque uma política está referenciando a própria tabela que tenta proteger
 -- ou existe um loop entre políticas de segurança
@@ -105,4 +106,4 @@ SELECT
   qual,
   with_check
 FROM pg_policies
-WHERE tablename = 'perfis'; 
+WHERE tablename = 'perfis';

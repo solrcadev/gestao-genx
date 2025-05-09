@@ -1,3 +1,4 @@
+
 -- Script para simplificar as políticas RLS da tabela "perfis"
 -- Esta alteração permite que qualquer usuário autenticado possa visualizar os dados, sem verificação de perfis
 
@@ -81,4 +82,4 @@ SELECT
   qual,
   with_check
 FROM pg_policies
-WHERE tablename = 'perfis'; 
+WHERE tablename = 'perfis';

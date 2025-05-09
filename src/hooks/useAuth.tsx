@@ -2,73 +2,54 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type Profile = {
-  id: string;
-  funcao: string;
-  atleta_id?: string;
-  status?: string;
-};
-
-type User = {
+interface User {
   id: string;
   email?: string;
-};
+}
 
 interface AuthContextType {
   user: User | null;
-  profile: Profile | null;
-  isLoading: boolean;
+  loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<any>;
   error: string | null;
+  session: any;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  profile: null,
-  isLoading: true,
+  loading: true,
   signIn: async () => {},
   signOut: async () => {},
-  error: null
+  error: null,
+  session: null
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState(null);
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.info('Auth state changed:', event);
-        setIsLoading(true);
+        setLoading(true);
 
         if (session) {
           setUser({
             id: session.user.id,
             email: session.user.email
           });
-
-          // Fetch user profile data
-          const { data: profileData, error } = await supabase
-            .from('perfis')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching user profile:', error);
-          } else if (profileData) {
-            setProfile(profileData);
-          }
+          setSession(session);
         } else {
           setUser(null);
-          setProfile(null);
+          setSession(null);
         }
 
-        setIsLoading(false);
+        setLoading(false);
       }
     );
 
@@ -79,24 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: session.user.id,
           email: session.user.email
         });
-
-        // Fetch user profile data
-        supabase
-          .from('perfis')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error('Error fetching user profile:', error);
-            } else if (data) {
-              setProfile(data);
-            }
-            setIsLoading(false);
-          });
-      } else {
-        setIsLoading(false);
+        setSession(session);
       }
+      setLoading(false);
     });
 
     return () => {
@@ -142,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isLoading, signIn, signOut, error }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, error, session }}>
       {children}
     </AuthContext.Provider>
   );

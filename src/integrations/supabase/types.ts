@@ -254,6 +254,13 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
@@ -535,6 +542,13 @@ export type Database = {
             foreignKeyName: "exercicio_tag_relacao_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "exercicio_tag_relacao_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
@@ -571,38 +585,53 @@ export type Database = {
       exercicios: {
         Row: {
           categoria: string
+          checklist_tecnico: string[] | null
           created_at: string | null
           descricao: string
+          dificuldade: string | null
+          fundamentos: string[] | null
           id: string
           imagem_url: string | null
           nome: string
           numero_jogadores: number
           objetivo: string
           tempo_estimado: number
+          video_fim: string | null
+          video_inicio: string | null
           video_url: string | null
         }
         Insert: {
           categoria: string
+          checklist_tecnico?: string[] | null
           created_at?: string | null
           descricao: string
+          dificuldade?: string | null
+          fundamentos?: string[] | null
           id?: string
           imagem_url?: string | null
           nome: string
           numero_jogadores: number
           objetivo: string
           tempo_estimado: number
+          video_fim?: string | null
+          video_inicio?: string | null
           video_url?: string | null
         }
         Update: {
           categoria?: string
+          checklist_tecnico?: string[] | null
           created_at?: string | null
           descricao?: string
+          dificuldade?: string | null
+          fundamentos?: string[] | null
           id?: string
           imagem_url?: string | null
           nome?: string
           numero_jogadores?: number
           objetivo?: string
           tempo_estimado?: number
+          video_fim?: string | null
+          video_inicio?: string | null
           video_url?: string | null
         }
         Relationships: []
@@ -1208,6 +1237,13 @@ export type Database = {
             foreignKeyName: "registro_execucoes_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "registro_execucoes_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
@@ -1333,6 +1369,13 @@ export type Database = {
           training_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "training_exercises_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
           {
             foreignKeyName: "training_exercises_exercicio_id_fkey"
             columns: ["exercicio_id"]
@@ -1544,6 +1587,13 @@ export type Database = {
             foreignKeyName: "treinos_exercicios_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "treinos_exercicios_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
@@ -1628,7 +1678,7 @@ export type Database = {
           created_at: string | null
           email: string
           encrypted_password: string
-          id: string
+          id: string | null
           nome: string
           role: string
           updated_at: string | null
@@ -1637,7 +1687,7 @@ export type Database = {
           created_at?: string | null
           email: string
           encrypted_password: string
-          id?: string
+          id?: string | null
           nome: string
           role?: string
           updated_at?: string | null
@@ -1646,7 +1696,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           encrypted_password?: string
-          id?: string
+          id?: string | null
           nome?: string
           role?: string
           updated_at?: string | null
@@ -1726,6 +1776,13 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
@@ -1778,10 +1835,25 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
         ]
+      }
+      exercicio_uso_estatisticas: {
+        Row: {
+          contagem_uso: number | null
+          exercicio_id: string | null
+          ultima_vez_usado: string | null
+        }
+        Relationships: []
       }
       v_avaliacoes_fundamento_resumidas: {
         Row: {
@@ -1836,6 +1908,13 @@ export type Database = {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
             columns: ["exercicio_id"]
             isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
@@ -1882,6 +1961,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_avaliacao_qualitativa_media"
             referencedColumns: ["atleta_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicio_uso_estatisticas"
+            referencedColumns: ["exercicio_id"]
           },
           {
             foreignKeyName: "avaliacoes_fundamento_exercicio_id_fkey"
@@ -1939,6 +2025,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_user: {
+        Args: { p_email: string; p_password: string; p_user_data?: Json }
+        Returns: Json
+      }
       criar_perfil_atleta: {
         Args: { p_user_id: string; p_atleta_id: string }
         Returns: undefined
@@ -1951,6 +2041,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      delete_user: {
+        Args: { user_id_param: string }
+        Returns: Json
+      }
       executar_sql: {
         Args: { sql_query: string }
         Returns: undefined
@@ -1958,6 +2052,24 @@ export type Database = {
       fix_security_definer_views: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_all_fundamentos_tecnicos: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          fundamento: string
+        }[]
+      }
+      get_exercise_usage_volume_por_fundamento: {
+        Args: {
+          p_fundamento_nome: string
+          p_data_inicio?: string
+          p_data_fim?: string
+          p_genero_equipe?: string
+        }
+        Returns: {
+          data_ponto_tempo: string
+          volume_uso_exercicio: number
+        }[]
       }
       get_perfis_por_funcao: {
         Args: { funcao_param: string }
@@ -1968,6 +2080,24 @@ export type Database = {
           status: string
           user_id: string | null
         }[]
+      }
+      get_performance_trend_por_fundamento: {
+        Args: {
+          p_fundamento_nome: string
+          p_data_inicio?: string
+          p_data_fim?: string
+          p_genero_equipe?: string
+        }
+        Returns: {
+          data_ponto_tempo: string
+          metrica_desempenho: number
+          total_acertos: number
+          total_erros: number
+        }[]
+      }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       user_has_role: {
         Args: { requested_role: Database["public"]["Enums"]["user_role"] }
