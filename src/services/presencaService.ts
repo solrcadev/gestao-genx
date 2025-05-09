@@ -45,23 +45,19 @@ export async function buscarPresencas(filtros?: FiltroPresenca): Promise<Presenc
       delete filtros?.atletaId;
     }
 
-    console.log('Buscando presenças com filtros:', filtros);
+    console.log('[DEBUG] Buscando presenças com filtros:', filtros);
 
-    // Consulta principal com junções para atletas e treinos
+    // Consulta simplificada para evitar erros 500
     let query = supabase
       .from('treinos_presencas')
       .select(`
-        *,
-        atleta:atleta_id(id, nome, posicao, time),
-        treino_do_dia:treino_do_dia_id(
-          id,
-          treino:treino_id(
-            id, 
-            nome, 
-            data, 
-            local
-          )
-        )
+        id,
+        atleta_id,
+        treino_do_dia_id,
+        presente,
+        justificativa,
+        justificativa_tipo,
+        created_at
       `);
 
     // Aplicar filtros se existirem
@@ -75,29 +71,74 @@ export async function buscarPresencas(filtros?: FiltroPresenca): Promise<Presenc
       query = query.eq('presente', false);
     }
 
-    const { data: presencas, error } = await query.order('created_at', { ascending: false });
+    const { data: presencas, error } = await query.order('created_at', { ascending: false }).limit(100);
 
     if (error) {
-      console.error('Erro ao buscar presenças:', error);
-      
-      // Se falhar a junção, tentar abordagem alternativa
-      console.log('Tentando abordagem alternativa sem junções...');
-      return buscarPresencasAlternativo(filtros);
+      console.error('[DEBUG] Erro ao buscar presenças:', error);
+      return [];
     }
 
     // Se não temos dados, retornar array vazio
     if (!presencas || presencas.length === 0) {
-      console.log('Nenhuma presença encontrada');
+      console.log('[DEBUG] Nenhuma presença encontrada');
       return [];
     }
 
-    console.log(`Encontradas ${presencas.length} presenças`);
+    console.log(`[DEBUG] Encontradas ${presencas.length} presenças básicas`);
+    
+    // Buscar dados relacionados separadamente
+    const atletaIds = [...new Set(presencas.map(p => p.atleta_id).filter(Boolean))];
+    const treinoDoDiaIds = [...new Set(presencas.map(p => p.treino_do_dia_id).filter(Boolean))];
+
+    // Verificar se os arrays não estão vazios antes de usar .in()
+    let atletas = [];
+    if (atletaIds.length > 0) {
+      const { data } = await supabase
+        .from('athletes')
+        .select('id, nome, posicao, time')
+        .in('id', atletaIds);
+      
+      atletas = data || [];
+    }
+    
+    let treinosDosDia = [];
+    if (treinoDoDiaIds.length > 0) {
+      const { data } = await supabase
+        .from('treinos_do_dia')
+        .select(`
+          id, 
+          data,
+          treino_id
+        `)
+        .in('id', treinoDoDiaIds);
+      
+      treinosDosDia = data || [];
+    }
+    
+    // Buscar treinos se necessário
+    const treinoIds = [...new Set(treinosDosDia.map(t => t.treino_id).filter(Boolean))];
+    let treinos = [];
+    
+    if (treinoIds.length > 0) {
+      const { data } = await supabase
+        .from('treinos')
+        .select('id, nome, data, local')
+        .in('id', treinoIds);
+      
+      treinos = data || [];
+    }
+    
+    // Mapear para acesso mais rápido
+    const atletasMap = new Map(atletas.map(a => [a.id, a]));
+    const treinosDoDiaMap = new Map(treinosDosDia.map(t => [t.id, t]));
+    const treinosMap = new Map(treinos.map(t => [t.id, t]));
     
     // Transformar dados para o formato esperado
     const resultado = presencas.map(p => {
-      // Verificar se temos os dados relacionados
-      const atleta = p.atleta;
-      const treino = p.treino_do_dia?.treino;
+      // Buscar dados relacionados
+      const atleta = atletasMap.get(p.atleta_id);
+      const treinoDoDia = treinosDoDiaMap.get(p.treino_do_dia_id);
+      const treino = treinoDoDia ? treinosMap.get(treinoDoDia.treino_id) : null;
       
       // Aplicar filtro por time quando necessário
       if (filtros?.time && (!atleta || atleta.time?.toLowerCase() !== filtros.time?.toLowerCase())) {
@@ -136,11 +177,11 @@ export async function buscarPresencas(filtros?: FiltroPresenca): Promise<Presenc
       } as Presenca;
     }).filter(Boolean) as Presenca[]; // Filtrar os nulos (excluídos pelos filtros)
     
-    console.log(`Retornando ${resultado.length} presenças após aplicar todos os filtros`);
+    console.log(`[DEBUG] Retornando ${resultado.length} presenças após aplicar todos os filtros`);
     return resultado;
     
   } catch (error) {
-    console.error('Erro ao buscar presenças:', error);
+    console.error('[DEBUG] Erro ao buscar presenças:', error);
     return [];
   }
 }
@@ -151,10 +192,12 @@ export async function buscarPresencas(filtros?: FiltroPresenca): Promise<Presenc
  */
 async function buscarPresencasAlternativo(filtros?: FiltroPresenca): Promise<Presenca[]> {
   try {
-    // 1. Buscar registros básicos de presença
+    console.log('[DEBUG] Usando abordagem alternativa de busca de presenças');
+    
+    // 1. Buscar registros básicos de presença sem junções complexas
     let query = supabase
       .from('treinos_presencas')
-      .select('*');
+      .select('id, atleta_id, treino_do_dia_id, presente, justificativa, created_at');
       
     // Aplicar filtros básicos
     if (filtros?.atletaId) {
@@ -167,92 +210,32 @@ async function buscarPresencasAlternativo(filtros?: FiltroPresenca): Promise<Pre
       query = query.eq('presente', false);
     }
     
-    const { data: presencas, error } = await query.order('created_at', { ascending: false });
+    const { data: presencas, error } = await query.order('created_at', { ascending: false }).limit(50);
     
     if (error) {
-      console.error('Erro ao buscar presenças (alternativo):', error);
+      console.error('[DEBUG] Erro ao buscar presenças (alternativo):', error);
       return [];
     }
     
     if (!presencas || presencas.length === 0) {
+      console.log('[DEBUG] Nenhuma presença encontrada (alternativo)');
       return [];
     }
     
-    // 2. Buscar atletas e treinos relacionados
-    const atletaIds = [...new Set(presencas.map(p => p.atleta_id).filter(Boolean))];
-    const treinoDoDiaIds = [...new Set(presencas.map(p => p.treino_do_dia_id).filter(Boolean))];
+    console.log(`[DEBUG] Encontradas ${presencas.length} presenças (alternativo)`);
     
-    // Buscar atletas
-    const { data: atletas } = await supabase
-      .from('athletes')
-      .select('id, nome, posicao, time')
-      .in('id', atletaIds);
-      
-    // Buscar treinos do dia
-    const { data: treinosDosDia } = await supabase
-      .from('treinos_do_dia')
-      .select('id, treino_id')
-      .in('id', treinoDoDiaIds);
-      
-    // Buscar treinos
-    const treinoIds = treinosDosDia?.map(t => t.treino_id).filter(Boolean) || [];
-    const { data: treinos } = await supabase
-      .from('treinos')
-      .select('id, nome, data, local')
-      .in('id', treinoIds);
-    
-    // Criar mapas para acesso rápido
-    const atletasMap = new Map(atletas?.map(a => [a.id, a]) || []);
-    const treinosDoDiaMap = new Map(treinosDosDia?.map(t => [t.id, t]) || []);
-    const treinosMap = new Map(treinos?.map(t => [t.id, t]) || []);
-    
-    // 3. Combinar os dados
-    const resultado = presencas.map(p => {
-      const atleta = p.atleta_id ? atletasMap.get(p.atleta_id) : undefined;
-      
-      // Para acessar o treino, precisamos ir através do treino_do_dia
-      const treinoDoDia = p.treino_do_dia_id ? treinosDoDiaMap.get(p.treino_do_dia_id) : undefined;
-      const treino = treinoDoDia?.treino_id ? treinosMap.get(treinoDoDia.treino_id) : undefined;
-      
-      // Aplicar filtro por time quando necessário
-      if (filtros?.time && (!atleta || atleta.time?.toLowerCase() !== filtros.time?.toLowerCase())) {
-        return null;
-      }
-      
-      // Aplicar filtro por data do treino
-      if (treino?.data && (filtros?.dataInicial || filtros?.dataFinal)) {
-        const dataTreino = new Date(treino.data);
-        
-        if (filtros?.dataInicial && dataTreino < filtros.dataInicial) {
-          return null;
-        }
-        
-        if (filtros?.dataFinal) {
-          const dataFinal = new Date(filtros.dataFinal);
-          dataFinal.setHours(23, 59, 59, 999);
-          
-          if (dataTreino > dataFinal) {
-            return null;
-          }
-        }
-      }
-      
-      return {
+    // Criar objetos simplificados para retorno
+    return presencas.map(p => ({
         id: p.id,
         atleta_id: p.atleta_id,
-        treino_id: treino?.id,
         treino_do_dia_id: p.treino_do_dia_id,
         status: p.presente ? 'presente' : 'ausente',
         justificativa: p.justificativa,
-        created_at: p.created_at,
-        atleta,
-        treino
-      } as Presenca;
-    }).filter(Boolean) as Presenca[];
+      created_at: p.created_at
+    } as Presenca));
     
-    return resultado;
   } catch (error) {
-    console.error('Erro na abordagem alternativa:', error);
+    console.error('[DEBUG] Erro na abordagem alternativa:', error);
     return [];
   }
 }
@@ -633,7 +616,7 @@ export function formatarData(data: string | Date | null | undefined): string {
   if (!data) return 'Data não disponível';
   
   try {
-    return format(new Date(data), 'dd/MM/yyyy', { locale: pt });
+    return format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: pt });
   } catch (error) {
     console.error('Erro ao formatar data:', error);
     return 'Data inválida';

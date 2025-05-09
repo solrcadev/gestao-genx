@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { fetchPresencasAtletas, registrarPresencasEmLote } from "@/services/treinosDoDiaService";
 import LoadingSpinner from "../LoadingSpinner";
@@ -32,7 +31,11 @@ const AthleteAttendance: React.FC<AthleteAttendanceProps> = ({ treinoDoDiaId, on
     const loadAthletes = async () => {
       try {
         setLoading(true);
+        console.log('[DEBUG] Carregando presenças de atletas para treino:', treinoDoDiaId);
+        
         const data = await fetchPresencasAtletas(treinoDoDiaId);
+        console.log('[DEBUG] Dados de presença carregados:', data.length, 'atletas');
+        
         setAthletes(data);
         
         // Initialize presences from fetched data and load effort indices
@@ -45,6 +48,7 @@ const AthleteAttendance: React.FC<AthleteAttendanceProps> = ({ treinoDoDiaId, on
         }));
         
         setPresences(initialPresences);
+        console.log('[DEBUG] Presenças inicializadas:', initialPresences.length);
         
         // Load effort indices
         const indices: Record<string, number> = {};
@@ -57,10 +61,10 @@ const AthleteAttendance: React.FC<AthleteAttendanceProps> = ({ treinoDoDiaId, on
         });
         setEffortIndices(indices);
       } catch (error) {
-        console.error("Error loading athletes:", error);
+        console.error("[DEBUG] Erro ao carregar atletas:", error);
         toast({
           title: "Erro ao carregar atletas",
-          description: "Não foi possível carregar a lista de atletas.",
+          description: "Não foi possível carregar a lista de atletas. Tente novamente ou contate o suporte.",
           variant: "destructive",
         });
       } finally {
@@ -109,13 +113,38 @@ const AthleteAttendance: React.FC<AthleteAttendanceProps> = ({ treinoDoDiaId, on
   const handleSavePresences = async () => {
     try {
       setSaving(true);
+      console.log('[DEBUG] Salvando presenças para o treino:', treinoDoDiaId);
+      console.log('[DEBUG] Total de presenças a salvar:', presences.length);
+      
+      // Verificar se presences está vazio
+      if (!presences.length) {
+        console.warn('[DEBUG] Não há presenças para salvar!');
+        toast({
+          title: "Aviso",
+          description: "Não há dados de presença para salvar.",
+          variant: "default",
+        });
+        setSaving(false);
+        return;
+      }
+      
+      // Preparar dados para salvar, garantindo que justificativa_tipo seja definido corretamente
+      const presencesToSave = presences.map(p => ({
+        ...p,
+        justificativa_tipo: p.presente 
+          ? null 
+          : (p.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA),
+        justificativa: p.presente ? null : p.justificativa
+      }));
+      
+      console.log('[DEBUG] Dados de presença processados:', JSON.stringify(presencesToSave, null, 2));
+      
       await registrarPresencasEmLote({
         treinoDoDiaId,
-        presences: presences.map(p => ({
-          ...p,
-          justificativa_tipo: p.presente ? null : (p.justificativa_tipo || JustificativaTipo.SEM_JUSTIFICATIVA)
-        }))
+        presences: presencesToSave
       });
+      
+      console.log('[DEBUG] Presenças salvas com sucesso');
       
       toast({
         title: "Presenças salvas",
@@ -126,10 +155,14 @@ const AthleteAttendance: React.FC<AthleteAttendanceProps> = ({ treinoDoDiaId, on
         onSaved();
       }
     } catch (error) {
-      console.error("Error saving presences:", error);
+      console.error("[DEBUG] Erro detalhado ao salvar presenças:", error);
+      
+      // Mensagem mais detalhada para o usuário
       toast({
         title: "Erro ao salvar presenças",
-        description: "Não foi possível salvar as presenças.",
+        description: error instanceof Error 
+          ? `Detalhes: ${error.message}` 
+          : "Houve um problema ao salvar as presenças. Verifique o console para mais detalhes.",
         variant: "destructive",
       });
     } finally {

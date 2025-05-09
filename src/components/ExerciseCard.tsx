@@ -6,12 +6,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Edit, Trash2, Clock, Users, Youtube, PlayCircle, Instagram } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Clock, Users, Youtube, PlayCircle, Instagram, Tag, BarChart2, Calendar, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import VideoModal from './ui/video-modal';
 import { getVideoPlatform } from '@/utils/video-utils';
+import { formatExerciseDate } from '@/services/exerciseService';
 
 interface Exercise {
   id: string;
@@ -25,6 +26,10 @@ interface Exercise {
   video_inicio?: string;
   video_fim?: string;
   imagem_url?: string;
+  fundamentos?: string[];
+  dificuldade?: string;
+  contagem_uso?: number;
+  ultima_vez_usado?: string | null;
 }
 
 interface ExerciseCardProps {
@@ -52,6 +57,32 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
     return categoryColors[category] || "bg-gray-500";
   };
 
+  // Function to get fundamento color
+  const getFundamentoColor = (fundamento: string) => {
+    const fundamentoColors = {
+      "Levantamento": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+      "Recepção": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      "Defesa": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+      "Saque": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+      "Ataque": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+      "Bloqueio": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+      "Deslocamento": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300",
+      "Comunicação": "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300"
+    };
+    return fundamentoColors[fundamento] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+  };
+
+  // Function to get dificuldade color and styles
+  const getDificuldadeStyles = (dificuldade: string) => {
+    const styles = {
+      "Iniciante": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+      "Intermediário": "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+      "Avançado": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800"
+    };
+    
+    return styles[dificuldade] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700";
+  };
+
   // Truncate text to specified number of lines
   const truncateText = (text: string, maxLines: number = 2) => {
     const words = text.split(' ');
@@ -75,6 +106,53 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
       default:
         return <PlayCircle className="h-4 w-4 mr-2" />;
     }
+  };
+
+  /**
+   * Renderiza as estatísticas de uso do exercício
+   */
+  const renderUsoStats = () => {
+    // Exercício nunca usado
+    if (!exercise.contagem_uso || exercise.contagem_uso === 0) {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+          <History className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>Nunca utilizado</span>
+        </div>
+      );
+    }
+    
+    // Usado, mas sem data (caso improvável, mas para robustez)
+    if (!exercise.ultima_vez_usado) {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+          <History className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>
+            Usado em {exercise.contagem_uso} {exercise.contagem_uso === 1 ? 'treino' : 'treinos'}
+          </span>
+        </div>
+      );
+    }
+    
+    // Caso completo: usado com data
+    const dataFormatada = formatExerciseDate(exercise.ultima_vez_usado);
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+        <History className="h-3.5 w-3.5 flex-shrink-0" />
+        <span>
+          Usado em {exercise.contagem_uso} {exercise.contagem_uso === 1 ? 'treino' : 'treinos'}. 
+          {dataFormatada && (
+            <>
+              <span className="mx-1">·</span>
+              <span className="inline-flex items-center">
+                <Calendar className="h-3 w-3 mr-0.5" /> 
+                Último: {dataFormatada}
+              </span>
+            </>
+          )}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -140,13 +218,26 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
         
         <CardContent className="p-4 flex-grow">
           <div>
-            <div className="flex gap-2 items-center mb-2">
+            <div className="flex gap-2 items-center justify-between mb-2">
               <span className={cn(
                 "px-2 py-0.5 rounded-full text-xs md:text-sm font-medium text-white truncate max-w-[120px]",
                 getCategoryColor(exercise.categoria)
               )}>
                 {exercise.categoria}
               </span>
+              
+              {/* Badge de nível de dificuldade */}
+              {exercise.dificuldade && (
+                <span 
+                  className={cn(
+                    "px-2 py-0.5 text-xs font-medium rounded-full flex items-center gap-1 border",
+                    getDificuldadeStyles(exercise.dificuldade)
+                  )}
+                >
+                  <BarChart2 className="h-3 w-3" />
+                  {exercise.dificuldade}
+                </span>
+              )}
             </div>
             
             <h3 className="font-bold text-base md:text-lg mb-2 break-words line-clamp-2">{exercise.nome}</h3>
@@ -166,12 +257,38 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
               {truncateText(exercise.objetivo)}
             </p>
 
+            {/* Exibir etiquetas de fundamentos técnicos */}
+            {exercise.fundamentos && exercise.fundamentos.length > 0 && (
+              <div className="mt-2 mb-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">Fundamentos</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {exercise.fundamentos.map(fundamento => (
+                    <span 
+                      key={fundamento} 
+                      className={cn(
+                        "px-1.5 py-0.5 rounded-full text-xs font-medium",
+                        getFundamentoColor(fundamento)
+                      )}
+                    >
+                      {fundamento}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Estatísticas de uso */}
+            {renderUsoStats()}
+
             {/* Botão de Ver Vídeo grande e chamativo quando tem vídeo */}
             {hasVideo && (
               <Button 
                 variant="default" 
                 size="sm"
-                className={`w-full text-white mt-2 ${
+                className={`w-full text-white mt-3 ${
                   videoPlatform === 'youtube' 
                     ? 'bg-red-600 hover:bg-red-700' 
                     : videoPlatform === 'instagram' 

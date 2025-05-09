@@ -55,7 +55,15 @@ export const fetchProximosTreinos = async (limit = 3): Promise<TreinoDoDia[]> =>
       
     if (error) throw error;
     
-    return data || [];
+    return (data || []).map(item => ({
+      id: item.id,
+      data: item.data,
+      treino_id: item.treino_id,
+      aplicado: item.aplicado,
+      treino: Array.isArray(item.treino) 
+        ? item.treino[0] 
+        : item.treino
+    }));
   } catch (error) {
     console.error('Error fetching upcoming trainings:', error);
     return [];
@@ -84,7 +92,15 @@ export const fetchTreinoDoDiaById = async (id: string): Promise<TreinoDoDia | nu
       return null;
     }
     
-    return data;
+    return {
+      id: data.id,
+      data: data.data,
+      treino_id: data.treino_id,
+      aplicado: data.aplicado,
+      treino: Array.isArray(data.treino) 
+        ? data.treino[0] 
+        : data.treino
+    };
   } catch (error) {
     console.error('Error fetching training day:', error);
     return null;
@@ -189,13 +205,39 @@ export const registrarPresencasEmLote = async ({
   }[];
 }) => {
   try {
-    // Separate records with IDs (existing ones) from new ones
-    const existingRecords = presences.filter(p => p.id);
-    const newRecords = presences.filter(p => !p.id);
+    console.log(`[DEBUG] Registrando presenças em lote para treino ${treinoDoDiaId}. Total: ${presences.length}`);
     
-    // Update existing records one by one
+    if (!treinoDoDiaId) {
+      throw new Error("ID do treino do dia não informado");
+    }
+    
+    if (!presences.length) {
+      console.warn("[DEBUG] Nenhuma presença para salvar");
+      return true;
+    }
+    
+    const validPresences = presences.filter(p => {
+      if (!p.atleta_id) {
+        console.warn("[DEBUG] Presença sem ID de atleta, ignorando");
+        return false;
+      }
+      return true;
+    });
+    
+    if (validPresences.length === 0) {
+      console.warn("[DEBUG] Nenhuma presença válida para salvar");
+      return true;
+    }
+    
+    const existingRecords = validPresences.filter(p => p.id);
+    const newRecords = validPresences.filter(p => !p.id);
+    
+    console.log(`[DEBUG] Registros existentes: ${existingRecords.length}, Novos registros: ${newRecords.length}`);
+    
     for (const record of existingRecords) {
       const { id, ...updateData } = record;
+      
+      console.log(`[DEBUG] Atualizando registro ${id} para atleta ${record.atleta_id}, presente: ${record.presente}`);
       
       const { error } = await supabase
         .from('treinos_presencas')
@@ -206,33 +248,44 @@ export const registrarPresencasEmLote = async ({
         .eq('id', id as string);
         
       if (error) {
+        console.error(`[ERROR] Erro ao atualizar registro de presença ${id}:`, error);
         throw new Error(`Error updating attendance record: ${error.message}`);
       }
     }
     
-    // Insert new records in batch
     if (newRecords.length > 0) {
-      const { error } = await supabase
+      const recordsToInsert = newRecords.map(record => ({
+        ...record,
+        treino_do_dia_id: treinoDoDiaId
+      }));
+      
+      console.log(`[DEBUG] Inserindo ${recordsToInsert.length} novos registros de presença`);
+      console.log(`[DEBUG] Exemplo: atleta_id=${recordsToInsert[0]?.atleta_id}, presente=${recordsToInsert[0]?.presente}`);
+      
+      const { data, error } = await supabase
         .from('treinos_presencas')
-        .insert(newRecords.map(record => ({
-          ...record,
-          treino_do_dia_id: treinoDoDiaId
-        })));
+        .insert(recordsToInsert)
+        .select();
         
       if (error) {
+        console.error(`[ERROR] Erro ao inserir registros de presença:`, error);
         throw new Error(`Error inserting attendance records: ${error.message}`);
       }
+      
+      console.log(`[DEBUG] ${data?.length || 0} registros inseridos com sucesso`);
     }
     
-    // Update effort indices for all athletes
-    const atletaIds = [...new Set(presences.map(p => p.atleta_id))];
+    const atletaIds = [...new Set(validPresences.map(p => p.atleta_id))];
+    console.log(`[DEBUG] Atualizando índices de esforço para ${atletaIds.length} atletas`);
+    
     for (const atletaId of atletaIds) {
       await updateAthleteEffortIndex(atletaId);
     }
     
+    console.log(`[DEBUG] Presenças registradas com sucesso para o treino ${treinoDoDiaId}`);
     return true;
   } catch (error) {
-    console.error('Error registering attendance:', error);
+    console.error('[ERROR] Erro completo ao registrar presenças:', error);
     throw error;
   }
 };

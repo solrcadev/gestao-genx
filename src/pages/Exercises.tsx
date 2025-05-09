@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter, X } from 'lucide-react';
+import { Plus, Search, Filter, X, Tag, BarChart2 } from 'lucide-react';
 import { Drawer } from '@/components/ui/drawer';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import ExerciseCard from '@/components/ExerciseCard';
 import ExerciseForm from '@/components/ExerciseForm';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { fetchExercises, deleteExercise } from '@/services/exerciseService';
+import { fetchExercises, deleteExercise, getFundamentosTecnicos } from '@/services/exerciseService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -23,6 +23,18 @@ import {
   DrawerTitle
 } from '@/components/ui/drawer';
 import { useDeviceInfo } from '@/hooks/use-mobile';
+import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 // Categories for exercises
 const CATEGORIES = [
@@ -42,11 +54,17 @@ const ExercisesPage = () => {
   const [editingExercise, setEditingExercise] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all-categories");
+  const [fundamentosFilter, setFundamentosFilter] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const { isMobile } = useDeviceInfo();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Lista de fundamentos técnicos disponíveis
+  const fundamentos = getFundamentosTecnicos();
 
   // Efeito para impedir rolagem quando o modal estiver aberto
   useEffect(() => {
@@ -96,8 +114,27 @@ const ExercisesPage = () => {
     const matchesCategory = categoryFilter === "all-categories" || 
       exercise.categoria === categoryFilter;
     
-    return matchesSearch && matchesCategory;
+    // Filtro por fundamentos
+    const matchesFundamentos = fundamentosFilter.length === 0 || 
+      (exercise.fundamentos && fundamentosFilter.every(f => exercise.fundamentos.includes(f)));
+    
+    return matchesSearch && matchesCategory && matchesFundamentos;
   });
+
+  // Handlers for fundamentos filter
+  const handleFundamentoFilterChange = (fundamento: string) => {
+    setFundamentosFilter(prev => {
+      if (prev.includes(fundamento)) {
+        return prev.filter(f => f !== fundamento);
+      } else {
+        return [...prev, fundamento];
+      }
+    });
+  };
+
+  const clearFundamentosFilter = () => {
+    setFundamentosFilter([]);
+  };
 
   // Handlers
   const handleOpenForm = (exercise = null) => {
@@ -135,7 +172,17 @@ const ExercisesPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 animate-fade-in max-w-7xl">
-      <h1 className="text-2xl md:text-3xl font-bold mb-6">Biblioteca de Exercícios</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold">Biblioteca de Exercícios</h1>
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/exercicios/dashboard')}
+          className="flex items-center gap-2"
+        >
+          <BarChart2 className="h-4 w-4" />
+          Dashboard de Análise
+        </Button>
+      </div>
       
       {/* Search and filter controls */}
       <div className="flex flex-col md:flex-row gap-3 mb-6">
@@ -148,6 +195,7 @@ const ExercisesPage = () => {
             className="pl-9 h-10"
           />
         </div>
+        <div className="flex gap-2">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-full md:w-[220px] h-10">
             <SelectValue placeholder="Todas categorias" />
@@ -159,7 +207,106 @@ const ExercisesPage = () => {
             ))}
           </SelectContent>
         </Select>
+          
+          {/* Filtro por fundamentos */}
+          <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant={fundamentosFilter.length > 0 ? "default" : "outline"} 
+                className="h-10 whitespace-nowrap gap-2"
+              >
+                <Tag className="h-4 w-4" />
+                {fundamentosFilter.length 
+                  ? `${fundamentosFilter.length} fundamento${fundamentosFilter.length > 1 ? 's' : ''}` 
+                  : "Fundamentos"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-3" align="end">
+              <div className="space-y-4">
+                <div className="font-medium text-sm flex justify-between items-center">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />
+                    Filtrar por Fundamentos
+                  </span>
+                  {fundamentosFilter.length > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 px-2 text-xs" 
+                      onClick={clearFundamentosFilter}
+                    >
+                      Limpar
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  {fundamentos.map(fundamento => (
+                    <div key={fundamento} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`filter-${fundamento}`}
+                        checked={fundamentosFilter.includes(fundamento)}
+                        onCheckedChange={() => handleFundamentoFilterChange(fundamento)}
+                      />
+                      <label 
+                        htmlFor={`filter-${fundamento}`}
+                        className="text-sm leading-none cursor-pointer"
+                      >
+                        {fundamento}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                
+                {fundamentosFilter.length > 0 && (
+                  <div className="pt-3 border-t">
+                    <div className="text-xs mb-2 font-medium text-muted-foreground">Fundamentos ativos:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {fundamentosFilter.map(fundamento => (
+                        <Badge 
+                          key={fundamento}
+                          variant="secondary"
+                          className="gap-1 group cursor-pointer"
+                          onClick={() => handleFundamentoFilterChange(fundamento)}
+                        >
+                          {fundamento}
+                          <X className="h-3 w-3 text-muted-foreground group-hover:text-foreground" />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
+      
+      {/* Chips de filtros ativos */}
+      {fundamentosFilter.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2 items-center">
+          <span className="text-sm text-muted-foreground">Filtros:</span>
+          {fundamentosFilter.map(fundamento => (
+            <Badge 
+              key={fundamento}
+              variant="secondary"
+              className="gap-1 group cursor-pointer"
+              onClick={() => handleFundamentoFilterChange(fundamento)}
+            >
+              {fundamento}
+              <X className="h-3 w-3 text-muted-foreground group-hover:text-foreground" />
+            </Badge>
+          ))}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 px-2 text-xs" 
+            onClick={clearFundamentosFilter}
+          >
+            Limpar filtros
+          </Button>
+        </div>
+      )}
       
       {isLoading ? (
         <div className="flex justify-center items-center py-20">

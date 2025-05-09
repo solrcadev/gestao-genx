@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -88,16 +87,6 @@ const Presenca = () => {
   // Ao selecionar um treino
   const handleTreinoSelect = (treinoId: string) => {
     setSelectedTreinoId(treinoId);
-  };
-  
-  // Formatar data
-  const formatarData = (dataString: string) => {
-    try {
-      const data = new Date(dataString);
-      return format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-    } catch (e) {
-      return dataString;
-    }
   };
   
   // Abrir modal de edição
@@ -228,6 +217,18 @@ const Presenca = () => {
             {error instanceof Error ? error.message : 'Ocorreu um erro ao carregar os treinos.'}
           </AlertDescription>
         </Alert>
+        
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+          <h3 className="font-medium mb-2">Informações para suporte técnico:</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            Se o problema persistir, verifique se:
+          </p>
+          <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+            <li>A tabela <code className="bg-gray-200 px-1 rounded">treinos_presencas</code> está configurada corretamente no Supabase</li>
+            <li>Os relacionamentos entre as tabelas estão funcionando</li>
+            <li>O usuário tem permissões para acessar as tabelas relacionadas a treinos e presenças</li>
+          </ul>
+        </div>
       </div>
     );
   }
@@ -245,6 +246,22 @@ const Presenca = () => {
           <AlertTitle>Modo Monitor</AlertTitle>
           <AlertDescription>
             Como monitor, suas alterações serão enviadas para aprovação dos técnicos.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Mensagem de estado dos dados */}
+      {!isLoading && treinos && treinos.length === 0 && (
+        <Alert className="mb-6 border-amber-500">
+          <AlertCircle className="h-4 w-4 text-amber-500" />
+          <AlertTitle>Sem dados de presenças</AlertTitle>
+          <AlertDescription>
+            <p>Não foram encontradas presenças registradas. Verificações recomendadas:</p>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>Certifique-se de que existem treinos cadastrados na aba "Treino do Dia"</li>
+              <li>Verifique se as equipes e atletas estão corretamente associados aos treinos</li>
+              <li>Registre presenças em um treino existente na aba "Treino do Dia"</li>
+            </ul>
           </AlertDescription>
         </Alert>
       )}
@@ -281,15 +298,22 @@ const Presenca = () => {
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{treino.nome}</span>
                         <span className="text-xs text-muted-foreground">
-                          {formatarData(treino.data)}
+                          {treino.dataFormatada}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {treino.atletas.length} atletas
                         </span>
                       </div>
                     </Button>
                   ))}
                 </div>
               ) : (
-                <div className="text-center p-4 text-muted-foreground">
-                  Nenhum treino encontrado
+                <div className="text-center p-4 text-muted-foreground flex flex-col items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  <p>Nenhum treino com presença encontrado</p>
+                  <p className="text-xs text-muted-foreground">
+                    Verifique se existem treinos registrados na aba "Treino do Dia"
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -305,7 +329,7 @@ const Presenca = () => {
                   <div className="flex flex-col">
                     <span>{selectedTreino.nome}</span>
                     <span className="text-sm font-normal text-muted-foreground">
-                      {formatarData(selectedTreino.data)}
+                      {selectedTreino.dataFormatada}
                     </span>
                   </div>
                 ) : (
@@ -343,6 +367,7 @@ const Presenca = () => {
                   )}
                   
                   {/* Tabela de atletas */}
+                  {selectedTreino.atletas.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -443,6 +468,15 @@ const Presenca = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  ) : (
+                    <div className="text-center p-6 flex flex-col items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-amber-500" />
+                      <p className="text-muted-foreground">Nenhum atleta encontrado para este treino</p>
+                      <p className="text-xs text-muted-foreground">
+                        Verifique se o time está configurado corretamente.
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center p-6 text-muted-foreground">

@@ -71,3 +71,64 @@ Yes it is!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+# GenX - Sistema de Gestão para Equipes Esportivas
+
+## Dashboard de Exercícios - Análise de Correlação Uso vs. Desempenho
+
+### Visão Geral
+
+O Dashboard de Exercícios agora possui uma nova funcionalidade para análise da correlação entre o uso de exercícios específicos e o desempenho da equipe em fundamentos técnicos. Esta funcionalidade permite aos técnicos visualizar o impacto dos exercícios utilizados no desempenho real da equipe.
+
+### Configuração das Funções RPC
+
+Para habilitar a funcionalidade de análise de correlação entre uso de exercícios e desempenho, é necessário configurar funções RPC no Supabase. Siga os passos abaixo:
+
+1. Acesse o Console do Supabase para o seu projeto
+2. Navegue até a seção SQL Editor
+3. Crie uma nova query
+4. Cole o conteúdo do arquivo `sql/criar_funcoes_rpc.sql`
+5. Execute a query para criar as funções RPC necessárias
+
+### Funções RPC Criadas
+
+1. **get_performance_trend_por_fundamento**
+   - Parâmetros: 
+     - `p_fundamento_nome`: Nome do fundamento técnico
+     - `p_data_inicio`: Data inicial (opcional)
+     - `p_data_fim`: Data final (opcional)
+     - `p_genero_equipe`: Gênero da equipe (opcional)
+   - Retorna: Tendência de desempenho (% acertos) para o fundamento selecionado ao longo do tempo
+
+2. **get_exercise_usage_volume_por_fundamento**
+   - Parâmetros:
+     - `p_fundamento_nome`: Nome do fundamento técnico
+     - `p_data_inicio`: Data inicial (opcional)
+     - `p_data_fim`: Data final (opcional)
+     - `p_genero_equipe`: Gênero da equipe (opcional)
+   - Retorna: Volume de uso de exercícios para o fundamento selecionado ao longo do tempo
+
+3. **get_all_fundamentos_tecnicos**
+   - Retorna: Lista de todos os fundamentos técnicos disponíveis no sistema
+
+### Requisitos de Dados
+
+Para que a análise de correlação funcione corretamente, é necessário que:
+
+1. Os exercícios tenham fundamentos técnicos definidos (array `fundamentos` na tabela `exercicios`)
+2. Existam registros de avaliações de desempenho na tabela `avaliacoes_fundamento`
+3. Os treinos estejam associados corretamente a exercícios na tabela `treinos_exercicios`
+
+### Como Usar a Análise de Correlação
+
+1. Acesse o Dashboard de Exercícios
+2. Navegue até a aba "Análise: Uso vs. Desempenho"
+3. Selecione um fundamento técnico específico
+4. Use os filtros globais de gênero e período para refinar sua análise
+5. Analise o gráfico que mostra a correlação entre o volume de uso de exercícios (barras) e o desempenho da equipe (linha) ao longo do tempo
+
+### Interpretação dos Dados
+
+- Uma correlação positiva (aumento no uso de exercícios seguido por aumento no desempenho) sugere que os exercícios estão sendo eficazes.
+- Uma correlação negativa ou neutra pode indicar que os exercícios selecionados não estão contribuindo significativamente para a melhoria do fundamento, ou que há outros fatores influenciando o desempenho.
+- A análise deve ser feita em conjunto com outras métricas e observações da equipe técnica.

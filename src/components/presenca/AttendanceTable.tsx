@@ -257,7 +257,7 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
       responsive: ['md'],
     },
     {
-      title: 'Data',
+      title: 'Data do Treino',
       key: 'data',
       render: (_, record) => formatarData(record.treino?.data),
       sorter: (a, b) => {

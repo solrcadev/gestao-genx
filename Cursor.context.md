@@ -48,6 +48,11 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 - Categorização de exercícios
 - Reutilização de exercícios em diferentes treinos
 
+### 7. Sistema de Notificações
+- Implementação de hook simplificado para evitar recursão infinita
+- Fallback temporário para resolver problemas com Supabase
+- Retorno de dados vazios de forma segura
+
 ## Estrutura do Banco de Dados
 
 ### Tabelas Principais
@@ -85,6 +90,7 @@ O Painel GenX é uma aplicação web para gerenciamento de times de vôlei, foca
 - Implementação de consultas separadas para contornar limitações de joins no Supabase
 - Verificação e criação automática de tabelas quando não existem no banco
 - Documentação detalhada sobre solução de problemas com Storage
+- Implementação de hook de notificações simplificado para evitar recursão infinita no Supabase
 
 ## Scripts SQL
 
@@ -217,22 +223,73 @@ async function checkAndCreateBuckets() {
 - Verificação inteligente do tipo de avaliação para determinar o valor correto de exercicio_id
 - Mensagens de log detalhadas para facilitar a depuração
 
+#### 3.3 Sistema de Notificações Simplificado
+
+- Implementação de um hook `useNotifications` simplificado em `src/hooks/use-notifications.ts`
+- Solução temporária para contornar problemas de recursão infinita com o Supabase
+- Retorna dados vazios e funções mock para evitar erros no lado do servidor
+- Facilita o desenvolvimento e testes sem travamentos da aplicação
+
 ### 4. Scripts SQL para Manutenção do Banco de Dados
 
 - `add_observacoes_column.sql`: Adiciona as colunas observacoes e origem
 - `make_exercicio_id_nullable.sql`: Modifica a restrição NOT NULL da coluna exercicio_id
 - Backup automático das definições das views antes de alterá-las
 
+### 5. Correções na Funcionalidade "Gerenciar Presenças"
+
+#### 5.1 Problema Inicial
+- A aba "Gerenciar Presenças" não exibia dados de presença dos atletas, mesmo com registros armazenados no banco de dados
+- Erros 500 em consultas ao Supabase ocorriam durante a tentativa de busca dos dados
+
+#### 5.2 Correções Implementadas
+- **Otimização de Consultas ao Supabase**:
+  - Simplificação das consultas que estavam causando erros 500
+  - Remoção de junções complexas que estavam sobrecarregando o processamento
+  - Verificação de arrays vazios antes de usar o operador `.in()` para evitar erros
+
+- **Melhoria no Hook `useTreinosComPresenca`**:
+  - Refatoração da lógica para buscar dados de presença
+  - Separação de consultas complexas em etapas mais gerenciáveis
+  - Implementação de tratamento de erros detalhado com mensagens claras
+
+- **Componente `AthleteAttendance`**:
+  - Adição de validações para garantir integridade dos dados
+  - Implementação de logs detalhados para rastreamento de erros
+  - Melhoria no processo de salvamento de presenças
+
+- **Página `Presenca.tsx`**:
+  - Adição de mensagens informativas para o usuário quando não há dados
+  - Melhor tratamento de estados de carregamento e erro
+
+- **Service `treinosDoDiaService.ts`**:
+  - Correção de erros de tipagem que causavam comportamentos inesperados
+  - Adição de validações para garantir a integridade dos dados
+
+#### 5.3 Problema Atual
+- Após as correções iniciais, surgiu um novo erro relacionado às políticas de segurança RLS do Supabase
+- O erro "infinite recursion detected in policy for relation \"perfis\"" indica uma recursão infinita nas políticas da tabela "perfis"
+- Esta recursão possivelmente ocorre porque uma política está referenciando a própria tabela ou existe um loop entre diferentes políticas
+
+#### 5.4 Próximos Passos para Solução
+- Analisar as políticas RLS configuradas para a tabela "perfis" no Supabase
+- Identificar e corrigir políticas que possam estar causando recursão
+- Implementar uma abordagem alternativa para consulta de dados que não acione o problema de recursão
+
 ## Estado Atual e Próximos Passos
 1. O aplicativo possui todas as funcionalidades principais implementadas
 2. A sincronização de dados entre dispositivos está funcionando
 3. O módulo de Metas e Evolução está completo
 4. Upload e gerenciamento de imagens corrigido e funcionando
-5. Próximos passos incluem:
+5. Implementação de solução temporária para o sistema de notificações
+6. Próximos passos incluem:
+   - Resolver o problema de recursão infinita nas políticas RLS para a tabela "perfis" no Supabase
+   - Finalizar a implementação da aba "Gerenciar Presenças" com atualizações nas políticas de segurança
    - Implementar sincronização das avaliações armazenadas localmente quando a conexão for restaurada
    - Melhorar a visualização das observações nas interfaces de relatórios
    - Adicionar campo de observações também na avaliação em tempo real
    - Desenvolvimento de relatórios avançados para técnicos
+   - Revisão e implementação final do sistema de notificações em tempo real
 
 ## Documentação Adicional
 - `STORAGE_README.md`: Instruções detalhadas para configuração do Storage

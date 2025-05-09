@@ -21,6 +21,7 @@ import Dashboard from '@/pages/Dashboard';
 import Athletes from '@/pages/Athletes';
 import AthleteDetails from '@/pages/AthleteDetails';
 import Exercises from '@/pages/Exercises';
+import DashboardExerciciosPage from '@/pages/DashboardExerciciosPage';
 import Trainings from '@/pages/Trainings';
 import TrainingAssembly from '@/pages/TrainingAssembly';
 import TreinoDosDia from '@/pages/TreinoDosDia';
@@ -157,6 +158,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Exercises />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/exercicios/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardExerciciosPage />
                   </ProtectedRoute>
                 }
               />

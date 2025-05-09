@@ -1,7 +1,8 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // Types
 export enum JustificativaTipo {
@@ -27,15 +28,30 @@ export interface AtletaPresenca {
 export interface TreinoComPresenca {
   id: string;
   data: string;
+  dataFormatada: string;
   nome: string;
   atletas: AtletaPresenca[];
 }
+
+// Função para formatar data
+const formatarData = (dataString: string | null | undefined): string => {
+  if (!dataString) return 'Data não disponível';
+  
+  try {
+    const data = new Date(dataString);
+    return format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  } catch (e) {
+    console.error('Erro ao formatar data:', e);
+    return dataString || 'Data inválida';
+  }
+};
 
 // Função para buscar treinos com dados de presença
 export const useTreinosComPresenca = (limit: number = 20) => {
   return useQuery({
     queryKey: ['treinos-presenca', limit],
     queryFn: async (): Promise<TreinoComPresenca[]> => {
+      try {
       // 1. Buscar treinos do dia
       const { data: treinosDoDia, error: treinosError } = await supabase
         .from('treinos_do_dia')
@@ -45,19 +61,44 @@ export const useTreinosComPresenca = (limit: number = 20) => {
           treino:treino_id (
             id, 
             nome,
-            time
+              time,
+              data
           )
         `)
         .order('data', { ascending: false })
         .limit(limit);
         
-      if (treinosError) throw treinosError;
-      if (!treinosDoDia) return [];
+        if (treinosError) {
+          console.error('[DEBUG] Erro ao buscar treinos do dia:', treinosError);
+          return [];
+        }
+        
+        if (!treinosDoDia || treinosDoDia.length === 0) {
+          console.log('[DEBUG] Nenhum treino do dia encontrado');
+          return [];
+        }
+        
+        console.log(`[DEBUG] Encontrados ${treinosDoDia.length} treinos do dia`);
       
       // 2. Para cada treino, buscar dados de presença
       const treinosComPresenca: TreinoComPresenca[] = [];
       
       for (const treinoDoDia of treinosDoDia) {
+          if (!treinoDoDia.id) {
+            console.log('[DEBUG] Treino do dia sem ID válido, pulando...');
+            continue;
+          }
+          
+          // Garantir que temos uma data válida, usando a data do treino ou do treino do dia
+          const dataTreino = treinoDoDia.data || (treinoDoDia.treino as any)?.data;
+          console.log(`[DEBUG] Processando treino do dia ${treinoDoDia.id} de ${dataTreino}`);
+          
+          if (!dataTreino) {
+            console.log('[DEBUG] Data não encontrada para o treino, pulando...');
+            continue;
+          }
+          
+          try {
         // Buscar registros de presença para este treino
         const { data: presencas, error: presencasError } = await supabase
           .from('treinos_presencas')
@@ -67,39 +108,54 @@ export const useTreinosComPresenca = (limit: number = 20) => {
             justificativa,
             justificativa_tipo,
             indice_esforco,
-            atleta:atleta_id (
-              id,
-              nome,
-              posicao,
-              time,
-              foto_url,
-              indice_esforco
-            )
+                atleta_id
           `)
           .eq('treino_do_dia_id', treinoDoDia.id);
           
         if (presencasError) {
-          console.error('Erro ao buscar presenças:', presencasError);
+              console.error('[DEBUG] Erro ao buscar presenças:', presencasError);
           continue;
         }
         
+            console.log(`[DEBUG] Encontradas ${presencas?.length || 0} presenças para o treino ${treinoDoDia.id}`);
+            
+            // Se não há registros de presença OU presencas é null/undefined
         if (!presencas || presencas.length === 0) {
-          // Se não há registros de presença, buscar atletas do time para criar registros padrão
-          if (!treinoDoDia.treino) continue;
+              // Buscar atletas do time para criar registros padrão
+              if (!treinoDoDia.treino) {
+                console.log(`[DEBUG] Treino não encontrado para treino_do_dia ${treinoDoDia.id}`);
+                continue;
+              }
           
           const timeDoTreino = (treinoDoDia.treino as any).time;
-          if (!timeDoTreino) continue;
+              if (!timeDoTreino) {
+                console.log(`[DEBUG] Time não encontrado para treino ${treinoDoDia.id}`);
+                continue;
+              }
+              
+              console.log(`[DEBUG] Buscando atletas do time ${timeDoTreino}`);
           
           const { data: atletas, error: atletasError } = await supabase
             .from('athletes')
             .select('id, nome, posicao, time, foto_url, indice_esforco')
             .eq('time', timeDoTreino);
             
-          if (atletasError || !atletas) continue;
+              if (atletasError) {
+                console.error('[DEBUG] Erro ao buscar atletas:', atletasError);
+                continue;
+              }
+              
+              if (!atletas || atletas.length === 0) {
+                console.log(`[DEBUG] Nenhum atleta encontrado para o time ${timeDoTreino}`);
+                continue;
+              }
+              
+              console.log(`[DEBUG] Encontrados ${atletas.length} atletas para o time ${timeDoTreino}`);
           
           treinosComPresenca.push({
             id: treinoDoDia.id,
-            data: treinoDoDia.data,
+                data: dataTreino,
+                dataFormatada: formatarData(dataTreino),
             nome: (treinoDoDia.treino as any).nome || 'Treino sem nome',
             atletas: atletas.map(atleta => ({
               id: atleta.id,
@@ -112,27 +168,81 @@ export const useTreinosComPresenca = (limit: number = 20) => {
             }))
           });
         } else {
-          // Se há registros de presença, usar esses dados
-          treinosComPresenca.push({
-            id: treinoDoDia.id,
-            data: treinoDoDia.data,
-            nome: (treinoDoDia.treino as any).nome || 'Treino sem nome',
-            atletas: presencas.map(presenca => ({
-              id: (presenca.atleta as any).id,
-              nome: (presenca.atleta as any).nome,
-              posicao: (presenca.atleta as any).posicao,
-              time: (presenca.atleta as any).time,
-              foto_url: (presenca.atleta as any).foto_url,
+              // Se há registros de presença, precisamos buscar os dados dos atletas
+              // Coletar todos os IDs de atletas
+              const atletaIds = [...new Set(presencas.map(p => p.atleta_id))];
+              
+              if (atletaIds.length === 0) {
+                console.log(`[DEBUG] Nenhum ID de atleta encontrado para o treino ${treinoDoDia.id}`);
+                continue;
+              }
+              
+              // Buscar detalhes dos atletas
+              const { data: atletas, error: atletasError } = await supabase
+                .from('athletes')
+                .select('id, nome, posicao, time, foto_url, indice_esforco')
+                .in('id', atletaIds);
+                
+              if (atletasError) {
+                console.error('[DEBUG] Erro ao buscar detalhes dos atletas:', atletasError);
+                continue;
+              }
+              
+              if (!atletas || atletas.length === 0) {
+                console.log(`[DEBUG] Nenhum detalhes de atleta encontrado`);
+                continue;
+              }
+              
+              // Criar um mapa para acesso rápido aos atletas
+              const atletasMap = new Map(atletas.map(a => [a.id, a]));
+              
+              // Combinar dados de presença com detalhes dos atletas
+              const atletasComPresenca = presencas.map(presenca => {
+                const atleta = atletasMap.get(presenca.atleta_id);
+                if (!atleta) return null;
+                
+                return {
+                  id: atleta.id,
+                  nome: atleta.nome,
+                  posicao: atleta.posicao,
+                  time: atleta.time,
+                  foto_url: atleta.foto_url,
               presente: presenca.presente,
               justificativa: presenca.justificativa,
               justificativa_tipo: presenca.justificativa_tipo as JustificativaTipo,
-              indice_esforco: (presenca.atleta as any).indice_esforco
-            }))
+                  indice_esforco: atleta.indice_esforco
+                } as AtletaPresenca;
+              }).filter(Boolean) as AtletaPresenca[];
+              
+              if (atletasComPresenca.length > 0) {
+                console.log(`[DEBUG] Usando ${atletasComPresenca.length} registros de presença existentes`);
+                
+                treinosComPresenca.push({
+                  id: treinoDoDia.id,
+                  data: dataTreino,
+                  dataFormatada: formatarData(dataTreino),
+                  nome: (treinoDoDia.treino as any).nome || 'Treino sem nome',
+                  atletas: atletasComPresenca
           });
         }
       }
+          } catch (error) {
+            console.error(`[DEBUG] Erro ao processar treino ${treinoDoDia.id}:`, error);
+            continue;
+          }
+        }
+        
+        // Ordenar treinos por data (mais recentes primeiro)
+        treinosComPresenca.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        
+        console.log(`[DEBUG] Total de treinos com presença: ${treinosComPresenca.length}`);
+        console.log('[DEBUG] Exemplo de treino formatado:', treinosComPresenca[0]);
       
       return treinosComPresenca;
+      } catch (error) {
+        console.error('[DEBUG] Erro geral ao buscar treinos com presença:', error);
+        return [];
+      }
     }
   });
 };
