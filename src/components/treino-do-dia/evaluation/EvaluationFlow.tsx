@@ -1,91 +1,86 @@
-
 import React, { useState } from 'react';
 import ExerciseSelection from './ExerciseSelection';
 import RealTimeEvaluation from './RealTimeEvaluation';
 import EvaluationSummary from './EvaluationSummary';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EvaluationFlowProps {
   treinoDoDiaId: string;
   onClose?: () => void;
 }
 
+enum EvaluationStage {
+  SELECT_EXERCISE,
+  EVALUATE,
+  SUMMARY
+}
+
 export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) {
-  const [step, setStep] = useState(1);
+  const [stage, setStage] = useState<EvaluationStage>(EvaluationStage.SELECT_EXERCISE);
   const [selectedExercise, setSelectedExercise] = useState<any>(null);
   const [evaluationData, setEvaluationData] = useState<any>({});
-  const { profile } = useAuth();
+  const { userRole } = useAuth();
   
   // Verificar se o usuário é técnico
-  const isTecnico = profile?.funcao === 'tecnico';
+  const isTecnico = userRole === 'tecnico';
   
   // Handle exercise selection
   const handleExerciseSelect = (exercise: any) => {
     setSelectedExercise(exercise);
-    setStep(2);
+    setStage(EvaluationStage.EVALUATE);
   };
   
-  // Handle back from evaluation
-  const handleBackFromEvaluation = () => {
-    setStep(1);
-  };
-  
-  // Handle evaluation completion
+  // Handle evaluation complete
   const handleEvaluationComplete = (data: any) => {
     setEvaluationData(data);
-    setStep(3);
+    setStage(EvaluationStage.SUMMARY);
   };
   
-  // Handle evaluation edit
-  const handleEvaluationEdit = () => {
-    setStep(2);
+  // Handle back button
+  const handleBack = () => {
+    if (stage === EvaluationStage.EVALUATE) {
+      setStage(EvaluationStage.SELECT_EXERCISE);
+    } else if (stage === EvaluationStage.SUMMARY) {
+      setStage(EvaluationStage.EVALUATE);
+    }
   };
   
-  // Handle save and close
-  const handleSaveAndClose = () => {
+  // Handle summary complete
+  const handleSummaryComplete = () => {
     if (onClose) {
       onClose();
     }
   };
   
-  // Render based on current step
-  const renderStep = () => {
-    switch (step) {
-      case 1: // Exercise selection
-        return (
-          <ExerciseSelection
-            onExerciseSelect={handleExerciseSelect}
-          />
-        );
-      case 2: // Real-time evaluation
-        return (
-          <RealTimeEvaluation 
-            exercise={selectedExercise}
-            treinoDoDiaId={treinoDoDiaId}
-            onBack={handleBackFromEvaluation}
-            onComplete={handleEvaluationComplete}
-            isMonitor={!isTecnico}
-          />
-        );
-      case 3: // Evaluation summary
-        return (
-          <EvaluationSummary
-            exercise={selectedExercise}
-            evaluationData={evaluationData}
-            onEdit={handleEvaluationEdit}
-            onSave={handleSaveAndClose}
-            isMonitor={!isTecnico}
-            needsApproval={!isTecnico}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-  
   return (
-    <div className="h-full flex flex-col overflow-auto">
-      {renderStep()}
+    <div className="space-y-4">
+      {stage === EvaluationStage.SELECT_EXERCISE && (
+        <ExerciseSelection 
+          onExerciseSelect={handleExerciseSelect}
+          treinoId={treinoDoDiaId}
+        />
+      )}
+      
+      {stage === EvaluationStage.EVALUATE && selectedExercise && (
+        <RealTimeEvaluation
+          exercise={selectedExercise}
+          treinoDoDiaId={treinoDoDiaId}
+          onBack={handleBack}
+          onComplete={handleEvaluationComplete}
+          isMonitor={!isTecnico}
+        />
+      )}
+      
+      {stage === EvaluationStage.SUMMARY && (
+        <EvaluationSummary
+          exercise={selectedExercise}
+          evaluationData={evaluationData}
+          onBack={handleBack}
+          onSave={handleSummaryComplete}
+          isMonitor={!isTecnico}
+          needsApproval={!isTecnico}
+        />
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Clock, Play, Pause, Check, X, BarChart3, CheckCircle } from "lucide-rea
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { EvaluationFlow } from "./evaluation/EvaluationFlow";
 
 interface ExerciseTimerProps {
@@ -29,10 +29,10 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [activeTab, setActiveTab] = useState<"timer" | "evaluation">("timer");
   const [evaluationData, setEvaluationData] = useState({});
-  const { profile } = useAuth();
+  const { userRole } = useAuth();
   
   // Verificar se o usuário é técnico
-  const isTecnico = profile?.funcao === 'tecnico';
+  const isTecnico = userRole === 'tecnico';
 
   // Time display formatting
   const formatTime = (timeInSeconds: number): string => {

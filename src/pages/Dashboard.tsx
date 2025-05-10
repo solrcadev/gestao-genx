@@ -16,9 +16,9 @@ import {
 import { useNotifications } from "@/hooks/use-notifications";
 
 const Dashboard: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { isSupported, isPermissionGranted, isLoading, setupNotifications } = useNotifications();
+  const { loading: isNotificationsLoading } = useNotifications();
 
   const quickLinks = [
     {
@@ -47,10 +47,6 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const handleEnableNotifications = async () => {
-    await setupNotifications();
-  };
-
   return (
     <div className="mobile-container py-6 pb-20">
       <div className="flex justify-between items-center mb-6">
@@ -58,7 +54,7 @@ const Dashboard: React.FC = () => {
           <h1 className="text-2xl font-bold">Olá, {user?.email?.split('@')[0] || 'Técnico'}</h1>
           <p className="text-muted-foreground">Bem-vindo ao GEN X - Painel de Gestão</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
+        <Button variant="ghost" size="icon" onClick={logout} title="Sair">
           <LogOut className="h-5 w-5" />
         </Button>
       </div>
@@ -109,17 +105,6 @@ const Dashboard: React.FC = () => {
             <FileText className="h-4 w-4 mr-2" />
             Atas de Reunião
           </Button>
-          {isSupported && !isPermissionGranted && (
-            <Button 
-              className="justify-start" 
-              variant="outline"
-              onClick={handleEnableNotifications}
-              disabled={isLoading}
-            >
-              <Bell className="h-4 w-4 mr-2" />
-              {isLoading ? "Ativando notificações..." : "Ativar notificações"}
-            </Button>
-          )}
         </CardContent>
       </Card>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Card, 
   CardContent, 
@@ -58,7 +58,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 
 const Presenca = () => {
-  const { profile, isLoading: authLoading } = useAuth();
+  const { user, userRole, isLoading: authLoading } = useAuth();
   const [selectedTreinoId, setSelectedTreinoId] = useState<string | null>(null);
   const [editingAtleta, setEditingAtleta] = useState<AtletaPresenca | null>(null);
   const [justificativa, setJustificativa] = useState<string>('');
@@ -66,8 +66,8 @@ const Presenca = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Verificar se o usuário é técnico
-  const isTecnico = profile?.funcao === 'tecnico';
-  const isMonitor = profile?.funcao === 'monitor';
+  const isTecnico = userRole === 'tecnico';
+  const isMonitor = userRole === 'monitor';
   
   // Buscar treinos com presença
   const { 
@@ -192,7 +192,7 @@ const Presenca = () => {
   }
   
   // Verificar permissão (apenas técnicos ou monitores)
-  if (profile && !['tecnico', 'monitor'].includes(profile.funcao)) {
+  if (user && !['tecnico', 'monitor'].includes(userRole)) {
     return (
       <div className="container mx-auto p-6 max-w-7xl">
         <Alert>

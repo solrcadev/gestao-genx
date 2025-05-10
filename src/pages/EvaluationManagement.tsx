@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   getAvaliacoesParaAprovar, 
   aprovarAvaliacao, 
@@ -42,14 +41,14 @@ interface Avaliacao {
 }
 
 const EvaluationManagement = () => {
-  const { user, profile } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Verificar se o usuário é técnico
-    if (profile && profile.funcao !== 'tecnico') {
+    if (userRole !== 'tecnico') {
       toast({
         title: "Acesso restrito",
         description: "Esta página é restrita para técnicos.",
@@ -78,7 +77,7 @@ const EvaluationManagement = () => {
     };
 
     carregarAvaliacoes();
-  }, [profile, navigate]);
+  }, [userRole, navigate]);
 
   const handleAprovar = async (id: string) => {
     try {

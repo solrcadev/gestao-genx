@@ -22,7 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const More = () => {
   const navigate = useNavigate();
-  const { userRole, signOut } = useAuth();
+  const { userRole, logout } = useAuth();
   
   // Verificar se é técnico
   const isTecnico = userRole === 'tecnico';
@@ -112,7 +112,7 @@ const More = () => {
       icon: <LogOut className="h-5 w-5" />,
       title: "Sair",
       description: "Encerrar sessão",
-      action: () => signOut(),
+      action: logout,
       showFor: ['tecnico', 'monitor'] // Visível para ambos
     }
   ];

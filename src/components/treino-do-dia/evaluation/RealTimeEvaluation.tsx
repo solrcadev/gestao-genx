@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, MinusCircle, RotateCcw, ArrowLeft, Save } from 'lucide-react';
 import { registrarAvaliacaoDesempenho } from '@/services/athletes/evaluations';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface RealTimeEvaluationProps {
   exercise: any;
@@ -33,7 +32,7 @@ export default function RealTimeEvaluation({
     'Bloqueio',
     'Defesa'
   ]);
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   // Reset counters
   const handleReset = () => {

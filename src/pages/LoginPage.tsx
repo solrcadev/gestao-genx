@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -32,9 +32,10 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const LoginPage: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login, user, isLoading: isAuthLoading } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -74,58 +75,23 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Function to remove evaluation from localStorage
-  const removeFromLocalStorage = (id: string): void => {
-    try {
-      const evaluations = getLocalStorageEvaluations();
-      const filtered = evaluations.filter(ev => ev.id !== id);
-      localStorage.setItem('avaliacoes_exercicios', JSON.stringify(filtered));
-    } catch (error) {
-      console.error('Error removing evaluation from localStorage:', error);
-    }
-  };
-
   const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
+    setIsLocalLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const { error } = await login(values.email, values.password);
 
       if (error) {
-        toast({
-          title: "Erro ao fazer login",
-          description: error.message,
-          variant: "destructive",
-        });
         return;
       }
 
-      if (data?.user) {
-        toast({
-          title: "Login realizado com sucesso",
-          description: "Você será redirecionado para o dashboard.",
-        });
-
-        // Sincronizar avaliações do localStorage com o banco de dados
-        const localEvaluations = getLocalStorageEvaluations();
-        if (localEvaluations.length > 0) {
-          console.log("Sincronizando avaliações do localStorage:", localEvaluations);
-          
-          for (const evaluation of localEvaluations) {
-            try {
-              await syncLocalStorageWithDatabase(evaluation, data.user.id);
-              removeFromLocalStorage(evaluation.id);
-            } catch (syncError) {
-              console.error("Erro ao sincronizar avaliação:", syncError);
-            }
-          }
+      // Try to sync any localStorage evaluations
+      if (user) {
+        console.log("Iniciando sincronização de avaliações do localStorage");
+        try {
+          await syncLocalStorageWithDatabase();
+        } catch (syncError) {
+          console.error("Erro ao sincronizar avaliação:", syncError);
         }
-
-        // Redirecionar para a rota adequada
-        const redirectRoute = getRedirectRoute();
-        navigate(redirectRoute);
       }
     } catch (err) {
       console.error("Erro no login:", err);
@@ -135,9 +101,11 @@ const LoginPage: React.FC = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsLocalLoading(false);
     }
   };
+
+  const isLoading = isLocalLoading || isAuthLoading;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-4">
@@ -206,7 +174,6 @@ const LoginPage: React.FC = () => {
                 className="text-sm text-muted-foreground hover:text-primary"
                 onClick={(e) => {
                   e.preventDefault();
-                  // Implementar a recuperação de senha
                   navigate("/forgot-password");
                 }}
               >
