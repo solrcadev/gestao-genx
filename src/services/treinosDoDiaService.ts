@@ -479,14 +479,56 @@ export const setTreinoParaDia = async (treinoId: string, data?: Date): Promise<a
   }
 };
 
-// Add these missing functions that are imported by other components
-export const fetchTreinoAtual = async (): Promise<any> => {
+/**
+ * Fetch training data for the specified date
+ */
+export const fetchTreinoAtual = async (treinoDoDiaId: string): Promise<any> => {
   try {
-    const today = new Date();
-    return await getTreinoDoDia(today);
+    // First get the training day details
+    const { data: treinoDoDia, error: treinoDoDiaError } = await supabase
+      .from('treinos_do_dia')
+      .select(`
+        id, 
+        data, 
+        treino_id,
+        aplicado,
+        treino:treino_id(id, nome, local, horario, time)
+      `)
+      .eq('id', treinoDoDiaId)
+      .single();
+      
+    if (treinoDoDiaError) {
+      console.error("Error fetching training day:", treinoDoDiaError);
+      throw treinoDoDiaError;
+    }
+    
+    // Now fetch the exercises for this training
+    const { data: exercicios, error: exerciciosError } = await supabase
+      .from('treinos_exercicios')
+      .select(`
+        id,
+        ordem,
+        tempo_real,
+        concluido,
+        observacao,
+        exercicio:exercicio_id(id, nome, descricao, categoria, tempo_estimado, imagem_url)
+      `)
+      .eq('treino_id', treinoDoDia.treino_id)
+      .order('ordem');
+      
+    if (exerciciosError) {
+      console.error("Error fetching exercises:", exerciciosError);
+      throw exerciciosError;
+    }
+    
+    // Return both the training day info and the exercises
+    return {
+      ...treinoDoDia,
+      exercicios: exercicios || []
+    };
   } catch (error) {
-    console.error("Error fetching current training:", error);
-    return null;
+    console.error("Error fetching current training with exercises:", error);
+    return { exercicios: [] };
   }
 };
 
@@ -514,12 +556,12 @@ export const concluirExercicio = async (params: { exercicioId: string; tempoReal
   }
 };
 
-export const desmarcarExercicio = async (exercicioId: string): Promise<any> => {
+export const desmarcarExercicio = async (params: { exercicioId: string }): Promise<any> => {
   try {
     const { data, error } = await supabase
       .from('treinos_exercicios')
       .update({ concluido: false })
-      .eq('id', exercicioId)
+      .eq('id', params.exercicioId)
       .select();
       
     if (error) throw error;

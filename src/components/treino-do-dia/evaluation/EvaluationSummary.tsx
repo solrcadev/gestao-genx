@@ -1,15 +1,18 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle, Edit, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Edit, AlertTriangle, ClipboardCheck, BarChart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export interface EvaluationSummaryProps {
   exercise: any;
   evaluationData: {
     fundamento: string;
-    acertos: number;
-    erros: number;
+    acertos?: number;
+    erros?: number;
+    tipo?: 'quantitativa' | 'qualitativa';
+    eventos_qualitativos?: number;
+    observacoes?: string;
   };
   onEdit: () => void;
   onSave: () => void;
@@ -25,7 +28,7 @@ export default function EvaluationSummary({
   isMonitor = false,
   needsApproval = false
 }: EvaluationSummaryProps) {
-  const { fundamento, acertos, erros } = evaluationData;
+  const { fundamento, acertos = 0, erros = 0, observacoes, tipo = 'quantitativa', eventos_qualitativos = 0 } = evaluationData;
   const total = acertos + erros;
   const percentAcertos = total > 0 ? Math.round((acertos / total) * 100) : 0;
 
@@ -57,28 +60,56 @@ export default function EvaluationSummary({
       )}
 
       <Card className="p-5 mb-6">
-        <h3 className="font-medium text-lg mb-4">{exercise?.nome || "Exercício"}</h3>
+        <h3 className="font-medium text-lg mb-4">{exercise?.exercicio?.nome || exercise?.nome || "Exercício"}</h3>
+        
+        <div className="mb-4">
+          <Badge variant="outline" className="mb-4">
+            {tipo === 'quantitativa' ? (
+              <><BarChart className="h-3 w-3 mr-1" /> Avaliação Quantitativa</>
+            ) : (
+              <><ClipboardCheck className="h-3 w-3 mr-1" /> Avaliação Qualitativa</>
+            )}
+          </Badge>
+        </div>
+        
         <div className="space-y-4">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Fundamento:</span>
             <span className="font-medium">{fundamento || "Não especificado"}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Acertos:</span>
-            <span className="font-medium text-green-600">{acertos}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Erros:</span>
-            <span className="font-medium text-red-600">{erros}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Total de execuções:</span>
-            <span className="font-medium">{total}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Eficiência:</span>
-            <span className={`font-medium ${getPercentClass()}`}>{percentAcertos}%</span>
-          </div>
+          
+          {tipo === 'quantitativa' ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Acertos:</span>
+                <span className="font-medium text-green-600">{acertos}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Erros:</span>
+                <span className="font-medium text-red-600">{erros}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total de execuções:</span>
+                <span className="font-medium">{total}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Eficiência:</span>
+                <span className={`font-medium ${getPercentClass()}`}>{percentAcertos}%</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Eventos registrados:</span>
+              <span className="font-medium">{eventos_qualitativos}</span>
+            </div>
+          )}
+          
+          {observacoes && (
+            <div className="mt-4 border-t pt-4">
+              <span className="text-muted-foreground block mb-1">Observações:</span>
+              <p className="text-sm">{observacoes}</p>
+            </div>
+          )}
         </div>
       </Card>
 

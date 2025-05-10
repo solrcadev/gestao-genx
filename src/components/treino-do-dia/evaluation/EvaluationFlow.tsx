@@ -3,6 +3,8 @@ import ExerciseSelection from './ExerciseSelection';
 import RealTimeEvaluation from './RealTimeEvaluation';
 import EvaluationSummary from './EvaluationSummary';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface EvaluationFlowProps {
   treinoDoDiaId: string;
@@ -51,14 +53,32 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
       onClose();
     }
   };
+
+  // Handle global back button for exercise selection
+  const handleMainBack = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
   
   return (
     <div className="space-y-4">
       {stage === EvaluationStage.SELECT_EXERCISE && (
-        <ExerciseSelection 
-          onExerciseSelect={handleExerciseSelect}
-          treinoId={treinoDoDiaId}
-        />
+        <>
+          {onClose && (
+            <div className="flex items-center mb-4">
+              <Button variant="ghost" size="icon" onClick={handleMainBack}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h2 className="text-xl font-semibold ml-2">Avaliação</h2>
+            </div>
+          )}
+          <ExerciseSelection 
+            treinoId={treinoDoDiaId}
+            onExerciseSelect={handleExerciseSelect}
+            onClose={onClose}
+          />
+        </>
       )}
       
       {stage === EvaluationStage.EVALUATE && selectedExercise && (
@@ -75,7 +95,7 @@ export function EvaluationFlow({ treinoDoDiaId, onClose }: EvaluationFlowProps) 
         <EvaluationSummary
           exercise={selectedExercise}
           evaluationData={evaluationData}
-          onBack={handleBack}
+          onEdit={() => setStage(EvaluationStage.EVALUATE)}
           onSave={handleSummaryComplete}
           isMonitor={!isTecnico}
           needsApproval={!isTecnico}

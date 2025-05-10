@@ -28,8 +28,11 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
   const loadExercicios = async () => {
     try {
       setLoading(true);
+      console.log("Loading exercises for treinoDoDiaId:", treinoDoDiaId);
       const treinoAtual = await fetchTreinoAtual(treinoDoDiaId);
+      console.log("Fetched treino atual data:", treinoAtual);
       setExercicios(treinoAtual.exercicios || []);
+      console.log("Set exercicios state with:", treinoAtual.exercicios || []);
     } catch (error) {
       console.error("Error loading exercises:", error);
       toast({
@@ -109,7 +112,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
         treinoDoDiaId={treinoDoDiaId}
         onFinish={handleCompleteExercise}
         onCancel={handleCancelExercise}
-        estimatedTime={activeExercise.tempo || 10}
+        estimatedTime={activeExercise.tempo || activeExercise.exercicio?.tempo_estimado || 10}
       />
     );
   }
@@ -144,7 +147,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
                   
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Clock className="h-4 w-4 mr-1" />
-                    {exercicio.tempo || "?"} min
+                    {exercicio.tempo || exercicio.exercicio?.tempo_estimado || "?"} min
                     {exercicio.concluido && exercicio.tempo_real && (
                       <span className="ml-2 text-green-600">
                         • Tempo real: {Math.floor(exercicio.tempo_real / 60)}:{(exercicio.tempo_real % 60).toString().padStart(2, '0')}

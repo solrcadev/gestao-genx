@@ -1,8 +1,8 @@
-
 import { supabase } from '@/lib/supabase';
 
 interface AvaliacaoData {
-  atleta_id: string;
+  atleta_id?: string;
+  exercicio_id?: string;
   treino_id: string;
   fundamento: string;
   acertos: number;
@@ -14,6 +14,11 @@ interface AvaliacaoData {
 
 export async function registrarAvaliacaoDesempenho(data: AvaliacaoData) {
   try {
+    // Validate that either atleta_id or exercicio_id is provided
+    if (!data.atleta_id && !data.exercicio_id) {
+      throw new Error('Avaliação precisa ter um atleta_id ou exercicio_id');
+    }
+
     const { error } = await supabase
       .from('avaliacoes_fundamento')
       .insert([data]);

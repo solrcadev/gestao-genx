@@ -1,26 +1,75 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   ClipboardCheck, 
   ClipboardList, 
-  TimerIcon, 
   Clock, 
   PlayCircle,
-  X
+  X,
+  Loader2
 } from "lucide-react";
+import { getExerciciosTreinoDoDia } from "@/services/treinosDoDiaService";
 
 interface ExerciseSelectionProps {
-  exercises: any[];
-  onSelect: (exercise: any) => void;
-  onClose: () => void;
+  treinoId: string;
+  onExerciseSelect: (exercise: any) => void;
+  onClose?: () => void;
 }
 
-const ExerciseSelection = ({ exercises, onSelect, onClose }: ExerciseSelectionProps) => {
-  // Remover filtro de exercícios concluídos para permitir avaliação durante a execução
-  // const completedExercises = exercises.filter(ex => ex.concluido);
-  const availableExercises = exercises;
+const ExerciseSelection = ({ treinoId, onExerciseSelect, onClose }: ExerciseSelectionProps) => {
+  const [exercises, setExercises] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (availableExercises.length === 0) {
+  useEffect(() => {
+    async function loadExercises() {
+      try {
+        setLoading(true);
+        const data = await getExerciciosTreinoDoDia(treinoId);
+        setExercises(data || []);
+      } catch (err) {
+        console.error("Error loading exercises for evaluation:", err);
+        setError("Não foi possível carregar os exercícios para este treino.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadExercises();
+  }, [treinoId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Carregando exercícios...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 space-y-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600">
+          <X className="h-8 w-8" />
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium mb-1">Erro ao carregar exercícios</h3>
+          <p className="text-muted-foreground text-sm">{error}</p>
+        </div>
+        
+        {onClose && (
+          <Button onClick={onClose} variant="outline" className="mt-4">
+            <X className="h-4 w-4 mr-2" />
+            Fechar
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (exercises.length === 0) {
     return (
       <div className="text-center py-8 space-y-4">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-600">
@@ -34,10 +83,12 @@ const ExerciseSelection = ({ exercises, onSelect, onClose }: ExerciseSelectionPr
           </p>
         </div>
         
-        <Button onClick={onClose} variant="outline" className="mt-4">
-          <X className="h-4 w-4 mr-2" />
-          Fechar
-        </Button>
+        {onClose && (
+          <Button onClick={onClose} variant="outline" className="mt-4">
+            <X className="h-4 w-4 mr-2" />
+            Fechar
+          </Button>
+        )}
       </div>
     );
   }
@@ -52,11 +103,11 @@ const ExerciseSelection = ({ exercises, onSelect, onClose }: ExerciseSelectionPr
       </div>
       
       <div className="space-y-3 overflow-y-auto max-h-[60vh]">
-        {availableExercises.map((exercise, index) => (
+        {exercises.map((exercise, index) => (
           <div
             key={exercise.id}
-            className="border rounded-md p-4 hover:border-primary transition"
-            onClick={() => onSelect(exercise)}
+            className="border rounded-md p-4 hover:border-primary transition cursor-pointer"
+            onClick={() => onExerciseSelect(exercise)}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -71,7 +122,7 @@ const ExerciseSelection = ({ exercises, onSelect, onClose }: ExerciseSelectionPr
                 
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="h-4 w-4 mr-1" />
-                  {exercise.tempo || "?"} min
+                  {exercise.tempo || exercise.exercicio?.tempo_estimado || "?"} min
                   {exercise.concluido && (
                     <span className="ml-2 text-green-500 flex items-center">
                       <ClipboardCheck className="h-3 w-3 mr-1" />
