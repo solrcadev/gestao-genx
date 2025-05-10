@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +35,7 @@ const LoginPage: React.FC = () => {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, user, isLoading: isAuthLoading } = useAuth();
+  const { login, user, isLoading: isAuthLoading, userRole } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -106,6 +106,21 @@ const LoginPage: React.FC = () => {
   };
 
   const isLoading = isLocalLoading || isAuthLoading;
+
+  // Add this useEffect to redirect authenticated users
+  useEffect(() => {
+    console.log("LoginPage: Auth state -", { 
+      isAuthLoading, 
+      isAuthenticated: !!user,
+      userRole 
+    });
+
+    // If user is already authenticated, redirect to dashboard
+    if (user && !isAuthLoading) {
+      console.log("LoginPage: User already authenticated, redirecting to dashboard");
+      navigate("/dashboard");
+    }
+  }, [user, isAuthLoading, navigate, userRole]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-4">

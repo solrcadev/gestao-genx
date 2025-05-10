@@ -40,6 +40,7 @@ import DBMigrationPage from '@/pages/DBMigration';
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
 import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+import AuthRedirect from '@/components/AuthRedirect';
 
 // Atas de Reunião 
 import AtasReuniao from './app/atas-reuniao/page';
@@ -133,7 +134,7 @@ function App() {
             {/* <NotificationsManager /> */}
             <BottomNavbar />
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<AuthRedirect />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
@@ -331,7 +332,7 @@ function App() {
                 </ProtectedRoute>
               } />
               
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <AuthDebugger />
             <Toaster />
