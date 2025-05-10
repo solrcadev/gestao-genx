@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 export default function AtasReuniao() {
   const [atas, setAtas] = useState<AtaReuniao[]>([]);
@@ -62,10 +63,12 @@ export default function AtasReuniao() {
             <BarChart3Icon className="mr-2 h-4 w-4" />
             Dashboard
           </Button>
+          <RoleBasedAccess allowedRoles={['tecnico']}>
           <Button onClick={() => navigate('/atas-reuniao/nova')}>
             <PlusIcon className="mr-2 h-4 w-4" />
             Nova Ata
           </Button>
+          </RoleBasedAccess>
         </div>
       </div>
 
@@ -145,10 +148,12 @@ export default function AtasReuniao() {
               ? `Não foram encontradas atas com o filtro "${filtro}"`
               : 'Ainda não há atas de reunião registradas'}
           </p>
+          <RoleBasedAccess allowedRoles={['tecnico']}>
           <Button onClick={() => navigate('/atas-reuniao/nova')}>
             <PlusIcon className="mr-2 h-4 w-4" />
             Criar primeira ata
           </Button>
+          </RoleBasedAccess>
         </div>
       )}
     </div>

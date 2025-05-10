@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck, Clipboard, ListChecks } from 'lucide-react';
+import { Calendar, MapPin, Plus, Edit, Trash2, ClipboardCheck, Clipboard, ListChecks, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
@@ -49,6 +49,7 @@ import { fetchTrainings, createTraining, updateTraining, deleteTraining } from '
 import { definirTreinoDoDia } from '@/services/treinosDoDiaService';
 import { Team, Training } from '@/types';
 import EditTrainingExercises from '@/components/training/EditTrainingExercises';
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 const formSchema = z.object({
   nome: z.string().min(3, { message: 'Nome deve ter pelo menos 3 caracteres' }),
@@ -258,20 +259,30 @@ const Trainings = () => {
 
   return (
     <div className="mobile-container pb-20">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Treinos</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleOpenTreinoDoDia}>
-            <ClipboardCheck className="mr-2 h-4 w-4" />
-            Ver Treino do Dia
+      <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Treinos</h1>
+          <p className="text-muted-foreground">
+            Gerencie todos os treinos disponíveis para a equipe
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <RoleBasedAccess allowedRoles={['tecnico']}>
+            <Button 
+              onClick={() => navigate('/montar-treino')}
+              className="whitespace-nowrap flex-shrink-0"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Montar Novo Treino
           </Button>
-          <Button variant="outline" onClick={handleGerenciarPresencas}>
-            <Clipboard className="mr-2 h-4 w-4" />
-            Gerenciar Presenças
-          </Button>
-          <Button onClick={() => navigate('/montar-treino')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Treino
+          </RoleBasedAccess>
+          <Button 
+            onClick={() => navigate('/treino-do-dia')}
+            variant="outline"
+            className="whitespace-nowrap flex-shrink-0"
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Treino do Dia
           </Button>
         </div>
       </div>
@@ -314,6 +325,7 @@ const Trainings = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <RoleBasedAccess allowedRoles={['tecnico']}>
                       <Button
                         variant="outline"
                         size="icon"
@@ -322,6 +334,8 @@ const Trainings = () => {
                       >
                         <ClipboardCheck className="h-4 w-4" />
                       </Button>
+                      </RoleBasedAccess>
+                      <RoleBasedAccess allowedRoles={['tecnico']}>
                       <Button
                         variant="outline"
                         size="icon"
@@ -330,6 +344,8 @@ const Trainings = () => {
                       >
                         <ListChecks className="h-4 w-4" />
                       </Button>
+                      </RoleBasedAccess>
+                      <RoleBasedAccess allowedRoles={['tecnico']}>
                       <Button
                         variant="outline"
                         size="icon"
@@ -338,6 +354,8 @@ const Trainings = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      </RoleBasedAccess>
+                      <RoleBasedAccess allowedRoles={['tecnico']}>
                       <Button
                         variant="outline"
                         size="icon"
@@ -346,6 +364,7 @@ const Trainings = () => {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
+                      </RoleBasedAccess>
                     </div>
                   </TableCell>
                 </TableRow>

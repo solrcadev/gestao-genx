@@ -40,6 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 export default function AtaReuniaoDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -237,22 +238,26 @@ export default function AtaReuniaoDetalhe() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate(`/atas-reuniao/editar/${ata.id}`)}
-                >
-                  <PencilIcon className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => setDialogoExcluir(true)}
-                >
-                  <TrashIcon className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
+                <RoleBasedAccess allowedRoles={['tecnico']}>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/atas-reuniao/editar/${ata.id}`)}
+                  >
+                    <PencilIcon className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                </RoleBasedAccess>
+                <RoleBasedAccess allowedRoles={['tecnico']}>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => setDialogoExcluir(true)}
+                  >
+                    <TrashIcon className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </RoleBasedAccess>
               </div>
             </div>
           </CardHeader>

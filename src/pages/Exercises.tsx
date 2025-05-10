@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 // Categories for exercises
 const CATEGORIES = [
@@ -327,6 +328,7 @@ const ExercisesPage = () => {
       ) : (
         <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
           <p className="text-muted-foreground mb-4">Nenhum exercício encontrado</p>
+          <RoleBasedAccess allowedRoles={['tecnico']}>
           <Button 
             onClick={() => handleOpenForm()}
             variant="default"
@@ -336,6 +338,7 @@ const ExercisesPage = () => {
             <Plus className="h-5 w-5 mr-2" />
             Criar Novo Exercício
           </Button>
+          </RoleBasedAccess>
         </div>
       )}
       
@@ -392,6 +395,7 @@ const ExercisesPage = () => {
       </Dialog>
       
       {/* Floating action button */}
+      <RoleBasedAccess allowedRoles={['tecnico']}>
       <button 
         onClick={() => handleOpenForm()}
         className="fixed right-6 bottom-6 w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 z-10"
@@ -399,6 +403,7 @@ const ExercisesPage = () => {
       >
         <Plus className="h-6 w-6" />
       </button>
+      </RoleBasedAccess>
       
       {/* Confirm dialog */}
       <ConfirmDialog 

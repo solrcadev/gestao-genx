@@ -22,7 +22,7 @@ import {
   uploadExerciseImage,
   deleteExerciseImage
 } from '@/services/exerciseService';
-import { VideoIcon, InfoIcon, Tag, CheckCircle, BarChart2, Image as ImageIcon, UploadCloud, X } from 'lucide-react';
+import { VideoIcon, InfoIcon, Tag, CheckCircle, BarChart2, Image as ImageIcon, UploadCloud, X, Youtube, Instagram } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
@@ -249,13 +249,15 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
       let finalImageUrl = values.imagem_url;
       
       if (imageFile) {
-        finalImageUrl = await uploadImage() || '';
-        if (!finalImageUrl) {
-          // Se o upload falhou, cancelar a submissão
-          setIsSubmitting(false);
-          return;
+        // Realizar o upload e obter a URL
+        const uploadedImageUrl = await uploadImage();
+        if (uploadedImageUrl) {
+          finalImageUrl = uploadedImageUrl;
         }
       }
+
+      // Processar o checklist_tecnico do formulário
+      // Isso já é processado automaticamente como o formulário usa o FormControl direto com o textarea
       
       // Determinar se é necessário incluir os parâmetros de tempo do vídeo
       const platform = values.video_url ? getVideoPlatform(values.video_url) : 'outro';
@@ -627,28 +629,41 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
             control={form.control}
             name="checklist_tecnico"
             render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="h-4 w-4 text-primary" />
-                  <FormLabel className="text-base font-medium m-0">Pontos de Atenção Técnica</FormLabel>
-                </div>
+              <FormItem className="col-span-2">
+                <FormLabel className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Checklist Técnico (Pontos de Atenção)
+                </FormLabel>
                 <FormControl>
                   <Textarea 
-                    placeholder="Digite um ponto de atenção por linha. Ex:&#10;Manter os cotovelos altos&#10;Posicionar os pés na largura dos ombros&#10;Flexionar os joelhos durante o movimento" 
-                    className="min-h-[120px] resize-y"
+                    placeholder="Digite cada ponto técnico em uma linha separada.
+Exemplo:
+- Manter joelhos flexionados
+- Braços estendidos acima da cabeça
+- Olhar sempre para a bola"
+                    className="min-h-[150px] resize-y"
                     {...field} 
-                    value={field.value?.join('\n') || ''}
+                    value={
+                      Array.isArray(field.value) 
+                        ? field.value.join('\n') 
+                        : ''
+                    }
                     onChange={(e) => {
-                      const text = e.target.value;
-                      const lines = text.split('\n').filter(line => line.trim() !== '');
-                      field.onChange(lines);
+                      // Quando o texto muda, dividimos por quebras de linha e armazenamos como array
+                      const items = e.target.value
+                        .split('\n')
+                        .map(item => item.trim())
+                        .filter(item => item.length > 0);
+                      
+                      // Atualizar o valor do campo diretamente com o array
+                      field.onChange(items);
                     }}
                   />
                 </FormControl>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Liste os pontos de atenção para a execução correta do exercício, um por linha
-                </div>
                 <FormMessage />
+                <div className="text-xs text-muted-foreground mt-1">
+                  Insira pontos importantes para a execução correta do exercício, um por linha.
+                </div>
               </FormItem>
             )}
           />
@@ -712,7 +727,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
             
             {/* Área de Upload */}
             {!imagePreview ? (
-              <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/30 transition-colors cursor-pointer relative">
+              <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/30 transition-colors cursor-pointer relative overflow-hidden">
                 <input
                   type="file"
                   id="image-upload"
@@ -732,7 +747,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                 </div>
               </div>
             ) : (
-              <div className="relative border rounded-lg overflow-hidden">
+              <div className="relative border rounded-lg overflow-hidden shadow-sm">
                 {/* Preview da Imagem */}
                 <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
                   <img 
@@ -753,7 +768,7 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                 
                 {/* Controles para imagem selecionada */}
                 <div className="p-3 flex justify-between items-center bg-card">
-                  <span className="text-sm truncate max-w-[70%]">
+                  <span className="text-sm truncate max-w-[70%] text-muted-foreground">
                     {imageFile?.name || 'Imagem do exercício'}
                   </span>
                   <div className="flex items-center gap-2">
@@ -762,10 +777,11 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8"
+                      className="h-8 flex items-center gap-1.5"
                       disabled={isUploading}
                       onClick={() => document.getElementById('image-upload')?.click()}
                     >
+                      <UploadCloud className="h-3.5 w-3.5" />
                       Trocar
                     </Button>
                     
@@ -774,11 +790,13 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="h-8 px-2"
+                      className="h-8 flex items-center gap-1.5"
                       disabled={isUploading}
                       onClick={handleRemoveImage}
+                      title="Remover imagem"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
+                      Remover
                     </Button>
                     
                     {/* Input oculto para trocar imagem */}
@@ -825,6 +843,9 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                       {...field} 
                     />
                   </FormControl>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Cole a URL completa do vídeo. Para vídeos do YouTube, você poderá definir pontos de início e fim.
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -846,6 +867,9 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                           {...field} 
                         />
                       </FormControl>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Tempo de início do exercício no vídeo
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -864,6 +888,9 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
                           {...field} 
                         />
                       </FormControl>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Tempo de fim do exercício no vídeo
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -871,9 +898,21 @@ const ExerciseForm: React.FC<ExerciseFormProps> = ({ exercise, categories, onSuc
               </div>
             )}
             
+            {/* Feedback visual para URL do YouTube */}
+            {form.watch('video_url') && isYoutube && (
+              <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center">
+                  <Youtube className="h-3.5 w-3.5 mr-1.5" />
+                  Vídeo do YouTube detectado. Você pode definir os tempos de início e fim do exercício.
+                </p>
+              </div>
+            )}
+            
+            {/* Feedback para Instagram */}
             {isInstagram && form.watch('video_url') && (
-              <div className="mt-4 p-3 bg-pink-50 dark:bg-pink-900/20 rounded-md">
-                <p className="text-xs text-pink-700 dark:text-pink-300">
+              <div className="mt-3 p-2 bg-pink-50 dark:bg-pink-900/20 rounded-md">
+                <p className="text-xs text-pink-700 dark:text-pink-300 flex items-center">
+                  <Instagram className="h-3.5 w-3.5 mr-1.5" />
                   Vídeo do Instagram detectado. Os parâmetros de início e fim não estão disponíveis para conteúdo do Instagram.
                 </p>
               </div>

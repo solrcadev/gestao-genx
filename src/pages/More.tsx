@@ -18,11 +18,14 @@ import {
   Database
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useConsolidatedAuth } from "@/hooks/useConsolidatedAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const More = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut, isTecnico } = useConsolidatedAuth();
+  const { userRole, signOut } = useAuth();
+  
+  // Verificar se é técnico
+  const isTecnico = userRole === 'tecnico';
 
   // Itens de menu específicos para técnicos
   const tecnicoItems = [
@@ -40,71 +43,87 @@ const More = () => {
     }
   ];
 
-  const menuItems = [
+  // Todos os itens de menu
+  const allMenuItems = [
     {
       icon: <Target className="h-5 w-5" />,
       title: "Metas & Evolução",
       description: "Acompanhe o progresso de metas individuais",
-      path: "/metas-evolucao"
+      path: "/metas-evolucao",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos, mas será read-only para monitor
     },
     {
       icon: <Award className="h-5 w-5" />,
       title: "Avaliação Qualitativa",
       description: "Registre eventos com peso técnico por fundamento",
-      path: "/avaliacao-qualitativa"
+      path: "/avaliacao-qualitativa",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos, com permissões de registro
     },
     {
       icon: <BarChart3 className="h-5 w-5" />,
       title: "Desempenho Detalhado",
       description: "Estatísticas e análises avançadas",
-      path: "/desempenho-detalhado"
+      path: "/desempenho-detalhado",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos, mas será read-only para monitor
     },
     {
       icon: <Clipboard className="h-5 w-5" />,
       title: "Atas de Reunião",
       description: "Registro e consulta de atas de reunião",
-      path: "/atas-reuniao"
+      path: "/atas-reuniao",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos, mas será read-only para monitor
     },
     {
       icon: <PieChart className="h-5 w-5" />,
       title: "Dashboard de Atas",
       description: "Estatísticas e análises de reuniões",
-      path: "/atas-reuniao/dashboard"
+      path: "/atas-reuniao/dashboard",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos, mas será read-only para monitor
     },
     {
       icon: <CheckSquare className="h-5 w-5" />,
       title: "Gestão de Presença",
       description: "Controle de presença em treinos",
-      path: "/presencas"
+      path: "/presencas",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos, com permissões de registro
     },
     {
       icon: <History className="h-5 w-5" />,
       title: "Histórico",
       description: "Histórico de atividades e alterações",
-      path: "/historico"
+      path: "/historico",
+      showFor: ['tecnico'] // Visível apenas para técnicos
     },
     {
       icon: <Calendar className="h-5 w-5" />,
       title: "Calendário",
       description: "Agenda de treinos e eventos",
-      path: "/calendario"
+      path: "/calendario",
+      showFor: ['tecnico', 'monitor'] // Visível para ambos
     },
     {
       icon: <Settings className="h-5 w-5" />,
       title: "Configurações",
       description: "Ajustes e preferências do sistema",
-      path: "/configuracoes"
+      path: "/configuracoes",
+      showFor: ['tecnico'] // Visível apenas para técnicos
     },
     {
       icon: <LogOut className="h-5 w-5" />,
       title: "Sair",
       description: "Encerrar sessão",
-      action: () => signOut()
+      action: () => signOut(),
+      showFor: ['tecnico', 'monitor'] // Visível para ambos
     }
   ];
 
+  // Filtrar os itens de menu com base no papel do usuário
+  const filteredMenuItems = allMenuItems.filter(item => 
+    !item.showFor || item.showFor.includes(userRole || '')
+  );
+
   // Combinar os itens de menu, adicionando os específicos para técnicos no início
-  const allMenuItems = isTecnico ? [...tecnicoItems, ...menuItems] : menuItems;
+  const menuItemsToShow = isTecnico ? [...tecnicoItems, ...filteredMenuItems] : filteredMenuItems;
 
   const handleItemClick = (item: any) => {
     if (item.action) {
@@ -123,7 +142,7 @@ const More = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {allMenuItems.map((item, index) => (
+        {menuItemsToShow.map((item, index) => (
           <Card 
             key={index}
             className="p-4 cursor-pointer hover:bg-accent transition-colors"

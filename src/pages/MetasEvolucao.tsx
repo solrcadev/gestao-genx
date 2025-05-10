@@ -43,6 +43,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
 import { sendGoalNotification } from '@/services/notificationService';
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 const MetasEvolucao = () => {
   const { toast } = useToast();
@@ -417,6 +418,8 @@ const MetasEvolucao = () => {
             
             <div className="flex-grow"></div>
             
+            <div className="flex justify-end">
+              <RoleBasedAccess allowedRoles={['tecnico']}>
             <AlertDialog open={modalNovaMetaAberto} onOpenChange={setModalNovaMetaAberto}>
               <AlertDialogTrigger asChild>
                 <Button>Criar Nova Meta</Button>
@@ -524,6 +527,8 @@ const MetasEvolucao = () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+              </RoleBasedAccess>
+            </div>
           </div>
           
           {/* Tabs para os diferentes status */}
@@ -551,9 +556,11 @@ const MetasEvolucao = () => {
               ) : metas?.length === 0 ? (
                 <div className="text-center p-8 border rounded-lg">
                   <p className="text-muted-foreground">Nenhuma meta encontrada.</p>
+                  <RoleBasedAccess allowedRoles={['tecnico']}>
                   <Button onClick={() => setModalNovaMetaAberto(true)} className="mt-4">
                     Criar Nova Meta
                   </Button>
+                  </RoleBasedAccess>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

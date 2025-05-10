@@ -87,3 +87,15 @@ export interface EventoQualificado {
   created_at?: string;
   updated_at?: string;
 }
+
+// Training interface for the training module
+export interface Training {
+  id: string;
+  nome: string;
+  local: string;
+  data: string;
+  descricao?: string;
+  time: "Masculino" | "Feminino";
+  created_at?: string;
+  updated_at?: string;
+}

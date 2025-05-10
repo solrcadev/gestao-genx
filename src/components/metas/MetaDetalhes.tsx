@@ -56,6 +56,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 interface DadosGrafico {
   data: string;
@@ -423,6 +424,7 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
               </AlertDialogContent>
             </AlertDialog>
             
+            <RoleBasedAccess allowedRoles={['tecnico']}>
             <Button 
               variant="outline" 
               size="sm"
@@ -432,6 +434,7 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
               <Edit className="h-4 w-4 mr-2" />
               Editar
             </Button>
+            </RoleBasedAccess>
           </div>
         </div>
         
@@ -761,12 +764,14 @@ const MetaDetalhes: React.FC<MetaDetalhesProps> = ({
                   <Progress value={meta.progresso} className="h-2" />
                 </div>
                 
+                <RoleBasedAccess allowedRoles={['tecnico']}>
                 <Button 
                   className="w-full mt-4" 
                   onClick={() => setModoAtualizarProgresso(true)}
                 >
                   Atualizar Progresso
                 </Button>
+                </RoleBasedAccess>
               </>
             )}
           </CardContent>

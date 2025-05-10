@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { concluirExercicio } from "@/services/treinosDoDiaService";
 import { Button } from "../ui/button";
 import { toast } from "../ui/use-toast";
-import { Clock, Play, Pause, Check, X, BarChart3 } from "lucide-react";
+import { Clock, Play, Pause, Check, X, BarChart3, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -77,11 +76,11 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
   // Finish exercise handler
   const handleFinishExercise = async () => {
     try {
-      await concluirExercicio(
-        treinoDoDiaId,
-        exerciseData.id,
-        elapsedTime
-      );
+      await concluirExercicio({
+        exercicioId: exerciseData.id,
+        tempoReal: elapsedTime,
+        treinoDoDiaId: treinoDoDiaId
+      });
 
       toast({
         title: "Exercício concluído",
@@ -166,6 +165,26 @@ export const ExerciseTimer: React.FC<ExerciseTimerProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Checklist Técnico */}
+            {exerciseData.exercicio?.checklist_tecnico && exerciseData.exercicio.checklist_tecnico.length > 0 && (
+              <div className="mt-4 bg-muted/20 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                  <h4 className="font-medium">Checklist Técnico</h4>
+                </div>
+                <ul className="space-y-2">
+                  {exerciseData.exercicio.checklist_tecnico.map((item, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <div className="mt-1">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      </div>
+                      <span className="text-sm">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Timer controls */}
             <div className="flex justify-center gap-2">

@@ -39,6 +39,7 @@ import DBMigrationPage from '@/pages/DBMigration';
 
 // Components
 import ProtectedRoute from '@/components/ProtectedRoute';
+import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 
 // Atas de Reunião 
 import AtasReuniao from './app/atas-reuniao/page';
@@ -53,54 +54,79 @@ const AtasReuniaoDetalhePage = () => {
   return <AtasReuniaoDetalhe />;
 };
 
-const queryClient = new QueryClient();
+// Create a QueryClient instance for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
 
-// SplashScreen component
-const SplashScreen = () => {
-  return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-primary z-50">
-      <img
-        src="/icons/icon-512x512.png"
-        alt="GEN X Logo"
-        className="w-32 h-32 mb-6 animate-pulse"
-      />
-      <h1 className="text-2xl font-bold text-white mb-2">GEN X</h1>
-      <p className="text-white/80 text-sm">Painel de Gestão</p>
-      <div className="mt-8 w-48 h-1 bg-gray-700 rounded-full overflow-hidden">
-        <div className="h-full bg-white animate-[loading_1.5s_ease-in-out_infinite]"></div>
-      </div>
-    </div>
-  );
+// Verifica se a aplicação está rodando como PWA
+const isPWA = isRunningAsPWA();
+console.log(`App rodando como PWA: ${isPWA}`);
+
+// Roteamento para PWA vs. Navegador normal
+const getInitialRoute = () => {
+  if (isPWA) {
+    // No PWA, verificamos se é a primeira visita após instalação
+    if (isFirstVisitAfterInstall()) {
+      console.log('Primeira visita após instalação do PWA');
+      return '/welcome'; // Exibir tela de boas-vindas
+    }
+    
+    // Já instalado, verificar se está logado
+    const hasToken = localStorage.getItem('supabase.auth.token');
+    return hasToken ? '/dashboard' : '/login';
+  }
+  
+  // Em navegador normal, iniciar na landing page
+  return '/';
 };
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
-  const isPWA = isRunningAsPWA();
   
   useEffect(() => {
-    // Verificar se é a primeira visita após instalação
-    if (isFirstVisitAfterInstall()) {
+    // Verificar se deve mostrar tela de boas-vindas
+    if (isPWA && isFirstVisitAfterInstall()) {
       setShowWelcome(true);
     }
     
-    // Simular carregamento para mostrar a tela de splash por alguns segundos
-    // Mais tempo se for PWA para melhor experiência de "app"
-    const timeout = setTimeout(() => {
+    // Simular tempo de carregamento para splash screen
+    const timer = setTimeout(() => {
       setIsLoading(false);
-    }, isPWA ? 2500 : 1000);
+    }, 1000);
     
-    return () => clearTimeout(timeout);
-  }, [isPWA]);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (isLoading && isPWA) {
-    return <SplashScreen />;
+  // Mostrar splash screen enquanto carrega
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background">
+        <img 
+          src="/logo.png" 
+          alt="Painel GenX" 
+          className="w-24 h-24 mb-4 animate-pulse" 
+        />
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  // Mostrar tela de boas-vindas se necessário
+  if (showWelcome) {
+    return <WelcomeScreen onComplete={() => setShowWelcome(false)} />;
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        {/* Keep AuthProvider inside BrowserRouter to ensure useNavigate works properly */}
         <AuthProvider>
           <RouterPersistence>
             {/* Desativado temporariamente devido a erros de servidor */}
@@ -181,7 +207,9 @@ function App() {
                 path="/montar-treino"
                 element={
                   <ProtectedRoute>
+                    <RoleProtectedRoute allowedRoles={['tecnico']}>
                     <TrainingAssembly />
+                    </RoleProtectedRoute>
                   </ProtectedRoute>
                 }
               />
@@ -255,7 +283,9 @@ function App() {
               } />
               <Route path="/atas-reuniao/nova" element={
                 <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['tecnico']}>
                   <NovaAtaReuniao />
+                  </RoleProtectedRoute>
                 </ProtectedRoute>
               } />
               <Route path="/atas-reuniao/dashboard" element={
@@ -265,7 +295,9 @@ function App() {
               } />
               <Route path="/atas-reuniao/editar/:id" element={
                 <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['tecnico']}>
                   <NovaAtaReuniao />
+                  </RoleProtectedRoute>
                 </ProtectedRoute>
               } />
               <Route path="/atas-reuniao/:id" element={
@@ -274,10 +306,28 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              {/* Páginas restritas a técnicos */}
+              <Route path="/historico" element={
+                <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['tecnico']}>
+                    <NotFound /> {/* Placeholder até ser implementada */}
+                  </RoleProtectedRoute>
+                </ProtectedRoute>
+              } />
+              <Route path="/configuracoes" element={
+                <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['tecnico']}>
+                    <NotFound /> {/* Placeholder até ser implementada */}
+                  </RoleProtectedRoute>
+                </ProtectedRoute>
+              } />
+              
               {/* Página de Migração do Banco de Dados */}
               <Route path="/admin/migracao-db" element={
                 <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['tecnico']}>
                   <DBMigrationPage />
+                  </RoleProtectedRoute>
                 </ProtectedRoute>
               } />
               
@@ -285,7 +335,6 @@ function App() {
             </Routes>
             <AuthDebugger />
             <Toaster />
-            {showWelcome && <WelcomeScreen onClose={() => setShowWelcome(false)} />}
           </RouterPersistence>
         </AuthProvider>
       </BrowserRouter>

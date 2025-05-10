@@ -6,13 +6,15 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Edit, Trash2, Clock, Users, Youtube, PlayCircle, Instagram, Tag, BarChart2, Calendar, History } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Clock, Users, Youtube, PlayCircle, Instagram, Tag, BarChart2, Calendar, History, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import VideoModal from './ui/video-modal';
 import { getVideoPlatform } from '@/utils/video-utils';
 import { formatExerciseDate } from '@/services/exerciseService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import RoleBasedAccess from '@/components/RoleBasedAccess';
 
 interface Exercise {
   id: string;
@@ -28,6 +30,7 @@ interface Exercise {
   imagem_url?: string;
   fundamentos?: string[];
   dificuldade?: string;
+  checklist_tecnico?: string[];
   contagem_uso?: number;
   ultima_vez_usado?: string | null;
 }
@@ -280,6 +283,40 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
               </div>
             )}
             
+            {/* Checklist Técnico (Pontos de Atenção) */}
+            {exercise.checklist_tecnico && exercise.checklist_tecnico.length > 0 && (
+              <div className="mt-2 mb-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    Pontos de Atenção ({exercise.checklist_tecnico.length})
+                  </span>
+                </div>
+                <TooltipProvider>
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Ver checklist técnico
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-sm">
+                      <div className="text-sm font-medium mb-1">Checklist Técnico:</div>
+                      <ul className="list-disc pl-5 text-xs space-y-1">
+                        {exercise.checklist_tecnico.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+            
             {/* Estatísticas de uso */}
             {renderUsoStats()}
 
@@ -305,6 +342,7 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
         </CardContent>
         
         <CardFooter className="p-4 pt-0 flex justify-end gap-2 mt-auto border-t">
+          <RoleBasedAccess allowedRoles={['tecnico']}>
           <Button
             size="sm"
             variant="outline"
@@ -314,7 +352,9 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
             <Edit className="h-4 w-4 mr-1.5" />
             <span>Editar</span>
           </Button>
+          </RoleBasedAccess>
           
+          <RoleBasedAccess allowedRoles={['tecnico']}>
           <Button
             size="sm"
             variant="outline"
@@ -324,6 +364,7 @@ const ExerciseCard = ({ exercise, onEdit, onDelete }: ExerciseCardProps) => {
             <Trash2 className="h-4 w-4 mr-1.5" />
             <span>Excluir</span>
           </Button>
+          </RoleBasedAccess>
         </CardFooter>
       </Card>
 
