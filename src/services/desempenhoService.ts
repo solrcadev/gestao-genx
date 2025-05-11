@@ -33,16 +33,35 @@ export interface FiltroAnalise {
  */
 export const obterTodosFundamentos = async (): Promise<string[]> => {
   try {
-    const { data, error } = await supabase
-      .rpc('get_all_fundamentos_tecnicos');
+    // Tentar usar RPC, mas se falhar (404) usar fallback direto
+    try {
+      const { data, error } = await supabase
+        .rpc('get_all_fundamentos_tecnicos');
 
-    if (error) {
-      console.error('Erro ao buscar fundamentos técnicos:', error);
-      throw new Error(error.message);
+      if (error) {
+        console.error('Erro ao buscar fundamentos técnicos via RPC:', error);
+        throw error;
+      }
+
+      // Extrair apenas os nomes dos fundamentos do resultado
+      return (data || []).map((item: { fundamento: string }) => item.fundamento);
+    } catch (rpcError) {
+      console.error('Fallback: buscando fundamentos diretamente da tabela de avaliações');
+      
+      // Fallback: consultar fundamentos direto da tabela
+      const { data, error } = await supabase
+        .from('avaliacoes_fundamento')
+        .select('fundamento')
+        .order('fundamento');
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Remover duplicatas
+      const fundamentosUnicos = [...new Set(data.map(item => item.fundamento))];
+      return fundamentosUnicos;
     }
-
-    // Extrair apenas os nomes dos fundamentos do resultado
-    return (data || []).map((item: { fundamento: string }) => item.fundamento);
   } catch (error) {
     console.error('Erro em obterTodosFundamentos:', error);
     // Fallback para fundamentos padrão caso ocorra um erro
@@ -66,20 +85,91 @@ export const obterTodosFundamentos = async (): Promise<string[]> => {
  */
 export const obterDadosDesempenho = async (filtros: FiltroAnalise): Promise<PerformanceData[]> => {
   try {
-    const { data, error } = await supabase
-      .rpc('get_performance_trend_por_fundamento', {
-        p_fundamento_nome: filtros.fundamento,
-        p_data_inicio: filtros.data_inicio?.toISOString().split('T')[0],
-        p_data_fim: filtros.data_fim?.toISOString().split('T')[0],
-        p_genero_equipe: filtros.genero_equipe
+    try {
+      const { data, error } = await supabase
+        .rpc('get_performance_trend_por_fundamento', {
+          p_fundamento_nome: filtros.fundamento,
+          p_data_inicio: filtros.data_inicio?.toISOString().split('T')[0],
+          p_data_fim: filtros.data_fim?.toISOString().split('T')[0],
+          p_genero_equipe: filtros.genero_equipe
+        });
+
+      if (error) {
+        console.error('Erro ao buscar dados de desempenho via RPC:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (rpcError) {
+      console.error('Fallback: buscando dados de desempenho diretamente', rpcError);
+      
+      // Implementação alternativa sem usar RPC
+      // Construir consulta SQL equivalente
+      let query = supabase
+        .from('avaliacoes_fundamento')
+        .select(`
+          treino_id,
+          acertos,
+          erros,
+          treinos!inner(data, time)
+        `)
+        .eq('fundamento', filtros.fundamento);
+        
+      if (filtros.data_inicio) {
+        query = query.gte('treinos.data', filtros.data_inicio.toISOString().split('T')[0]);
+      }
+      
+      if (filtros.data_fim) {
+        query = query.lte('treinos.data', filtros.data_fim.toISOString().split('T')[0]);
+      }
+      
+      if (filtros.genero_equipe && filtros.genero_equipe !== 'Todos') {
+        query = query.eq('treinos.time', filtros.genero_equipe);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Erro ao buscar dados de desempenho com fallback:', error);
+        return [];
+      }
+      
+      // Processar dados para formato esperado
+      // Agrupar por data
+      const dadosPorData: Record<string, { acertos: number, erros: number }> = {};
+      
+      data.forEach(item => {
+        if (item.treinos && typeof item.treinos === 'object' && 'data' in item.treinos) {
+          const dataString = String(item.treinos.data);
+          const data = new Date(dataString).toISOString().split('T')[0];
+          
+          if (!dadosPorData[data]) {
+            dadosPorData[data] = { acertos: 0, erros: 0 };
+          }
+          
+          dadosPorData[data].acertos += item.acertos || 0;
+          dadosPorData[data].erros += item.erros || 0;
+        }
       });
-
-    if (error) {
-      console.error('Erro ao buscar dados de desempenho:', error);
-      throw new Error(error.message);
+      
+      // Converter para formato de retorno
+      const resultado: PerformanceData[] = Object.keys(dadosPorData).map(data => {
+        const { acertos, erros } = dadosPorData[data];
+        const total = acertos + erros;
+        const metrica = total > 0 ? (acertos / total) * 100 : 0;
+        
+        return {
+          data_ponto_tempo: data,
+          metrica_desempenho: metrica,
+          total_acertos: acertos,
+          total_erros: erros
+        };
+      });
+      
+      return resultado.sort((a, b) => 
+        new Date(a.data_ponto_tempo).getTime() - new Date(b.data_ponto_tempo).getTime()
+      );
     }
-
-    return data || [];
   } catch (error) {
     console.error('Erro em obterDadosDesempenho:', error);
     return [];
@@ -93,20 +183,90 @@ export const obterDadosDesempenho = async (filtros: FiltroAnalise): Promise<Perf
  */
 export const obterDadosUsoExercicios = async (filtros: FiltroAnalise): Promise<UsageVolumeData[]> => {
   try {
-    const { data, error } = await supabase
-      .rpc('get_exercise_usage_volume_por_fundamento', {
-        p_fundamento_nome: filtros.fundamento,
-        p_data_inicio: filtros.data_inicio?.toISOString().split('T')[0],
-        p_data_fim: filtros.data_fim?.toISOString().split('T')[0],
-        p_genero_equipe: filtros.genero_equipe
+    try {
+      const { data, error } = await supabase
+        .rpc('get_exercise_usage_volume_por_fundamento', {
+          p_fundamento_nome: filtros.fundamento,
+          p_data_inicio: filtros.data_inicio?.toISOString().split('T')[0],
+          p_data_fim: filtros.data_fim?.toISOString().split('T')[0],
+          p_genero_equipe: filtros.genero_equipe
+        });
+
+      if (error) {
+        console.error('Erro ao buscar dados de uso de exercícios via RPC:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (rpcError) {
+      console.error('Fallback: buscando dados de uso de exercícios diretamente', rpcError);
+      
+      // Implementação alternativa sem usar RPC
+      let query = supabase
+        .from('treinos_exercicios')
+        .select(`
+          treino_id,
+          exercicio_id,
+          treinos!inner(data, time),
+          exercicios!inner(fundamentos)
+        `);
+        
+      if (filtros.data_inicio) {
+        query = query.gte('treinos.data', filtros.data_inicio.toISOString().split('T')[0]);
+      }
+      
+      if (filtros.data_fim) {
+        query = query.lte('treinos.data', filtros.data_fim.toISOString().split('T')[0]);
+      }
+      
+      if (filtros.genero_equipe && filtros.genero_equipe !== 'Todos') {
+        query = query.eq('treinos.time', filtros.genero_equipe);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Erro ao buscar dados de uso com fallback:', error);
+        return [];
+      }
+      
+      // Filtrar exercícios com o fundamento selecionado
+      const dadosFiltrados = data.filter(item => 
+        item.exercicios && 
+        typeof item.exercicios === 'object' &&
+        'fundamentos' in item.exercicios &&
+        Array.isArray(item.exercicios.fundamentos) && 
+        item.exercicios.fundamentos.includes(filtros.fundamento)
+      );
+      
+      // Agrupar por data e contar exercícios únicos
+      const dadosPorData: Record<string, Set<string>> = {};
+      
+      dadosFiltrados.forEach(item => {
+        if (item.treinos && typeof item.treinos === 'object' && 'data' in item.treinos) {
+          const dataString = String(item.treinos.data);
+          const data = new Date(dataString).toISOString().split('T')[0];
+          
+          if (!dadosPorData[data]) {
+            dadosPorData[data] = new Set();
+          }
+          
+          dadosPorData[data].add(item.exercicio_id);
+        }
       });
-
-    if (error) {
-      console.error('Erro ao buscar dados de uso de exercícios:', error);
-      throw new Error(error.message);
+      
+      // Converter para formato de retorno
+      const resultado: UsageVolumeData[] = Object.keys(dadosPorData).map(data => {
+        return {
+          data_ponto_tempo: data,
+          volume_uso_exercicio: dadosPorData[data].size
+        };
+      });
+      
+      return resultado.sort((a, b) => 
+        new Date(a.data_ponto_tempo).getTime() - new Date(b.data_ponto_tempo).getTime()
+      );
     }
-
-    return data || [];
   } catch (error) {
     console.error('Erro em obterDadosUsoExercicios:', error);
     return [];

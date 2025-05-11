@@ -13,6 +13,7 @@ export interface EventoQualificado {
   observacoes?: string;
   created_at?: string;
   updated_at?: string;
+  exercicio_id?: string;
 }
 
 // Tipo para filtros de busca
@@ -96,105 +97,257 @@ export const CONFIG_EVENTOS_QUALIFICADOS: ConfigFundamento[] = [
   }
 ];
 
-// Função para verificar e criar a tabela se não existir
-export async function verificarECriarTabelaEventosQualificados(): Promise<boolean> {
+// Helper function to get treino details from treinoDoDia
+export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string): Promise<{
+  treino_id: string;
+  nome_treino: string;
+  existe: boolean;
+}> => {
   try {
-    // Tentar acessar a tabela diretamente ao invés de verificar pg_proc
-    const { data, error } = await supabase
-      .from('avaliacoes_eventos_qualificados')
-      .select('id')
-      .limit(1);
+    // First check if it's a direct treino ID
+    const { data: treinoData, error: treinoError } = await supabase
+      .from('treinos')
+      .select('id, nome')
+      .eq('id', treinoOuTreinoDoDiaId)
+      .single();
     
-    // Se não houver erro, a tabela existe
-    if (!error) {
-      console.log("Tabela avaliacoes_eventos_qualificados já existe");
-      return true;
-    }
-
-    // Se houver erro de tipo "não existe", tentar criar a tabela
-    if (error.message.includes("relation") && error.message.includes("does not exist")) {
-      console.log("Tabela avaliacoes_eventos_qualificados não existe, tentando criar...");
-      
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('criar_tabela_eventos_qualificados');
-      
-      if (rpcError) {
-        console.error("Erro ao criar tabela:", rpcError);
-        toast({
-          title: "Erro",
-          description: "Não foi possível criar a tabela no banco de dados. Funcionando em modo offline.",
-          duration: 6000
-        });
-        return false;
-      }
-      
-      toast({
-        title: "Sucesso",
-        description: "Tabela de avaliações qualitativas criada com sucesso!",
-        duration: 4000
-      });
-      return true;
+    if (!treinoError && treinoData) {
+      console.log("ID é um treino válido:", treinoData);
+      return {
+        treino_id: treinoData.id as string,
+        nome_treino: treinoData.nome as string,
+        existe: true
+      };
     }
     
-    // Outro tipo de erro
-    console.error("Erro ao verificar tabela:", error);
-    toast({
-      title: "Aviso",
-      description: "Verificação da tabela falhou. Funcionando em modo offline.",
-      duration: 5000
-    });
-    return false;
-  } catch (error) {
-    console.error("Erro ao verificar/criar tabela de eventos qualificados:", error);
-    toast({
-      title: "Aviso",
-      description: "Erro de conexão. Funcionando em modo offline.",
-      duration: 5000
-    });
-    return false;
+    // If not found as treino, check if it's a treinoDoDia
+    const { data: treinoDoDiaData, error: treinoDoDiaError } = await supabase
+      .from('treinos_do_dia')
+      .select(`
+        id, 
+        treino_id
+      `)
+      .eq('id', treinoOuTreinoDoDiaId)
+      .single();
+    
+    if (treinoDoDiaError || !treinoDoDiaData) {
+      console.error("ID não encontrado como treino ou treinoDoDia:", treinoDoDiaError);
+      return {
+        treino_id: treinoOuTreinoDoDiaId,
+        nome_treino: "Treino não encontrado",
+        existe: false
+      };
+    }
+    
+    const treino_id = treinoDoDiaData.treino_id;
+    
+    if (!treino_id) {
+      console.error("treinoDoDia encontrado mas sem treino_id associado:", treinoDoDiaData);
+      return {
+        treino_id: treinoOuTreinoDoDiaId,
+        nome_treino: "Treino do dia sem treino associado",
+        existe: false
+      };
+    }
+    
+    // Once we have the treino_id, fetch the treino details
+    const { data: detalhesDoTreino, error: erroDetalhes } = await supabase
+      .from('treinos')
+      .select('id, nome')
+      .eq('id', treino_id)
+      .single();
+      
+    if (erroDetalhes || !detalhesDoTreino) {
+      console.error("Treino referenciado não encontrado:", erroDetalhes);
+      return {
+        treino_id: treino_id,
+        nome_treino: "Treino referenciado não encontrado",
+        existe: false
+      };
+    }
+    
+    console.log("ID é um treinoDoDia válido com treino associado:", detalhesDoTreino);
+    return {
+      treino_id: detalhesDoTreino.id as string,
+      nome_treino: detalhesDoTreino.nome as string,
+      existe: true
+    };
+  } catch (erro) {
+    console.error("Erro ao obter detalhes do treino:", erro);
+    return {
+      treino_id: treinoOuTreinoDoDiaId,
+      nome_treino: "Erro ao verificar treino",
+      existe: false
+    };
   }
-}
+};
 
 // Função para salvar um evento qualificado no banco de dados
 export const salvarEventoQualificado = async (evento: EventoQualificado): Promise<string | null> => {
   try {
+    console.log("Iniciando salvamento do evento qualificado com dados:", evento);
+    
     if (!evento.atleta_id || !evento.fundamento || !evento.tipo_evento) {
       console.error("Dados incompletos para salvar evento qualificado:", evento);
       throw new Error("Dados incompletos para salvar evento qualificado");
     }
     
+    // Validar treino_id - é obrigatório para a constraint de chave estrangeira
+    if (!evento.treino_id) {
+      console.error("treino_id faltando para salvar evento qualificado:", evento);
+      throw new Error("treino_id é obrigatório para salvar avaliação");
+    }
+    
+    console.log("salvarEventoQualificado: Recebido treino_id:", evento.treino_id);
+    console.log("salvarEventoQualificado: Recebido exercicio_id:", evento.exercicio_id);
+    
     // Garante que o timestamp existe
     if (!evento.timestamp) {
       evento.timestamp = new Date().toISOString();
     }
+
+    // Obter o treino_id real (se for um treino do dia, obtém o treino associado)
+    const detalhesDoTreino = await obterDetalhesDoTreinoAtual(evento.treino_id);
+    const treino_id_real = detalhesDoTreino.treino_id;
     
-    // Tenta salvar no Supabase
-    const { data, error } = await supabase
-      .from('avaliacoes_eventos_qualificados')
-      .insert([evento])
-      .select()
-      .single();
+    // Verificar se o exercicio_id é válido
+    let exercicio_id_valido = null;
+    if (evento.exercicio_id) {
+      try {
+        // Verificar se o exercicio existe na tabela exercicios
+        const { data: exercicioData, error: exercicioError } = await supabase
+          .from('exercicios')
+          .select('id')
+          .eq('id', evento.exercicio_id)
+          .single();
+          
+        if (!exercicioError && exercicioData) {
+          exercicio_id_valido = evento.exercicio_id;
+          console.log("exercicio_id válido:", exercicio_id_valido);
+        } else {
+          console.warn("exercicio_id inválido, será omitido:", evento.exercicio_id);
+        }
+      } catch (erroExercicio) {
+        console.error("Erro ao verificar exercicio_id:", erroExercicio);
+        // Continuar sem exercicio_id
+      }
+    }
     
-    if (error) {
-      console.error("Erro ao salvar evento qualificado:", error);
+    if (!detalhesDoTreino.existe) {
+      console.warn(`Treino não encontrado (ID: ${evento.treino_id}). Salvando localmente apenas.`);
+      toast({
+        title: "Treino não encontrado",
+        description: "O treino selecionado não foi encontrado no banco de dados. Os dados serão salvos localmente.",
+        variant: "destructive",
+        duration: 5000
+      });
       
-      // Salvar localmente como fallback com ID único
+      // Salvar localmente
       const eventoLocal = {
         ...evento,
         id: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
       };
       
-      salvarEventoQualificadoLocalStorage(eventoLocal);
+      // Salvar no localStorage para sincronização posterior
+      const eventosLocais = JSON.parse(localStorage.getItem('avaliacoes_fundamento') || '[]');
+      eventosLocais.push(eventoLocal);
+      localStorage.setItem('avaliacoes_fundamento', JSON.stringify(eventosLocais));
+      
+      console.log("Avaliação salva localmente devido à falta de treino válido");
+      return null;
+    }
+    
+    console.log(`Usando treino_id real: ${treino_id_real} (${detalhesDoTreino.nome_treino})`);
+
+    // Preparar dados para inserção - versão simplificada sem detecção automática de estrutura
+    const dadosAvaliacao = {
+      atleta_id: evento.atleta_id,
+      treino_id: treino_id_real,
+      fundamento: evento.fundamento,
+      classificacao: evento.tipo_evento,
+      peso: evento.peso,
+      data_avaliacao: evento.timestamp,
+      observacoes: evento.observacoes,
+      origem: 'avaliacao_tempo_real'
+    };
+    
+    // Adicionar exercicio_id apenas se for válido
+    if (exercicio_id_valido) {
+      dadosAvaliacao['exercicio_id'] = exercicio_id_valido;
+    }
+    
+    console.log("Tentando salvar avaliação com dados:", dadosAvaliacao);
+    console.log("treino_id utilizado no INSERT:", dadosAvaliacao.treino_id);
+    console.log("exercicio_id utilizado no INSERT:", dadosAvaliacao['exercicio_id'] || "OMITIDO");
+    
+    // Tenta salvar no Supabase na tabela apropriada
+    const { data, error } = await supabase
+      .from('avaliacoes_fundamento')
+      .insert([dadosAvaliacao])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Erro ao salvar avaliação:", error);
+      
+      // Adicionar informações específicas sobre erros de chave estrangeira
+      if (error.code === '23503') { // código para violação de constraint de chave estrangeira
+        console.error("Erro de violação de chave estrangeira:", error.details);
+        
+        // Se o problema é com exercicio_id, tentar sem ele
+        if (error.details && error.details.includes('exercicio_id') && dadosAvaliacao['exercicio_id']) {
+          console.warn("Problema com exercicio_id, tentando novamente sem este campo");
+          
+          // Remover exercicio_id e tentar novamente
+          const { exercicio_id, ...dadosSemExercicio } = dadosAvaliacao;
+          
+          const { data: dataRetry, error: errorRetry } = await supabase
+            .from('avaliacoes_fundamento')
+            .insert([dadosSemExercicio])
+            .select()
+            .single();
+            
+          if (!errorRetry) {
+            console.log("Avaliação salva com sucesso sem exercicio_id:", dataRetry);
+            return dataRetry.id;
+          } else {
+            console.error("Erro mesmo sem exercicio_id:", errorRetry);
+          }
+        }
+        
+        if (error.details && error.details.includes('treino_id')) {
+          console.error("Problema específico com treino_id:", dadosAvaliacao.treino_id);
+          toast({
+            title: "Erro de referência de treino",
+            description: "O treino selecionado não foi encontrado no sistema. Os dados foram salvos localmente.",
+            variant: "destructive",
+            duration: 6000
+          });
+        }
+      }
+      
+      // Salvar localmente como fallback
+      const eventoLocal = {
+        ...dadosAvaliacao,
+        id: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+      };
+      
+      // Salvar no localStorage para sincronização posterior
+      const eventosLocais = JSON.parse(localStorage.getItem('avaliacoes_fundamento') || '[]');
+      eventosLocais.push(eventoLocal);
+      localStorage.setItem('avaliacoes_fundamento', JSON.stringify(eventosLocais));
+      
+      console.log("Avaliação salva localmente para sincronização posterior");
       throw error;
     }
     
-    console.log("Evento qualificado salvo com sucesso:", data);
+    console.log("Avaliação qualitativa salva com sucesso:", data);
     return data.id;
   } catch (erro) {
-    console.error("Exceção ao salvar evento qualificado:", erro);
+    console.error("Exceção ao salvar avaliação qualitativa:", erro);
     toast({
-      title: "Erro ao salvar evento",
-      description: "O evento foi salvo localmente e será sincronizado quando possível.",
+      title: "Erro ao salvar avaliação",
+      description: "A avaliação foi salva localmente e será sincronizada quando possível.",
       variant: "destructive"
     });
     
@@ -231,44 +384,31 @@ export const salvarEventoQualificadoLocalStorage = (evento: EventoQualificado): 
 // Função para buscar eventos qualificados com filtros
 export async function buscarEventosQualificados(filtros?: FiltroEventosQualificados): Promise<EventoQualificado[]> {
   try {
-    // Verificar se a tabela existe, mas não impedir a operação se falhar
-    let tabelaExiste = false;
-    try {
-      tabelaExiste = await verificarECriarTabelaEventosQualificados();
-    } catch (error) {
-      console.error("Erro ao verificar tabela, continuando com armazenamento local:", error);
+    // Tentar consultar direto do Supabase
+    let query = supabase
+      .from('avaliacoes_eventos_qualificados')
+      .select('*');
+    
+    // Aplicar filtros se existirem
+    if (filtros) {
+      if (filtros.atleta_id) query = query.eq('atleta_id', filtros.atleta_id);
+      if (filtros.data_inicio) query = query.gte('created_at', filtros.data_inicio);
+      if (filtros.data_fim) query = query.lte('created_at', filtros.data_fim);
+      if (filtros.fundamento) query = query.eq('fundamento', filtros.fundamento);
+      if (filtros.tipo_evento) query = query.eq('tipo_evento', filtros.tipo_evento);
+      if (filtros.treino_id) query = query.eq('treino_id', filtros.treino_id);
     }
     
-    // Se a tabela existir e tivermos conexão, tentar buscar do Supabase
-    if (tabelaExiste) {
-      let query = supabase
-        .from('avaliacoes_eventos_qualificados')
-        .select('*');
-      
-      // Aplicar filtros se existirem
-      if (filtros) {
-        if (filtros.atleta_id) query = query.eq('atleta_id', filtros.atleta_id);
-        if (filtros.data_inicio) query = query.gte('created_at', filtros.data_inicio);
-        if (filtros.data_fim) query = query.lte('created_at', filtros.data_fim);
-        if (filtros.fundamento) query = query.eq('fundamento', filtros.fundamento);
-        if (filtros.tipo_evento) query = query.eq('tipo_evento', filtros.tipo_evento);
-        if (filtros.treino_id) query = query.eq('treino_id', filtros.treino_id);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Erro ao buscar eventos do Supabase:", error);
-        // Fallback para dados locais
-        return obterEventosQualificadosLocalStorage(filtros);
-      }
-      
-      // Se tudo correr bem, retornar dados do Supabase
-      return data as EventoQualificado[];
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error("Erro ao buscar eventos do Supabase:", error);
+      // Fallback para dados locais
+      return obterEventosQualificadosLocalStorage(filtros);
     }
     
-    // Se a tabela não existir, ou se houver problemas, usar dados locais
-    return obterEventosQualificadosLocalStorage(filtros);
+    // Se tudo correr bem, retornar dados do Supabase
+    return data as EventoQualificado[];
   } catch (error) {
     console.error("Erro ao buscar eventos qualificados:", error);
     // Em caso de erro, retornar dados do localStorage
