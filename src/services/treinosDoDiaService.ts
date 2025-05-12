@@ -85,10 +85,15 @@ export const fetchTreinoDoDiaById = async (id: string): Promise<TreinoDoDia | nu
         treino:treino_id(id, nome, local, horario, time)
       `)
       .eq('id', id)
-      .single();
+      .maybeSingle();
       
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching training day:', error);
+      return null;
+    }
+    
+    if (!data) {
+      console.warn('Training day not found with ID:', id);
       return null;
     }
     
@@ -147,10 +152,15 @@ export const fetchPresencasAtletas = async (treinoDoDiaId: string): Promise<Pres
         treino:treino_id(id, time)
       `)
       .eq('id', treinoDoDiaId)
-      .single();
+      .maybeSingle(); // Changed from single() to maybeSingle() to avoid PGRST116 errors
       
     if (treinoDoDiaError) {
       console.error('Error fetching training day:', treinoDoDiaError);
+      return [];
+    }
+    
+    if (!treinoDoDia) {
+      console.error('Training day not found with ID:', treinoDoDiaId);
       return [];
     }
     
@@ -218,74 +228,75 @@ export const registrarPresencasEmLote = async ({
     
     const validPresences = presences.filter(p => {
       if (!p.atleta_id) {
-        console.warn("[DEBUG] Presença sem ID de atleta, ignorando");
+        console.warn("[DEBUG] Presença sem ID de atleta válido, ignorando");
         return false;
       }
       return true;
     });
     
-    if (validPresences.length === 0) {
+    if (!validPresences.length) {
       console.warn("[DEBUG] Nenhuma presença válida para salvar");
       return true;
     }
     
-    const existingRecords = validPresences.filter(p => p.id);
-    const newRecords = validPresences.filter(p => !p.id);
+    // Separar registros a inserir e a atualizar
+    const presencesToUpdate = validPresences.filter(p => p.id);
+    const presencesToInsert = validPresences.filter(p => !p.id);
     
-    console.log(`[DEBUG] Registros existentes: ${existingRecords.length}, Novos registros: ${newRecords.length}`);
+    console.log(`[DEBUG] Registros a inserir: ${presencesToInsert.length}, a atualizar: ${presencesToUpdate.length}`);
     
-    for (const record of existingRecords) {
-      const { id, ...updateData } = record;
+    // Inserir novos registros se houver
+    if (presencesToInsert.length > 0) {
+      const newRecords = presencesToInsert.map(({ id, ...rest }) => ({
+        ...rest,
+        treino_do_dia_id: treinoDoDiaId 
+      }));
       
-      console.log(`[DEBUG] Atualizando registro ${id} para atleta ${record.atleta_id}, presente: ${record.presente}`);
+      const { error: insertError } = await supabase
+        .from('treinos_presencas')
+        .insert(newRecords);
       
-      const { error } = await supabase
+      if (insertError) {
+        console.error("[ERROR] Erro ao inserir registros de presença:", insertError);
+        throw new Error(`Error inserting attendance records: ${insertError.message}`);
+      }
+    }
+    
+    // Atualizar registros existentes se houver
+    for (const presence of presencesToUpdate) {
+      const { id, ...updateData } = presence;
+      
+      const { error: updateError } = await supabase
         .from('treinos_presencas')
         .update({
           ...updateData,
           treino_do_dia_id: treinoDoDiaId
         })
-        .eq('id', id as string);
-        
-      if (error) {
-        console.error(`[ERROR] Erro ao atualizar registro de presença ${id}:`, error);
-        throw new Error(`Error updating attendance record: ${error.message}`);
+        .eq('id', id);
+      
+      if (updateError) {
+        console.error(`[ERROR] Erro ao atualizar registro de presença ${id}:`, updateError);
+        throw new Error(`Error updating attendance record: ${updateError.message}`);
       }
     }
     
-    if (newRecords.length > 0) {
-      const recordsToInsert = newRecords.map(record => ({
-        ...record,
-        treino_do_dia_id: treinoDoDiaId
-      }));
-      
-      console.log(`[DEBUG] Inserindo ${recordsToInsert.length} novos registros de presença`);
-      console.log(`[DEBUG] Exemplo: atleta_id=${recordsToInsert[0]?.atleta_id}, presente=${recordsToInsert[0]?.presente}`);
-      
-      const { data, error } = await supabase
-        .from('treinos_presencas')
-        .insert(recordsToInsert)
-        .select();
-        
-      if (error) {
-        console.error(`[ERROR] Erro ao inserir registros de presença:`, error);
-        throw new Error(`Error inserting attendance records: ${error.message}`);
+    console.log("[DEBUG] Todos os registros de presença foram salvos com sucesso");
+    
+    // Acionar o recálculo de índices de esforço após salvar
+    try {
+      const { error: refreshError } = await supabase.rpc('refresh_effort_indices');
+      if (refreshError) {
+        console.warn("[WARNING] Erro ao recalcular índices de esforço:", refreshError);
       }
-      
-      console.log(`[DEBUG] ${data?.length || 0} registros inseridos com sucesso`);
+    } catch (error) {
+      console.warn("[WARNING] Exceção ao recalcular índices de esforço:", error);
+      // Não lançamos erro aqui para não falhar a operação principal
     }
     
-    const atletaIds = [...new Set(validPresences.map(p => p.atleta_id))];
-    console.log(`[DEBUG] Atualizando índices de esforço para ${atletaIds.length} atletas`);
-    
-    for (const atletaId of atletaIds) {
-      await updateAthleteEffortIndex(atletaId);
-    }
-    
-    console.log(`[DEBUG] Presenças registradas com sucesso para o treino ${treinoDoDiaId}`);
     return true;
   } catch (error) {
-    console.error('[ERROR] Erro completo ao registrar presenças:', error);
+    console.error("[ERROR] Erro ao inserir registros de presença:", error);
+    console.error("[ERROR] Erro completo ao registrar presenças:", error);
     throw error;
   }
 };
@@ -363,11 +374,16 @@ export const definirTreinoDoDia = async (treinoId: string): Promise<{ id: string
       .from('treinos')
       .select('data')
       .eq('id', treinoId)
-      .single();
+      .maybeSingle();
     
-    if (treinoError || !treino) {
+    if (treinoError) {
       console.error('Error fetching training:', treinoError);
       throw new Error(treinoError?.message || 'Erro ao buscar dados do treino');
+    }
+
+    if (!treino) {
+      console.error('Training not found with ID:', treinoId);
+      throw new Error('Treino não encontrado');
     }
 
     // Insert new record in treinos_do_dia
@@ -379,11 +395,16 @@ export const definirTreinoDoDia = async (treinoId: string): Promise<{ id: string
         aplicado: false
       })
       .select('id')
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error('Error setting training for the day:', error);
       throw new Error(error.message);
+    }
+    
+    if (!data) {
+      console.error('Failed to create training day record');
+      throw new Error('Falha ao criar registro de treino do dia');
     }
     
     return data;
@@ -411,7 +432,7 @@ export const getTreinoDoDia = async (date: Date): Promise<any> => {
         treino:treino_id(id, nome, local, horario, time)
       `)
       .eq('data', formattedDate)
-      .single();
+      .maybeSingle(); // Changed from single() to maybeSingle() to avoid PGRST116 errors
       
     if (error && error.code !== 'PGRST116') { // Not found error code
       console.error("Error fetching training day:", error);
@@ -484,6 +505,13 @@ export const setTreinoParaDia = async (treinoId: string, data?: Date): Promise<a
  */
 export const fetchTreinoAtual = async (treinoDoDiaId: string): Promise<any> => {
   try {
+    if (!treinoDoDiaId) {
+      console.error("[treinosDoDiaService] fetchTreinoAtual: treinoDoDiaId é null ou undefined");
+      return { exercicios: [] };
+    }
+
+    console.log("[treinosDoDiaService] Buscando informações do treino para treinoDoDiaId:", treinoDoDiaId);
+    
     // First get the training day details
     const { data: treinoDoDia, error: treinoDoDiaError } = await supabase
       .from('treinos_do_dia')
@@ -495,18 +523,39 @@ export const fetchTreinoAtual = async (treinoDoDiaId: string): Promise<any> => {
         treino:treino_id(id, nome, local, horario, time)
       `)
       .eq('id', treinoDoDiaId)
-      .single();
+      .maybeSingle(); // Use maybeSingle to avoid PGRST116 errors
       
     if (treinoDoDiaError) {
-      console.error("Error fetching training day:", treinoDoDiaError);
-      throw treinoDoDiaError;
+      console.error("[treinosDoDiaService] Erro ao buscar treino do dia:", treinoDoDiaError);
+      return { exercicios: [] };
     }
+    
+    if (!treinoDoDia) {
+      console.warn("[treinosDoDiaService] Treino do dia não encontrado para ID:", treinoDoDiaId);
+      return { exercicios: [] };
+    }
+    
+    if (!treinoDoDia.treino_id) {
+      console.warn("[treinosDoDiaService] Treino do dia sem treino_id associado:", treinoDoDiaId);
+      return { 
+        id: treinoDoDiaId,
+        data: treinoDoDia.data,
+        treino_id: null,
+        aplicado: treinoDoDia.aplicado,
+        treino: null,
+        exercicios: [] 
+      };
+    }
+    
+    console.log("[treinosDoDiaService] Buscando exercícios para treino_id:", treinoDoDia.treino_id);
     
     // Now fetch the exercises for this training
     const { data: exercicios, error: exerciciosError } = await supabase
       .from('treinos_exercicios')
       .select(`
         id,
+        treino_id,
+        exercicio_id,
         ordem,
         tempo_real,
         concluido,
@@ -517,17 +566,32 @@ export const fetchTreinoAtual = async (treinoDoDiaId: string): Promise<any> => {
       .order('ordem');
       
     if (exerciciosError) {
-      console.error("Error fetching exercises:", exerciciosError);
-      throw exerciciosError;
+      console.error("[treinosDoDiaService] Erro ao buscar exercícios:", exerciciosError);
+      return { 
+        ...treinoDoDia,
+        exercicios: [] 
+      };
     }
+    
+    // Validar os exercícios para garantir que todos os campos necessários existam
+    const exerciciosValidados = (exercicios || []).filter(exercicio => {
+      if (!exercicio.id) {
+        console.warn("[treinosDoDiaService] Exercício sem ID encontrado");
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log("[treinosDoDiaService] Exercícios validados:", exerciciosValidados.length);
     
     // Return both the training day info and the exercises
     return {
       ...treinoDoDia,
-      exercicios: exercicios || []
+      exercicios: exerciciosValidados || []
     };
   } catch (error) {
-    console.error("Error fetching current training with exercises:", error);
+    console.error("[treinosDoDiaService] Erro ao buscar treino atual com exercícios:", error);
     return { exercicios: [] };
   }
 };
@@ -589,40 +653,110 @@ export const salvarAvaliacaoExercicio = async (avaliacaoData: any): Promise<any>
 
 export const getExerciciosTreinoDoDia = async (treinoDoDiaId: string): Promise<any[]> => {
   try {
+    if (!treinoDoDiaId) {
+      console.error("[treinosDoDiaService] getExerciciosTreinoDoDia: treinoDoDiaId é null ou undefined");
+      return [];
+    }
+
+    console.log("[treinosDoDiaService] Buscando exercícios para treinoDoDiaId:", treinoDoDiaId);
+    
     // First, get the treino_id from the treino_do_dia
     const { data: treinoDoDia, error: treinoDoDiaError } = await supabase
       .from('treinos_do_dia')
       .select('treino_id')
       .eq('id', treinoDoDiaId)
-      .single();
+      .maybeSingle(); // Use maybeSingle to avoid PGRST116 errors
       
-    if (treinoDoDiaError || !treinoDoDia) {
-      console.error("Error fetching training day:", treinoDoDiaError);
+    if (treinoDoDiaError) {
+      console.error("[treinosDoDiaService] Erro ao buscar treino do dia:", treinoDoDiaError);
       return [];
     }
     
-    // Now fetch the exercises for that training
+    if (!treinoDoDia) {
+      console.warn("[treinosDoDiaService] Treino do dia não encontrado para ID:", treinoDoDiaId);
+      return [];
+    }
+    
+    if (!treinoDoDia.treino_id) {
+      console.warn("[treinosDoDiaService] Treino do dia sem treino_id associado:", treinoDoDiaId);
+      return [];
+    }
+    
+    console.log("[treinosDoDiaService] Usando treino_id para buscar exercícios:", treinoDoDia.treino_id);
+    
+    // Now fetch the exercises for that training with detailed data
     const { data: exercicios, error: exerciciosError } = await supabase
       .from('treinos_exercicios')
       .select(`
         id,
+        treino_id,
+        exercicio_id,
         ordem,
         tempo_real,
         concluido,
         observacao,
-        exercicio:exercicio_id(id, nome, descricao, categoria, tempo_estimado, imagem_url)
+        exercicio:exercicio_id(
+          id, 
+          nome, 
+          descricao, 
+          categoria, 
+          tempo_estimado, 
+          imagem_url, 
+          fundamentos,
+          checklist_tecnico
+        )
       `)
       .eq('treino_id', treinoDoDia.treino_id)
       .order('ordem');
       
     if (exerciciosError) {
-      console.error("Error fetching exercises:", exerciciosError);
+      console.error("[treinosDoDiaService] Erro ao buscar exercícios:", exerciciosError);
       return [];
     }
     
-    return exercicios || [];
+    if (!exercicios || exercicios.length === 0) {
+      console.warn("[treinosDoDiaService] Nenhum exercício encontrado para o treino_id:", treinoDoDia.treino_id);
+      return [];
+    }
+    
+    console.log("[treinosDoDiaService] Exercícios encontrados:", exercicios.length);
+    
+    // Validar cada exercício para garantir que todos os IDs necessários existam
+    const exerciciosValidados = exercicios
+      .filter(exercicio => {
+        // Validar o ID do exercicio
+        if (!exercicio.id) {
+          console.warn("[treinosDoDiaService] Exercício sem ID encontrado");
+          return false;
+        }
+        
+        // Validar o exercicio_id (chave estrangeira)
+        if (!exercicio.exercicio_id) {
+          console.warn("[treinosDoDiaService] Exercício sem exercicio_id:", exercicio.id);
+          return false;
+        }
+        
+        // Verificar se o objeto exercicio existe (join funcionou)
+        if (!exercicio.exercicio) {
+          console.warn("[treinosDoDiaService] Exercício sem dados relacionados:", exercicio.id);
+          // Ainda retornamos true pois o exercício em si é válido
+          return true;
+        }
+        
+        return true;
+      })
+      .map(exercicio => {
+        // Garantir que o exercício tenha o treino_id correto
+        return {
+          ...exercicio,
+          treino_id: treinoDoDia.treino_id
+        };
+      });
+    
+    console.log("[treinosDoDiaService] Exercícios validados:", exerciciosValidados.length);
+    return exerciciosValidados;
   } catch (error) {
-    console.error("Error getting exercises for training day:", error);
+    console.error("[treinosDoDiaService] Erro ao obter exercícios para avaliação:", error);
     return [];
   }
 };

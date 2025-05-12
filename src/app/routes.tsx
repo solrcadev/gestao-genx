@@ -11,6 +11,7 @@ import Atletas from '@/pages/Atletas';
 import Performance from '@/pages/Performance';
 import EvaluationManagement from '@/pages/EvaluationManagement';
 import MonitorManagement from '@/pages/MonitorManagement';
+import Presenca from '@/pages/Presenca';
 
 export const appRoutes = [
   {
@@ -86,6 +87,14 @@ export const appRoutes = [
     element: (
       <ProtectedRoute>
         <MonitorManagement />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/presenca",
+    element: (
+      <ProtectedRoute>
+        <Presenca />
       </ProtectedRoute>
     ),
   },

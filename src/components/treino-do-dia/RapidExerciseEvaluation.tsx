@@ -91,11 +91,16 @@ export function RapidExerciseEvaluation({
           .from('treinos_do_dia')
           .select('treino_id')
           .eq('id', treinoDoDiaId)
-          .single();
+          .maybeSingle();
 
         if (treinoError) {
           console.error('Error fetching treino do dia for evaluation:', treinoError);
           throw new Error(treinoError.message);
+        }
+        
+        if (!treinoDoDia) {
+          console.error('No treino do dia found with ID:', treinoDoDiaId);
+          return getEvaluationsFromLocalStorage(null, exerciseId, selectedFundamento);
         }
 
         const { data, error } = await supabase

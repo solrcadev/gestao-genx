@@ -30,11 +30,16 @@ export function ExerciseEvaluationTabs({
         .from("treinos_do_dia")
         .select("treino_id")
         .eq("id", treinoDoDiaId)
-        .single();
+        .maybeSingle();
 
       if (treinoDoDiaError) {
         console.error("Error fetching treino do dia:", treinoDoDiaError);
         throw new Error(treinoDoDiaError.message);
+      }
+
+      if (!treinoDoDia) {
+        console.error("No treino do dia found with ID:", treinoDoDiaId);
+        return [];
       }
 
       // Then, get the exercises for this treino

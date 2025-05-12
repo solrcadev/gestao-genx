@@ -18,6 +18,8 @@ import AthleteAnalysis from '@/components/performance/AthleteAnalysis';
 import AthleteRanking from '@/components/performance/AthleteRanking';
 import Rankings from '@/components/performance/Rankings';
 import { IndividualView } from '@/components/performance/content/IndividualView';
+import { useDesempenhoQualitativo } from '@/hooks/use-desempenho-qualitativo';
+import TabelaDesempenhoQualitativo from '@/components/performance/TabelaDesempenhoQualitativo';
 
 // Tipo para os fundamentos
 type Fundamento = 'saque' | 'recepção' | 'levantamento' | 'ataque' | 'bloqueio' | 'defesa';
@@ -30,14 +32,14 @@ interface FundamentoMedia {
 }
 
 // Tipo para abas de análise
-type AnalysisTab = 'equipe' | 'individual' | 'ranking';
+type AnalysisTab = 'equipe' | 'individual' | 'ranking' | 'qualitativo';
 
 const Performance = () => {
   const [team, setTeam] = useState<TeamType>("Masculino");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<AnalysisTab>('equipe');
+  const [activeTab, setActiveTab] = useState<AnalysisTab>('qualitativo');
   const [fundamentoSelecionado, setFundamentoSelecionado] = useState<Fundamento>('saque');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -66,6 +68,9 @@ const Performance = () => {
       }
     },
   });
+
+  // Buscar dados de desempenho qualitativo
+  const { desempenho, loading: loadingQualitativo, error: errorQualitativo } = useDesempenhoQualitativo();
 
   // Filtrar atletas com base na busca
   const filteredAthletes = performanceData?.filter(performance => 
@@ -238,116 +243,83 @@ const Performance = () => {
           </div>
         </div>
         
-        {/* Resto do conteúdo */}
-      <div className="sticky top-0 z-10 bg-background pt-2 pb-4 space-y-4 mb-6 shadow-sm">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar atleta..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button 
-              className="absolute right-2 top-1/2 transform -translate-y-1/2"
-              onClick={() => setSearchQuery("")}
-            >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          )}
-        </div>
-        
-        {/* Navegação simplificada */}
-        <div className="flex w-full rounded-md border p-1">
-          <button
-            className={`flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === 'equipe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('equipe')}
-          >
-            <div className="flex items-center justify-center gap-1">
-              <Users className="h-4 w-4" /> 
-              <span>Equipe</span>
-            </div>
-          </button>
-          <button
-            className={`flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === 'individual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('individual')}
-          >
-            <div className="flex items-center justify-center gap-1">
-              <User className="h-4 w-4" /> 
-              <span>Individual</span>
-            </div>
-          </button>
-          <button
-            className={`flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === 'ranking' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('ranking')}
-          >
-            <div className="flex items-center justify-center gap-1">
-              <Trophy className="h-4 w-4" /> 
+        {/* Abas de análise */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AnalysisTab)} className="w-full">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="qualitativo" className="flex items-center gap-1">
+              <Trophy className="h-4 w-4" />
+              <span>Avaliação Qualitativa</span>
+            </TabsTrigger>
+            <TabsTrigger value="equipe" className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              <span>Visão Equipe</span>
+            </TabsTrigger>
+            <TabsTrigger value="individual" className="flex items-center gap-1">
+              <User className="h-4 w-4" />
+              <span>Visão Individual</span>
+            </TabsTrigger>
+            <TabsTrigger value="ranking" className="flex items-center gap-1">
+              <BarChart2 className="h-4 w-4" />
               <span>Ranking</span>
-            </div>
-          </button>
-        </div>
-      </div>
-      
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
         {/* Mensagem de erro se houver */}
-          {errorMessage && (
+        {errorMessage && (
           <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
             <p>{errorMessage}</p>
           </div>
         )}
         
-        {/* Mostrar adequadamente com base na aba selecionada */}
-        <div className="mt-6">
-          {isLoading ? (
-            <div className="grid grid-cols-1 gap-4">
-              {renderSkeletons()}
-        </div>
-      ) : (
-        <>
-              {activeTab === 'equipe' && (
-                <div className="space-y-6">
-                  <TeamPerformanceSummary 
-                    mediasFundamentos={mediasFundamentos}
-                  />
-              
-              <TopAthletesSection
-                    topAtletas={topAtletas} 
-                fundamentoSelecionado={fundamentoSelecionado}
-                setFundamentoSelecionado={setFundamentoSelecionado}
-                    onSelectAthlete={(id) => handleSelectAthlete(id)}
-              />
-              
-              <PerformanceAlerts
-                alertas={alertas}
-                    onSelectAthlete={(id) => handleSelectAthlete(id)}
-              />
-            </div>
-              )}
-              
-              {activeTab === 'individual' && (
-                <IndividualView
-                  performanceData={performanceData || []}
-              selectedAthleteId={selectedAthleteId}
-              setSelectedAthleteId={setSelectedAthleteId}
-              selectedAthlete={selectedAthlete}
+        {/* Conteúdo baseado na aba selecionada */}
+        {activeTab === 'qualitativo' && (
+          <div className="space-y-4">
+            <TabelaDesempenhoQualitativo 
+              desempenho={desempenho}
+              loading={loadingQualitativo}
+            />
+          </div>
+        )}
+        
+        {activeTab === 'equipe' && (
+          <div className="space-y-6">
+            <TeamPerformanceSummary 
               mediasFundamentos={mediasFundamentos}
-              team={team}
-              onOpenDetailDrawer={() => setIsDetailOpen(true)}
             />
-              )}
-              
-              {activeTab === 'ranking' && (
-                <div className="space-y-6">
-                  <Rankings
-                    performanceData={performanceData || []} 
-              team={team}
+          
+            <TopAthletesSection
+                  topAtletas={topAtletas} 
+              fundamentoSelecionado={fundamentoSelecionado}
+              setFundamentoSelecionado={setFundamentoSelecionado}
+                  onSelectAthlete={(id) => handleSelectAthlete(id)}
             />
-                </div>
-          )}
-        </>
-      )}
-        </div>
+            
+            <PerformanceAlerts
+              alertas={alertas}
+                  onSelectAthlete={(id) => handleSelectAthlete(id)}
+            />
+          </div>
+        )}
+        
+        {activeTab === 'individual' && (
+          <IndividualView
+            performanceData={performanceData || []}
+            selectedAthleteId={selectedAthleteId}
+            setSelectedAthleteId={setSelectedAthleteId}
+            selectedAthlete={selectedAthlete}
+            mediasFundamentos={mediasFundamentos}
+            team={team}
+            onOpenDetailDrawer={() => setIsDetailOpen(true)}
+          />
+        )}
+        
+        {activeTab === 'ranking' && (
+          <div className="space-y-6">
+            <Rankings />
+          </div>
+        )}
+      </div>
       
       <Drawer open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DrawerContent className="max-h-[90vh]">
@@ -380,7 +352,6 @@ const Performance = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-      </div>
     </div>
   );
 };

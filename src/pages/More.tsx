@@ -82,9 +82,9 @@ const More = () => {
     },
     {
       icon: <CheckSquare className="h-5 w-5" />,
-      title: "Gestão de Presença",
+      title: "Gerenciar Presenças",
       description: "Controle de presença em treinos",
-      path: "/presencas",
+      path: "/presenca",
       showFor: ['tecnico', 'monitor'] // Visível para ambos, com permissões de registro
     },
     {

@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
@@ -19,7 +18,7 @@ export function useAvaliacoesAtleta(atletaId: string | undefined) {
       if (!atletaId) return [];
       
       const { data, error } = await supabase
-        .from("avaliacoes_eventos_qualificados")
+        .from("avaliacoes_fundamento")
         .select("*")
         .eq("atleta_id", atletaId)
         .order("timestamp", { ascending: false })

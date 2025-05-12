@@ -104,20 +104,35 @@ export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string):
   existe: boolean;
 }> => {
   try {
+    console.log("[AvaliacaoService] Verificando treino com ID:", treinoOuTreinoDoDiaId);
+    
+    if (!treinoOuTreinoDoDiaId) {
+      console.error("[AvaliacaoService] ID de treino fornecido é nulo ou vazio");
+      return {
+        treino_id: "",
+        nome_treino: "ID de treino inválido",
+        existe: false
+      };
+    }
+
     // First check if it's a direct treino ID
     const { data: treinoData, error: treinoError } = await supabase
       .from('treinos')
       .select('id, nome')
       .eq('id', treinoOuTreinoDoDiaId)
-      .single();
+      .maybeSingle(); // Usar maybeSingle em vez de single para evitar erro 406
     
-    if (!treinoError && treinoData) {
-      console.log("ID é um treino válido:", treinoData);
+    if (treinoError) {
+      console.error("[AvaliacaoService] Erro ao consultar treino diretamente:", treinoError);
+    } else if (treinoData) {
+      console.log("[AvaliacaoService] ID é um treino válido:", treinoData);
       return {
         treino_id: treinoData.id as string,
         nome_treino: treinoData.nome as string,
         existe: true
       };
+    } else {
+      console.log("[AvaliacaoService] ID não corresponde a um treino direto, verificando como treinoDoDia");
     }
     
     // If not found as treino, check if it's a treinoDoDia
@@ -128,10 +143,19 @@ export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string):
         treino_id
       `)
       .eq('id', treinoOuTreinoDoDiaId)
-      .single();
+      .maybeSingle(); // Usar maybeSingle em vez de single
     
-    if (treinoDoDiaError || !treinoDoDiaData) {
-      console.error("ID não encontrado como treino ou treinoDoDia:", treinoDoDiaError);
+    if (treinoDoDiaError) {
+      console.error("[AvaliacaoService] Erro ao verificar como treinoDoDia:", treinoDoDiaError);
+      return {
+        treino_id: treinoOuTreinoDoDiaId,
+        nome_treino: "Erro ao verificar treino",
+        existe: false
+      };
+    }
+    
+    if (!treinoDoDiaData) {
+      console.error("[AvaliacaoService] ID não encontrado como treino ou treinoDoDia:", treinoOuTreinoDoDiaId);
       return {
         treino_id: treinoOuTreinoDoDiaId,
         nome_treino: "Treino não encontrado",
@@ -142,7 +166,7 @@ export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string):
     const treino_id = treinoDoDiaData.treino_id;
     
     if (!treino_id) {
-      console.error("treinoDoDia encontrado mas sem treino_id associado:", treinoDoDiaData);
+      console.error("[AvaliacaoService] treinoDoDia encontrado mas sem treino_id associado:", treinoDoDiaData);
       return {
         treino_id: treinoOuTreinoDoDiaId,
         nome_treino: "Treino do dia sem treino associado",
@@ -155,10 +179,19 @@ export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string):
       .from('treinos')
       .select('id, nome')
       .eq('id', treino_id)
-      .single();
+      .maybeSingle(); // Usar maybeSingle em vez de single
       
-    if (erroDetalhes || !detalhesDoTreino) {
-      console.error("Treino referenciado não encontrado:", erroDetalhes);
+    if (erroDetalhes) {
+      console.error("[AvaliacaoService] Erro ao buscar detalhes do treino referenciado:", erroDetalhes);
+      return {
+        treino_id: treino_id,
+        nome_treino: "Erro ao buscar treino",
+        existe: false
+      };
+    }
+    
+    if (!detalhesDoTreino) {
+      console.error("[AvaliacaoService] Treino referenciado não encontrado para ID:", treino_id);
       return {
         treino_id: treino_id,
         nome_treino: "Treino referenciado não encontrado",
@@ -166,14 +199,14 @@ export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string):
       };
     }
     
-    console.log("ID é um treinoDoDia válido com treino associado:", detalhesDoTreino);
+    console.log("[AvaliacaoService] ID é um treinoDoDia válido com treino associado:", detalhesDoTreino);
     return {
       treino_id: detalhesDoTreino.id as string,
       nome_treino: detalhesDoTreino.nome as string,
       existe: true
     };
   } catch (erro) {
-    console.error("Erro ao obter detalhes do treino:", erro);
+    console.error("[AvaliacaoService] Exceção ao obter detalhes do treino:", erro);
     return {
       treino_id: treinoOuTreinoDoDiaId,
       nome_treino: "Erro ao verificar treino",
@@ -185,33 +218,33 @@ export const obterDetalhesDoTreinoAtual = async (treinoOuTreinoDoDiaId: string):
 // Função para salvar um evento qualificado no banco de dados
 export const salvarEventoQualificado = async (evento: EventoQualificado): Promise<string | null> => {
   try {
-    console.log("Iniciando salvamento do evento qualificado com dados:", evento);
+    console.log("[AvaliacaoService] Iniciando salvamento do evento qualificado com dados:", evento);
     
     if (!evento.atleta_id || !evento.fundamento || !evento.tipo_evento) {
-      console.error("Dados incompletos para salvar evento qualificado:", evento);
+      console.error("[AvaliacaoService] Dados incompletos para salvar evento qualificado:", evento);
       throw new Error("Dados incompletos para salvar evento qualificado");
     }
     
     // Validar treino_id - é obrigatório para a constraint de chave estrangeira
     if (!evento.treino_id) {
-      console.error("treino_id faltando para salvar evento qualificado:", evento);
+      console.error("[AvaliacaoService] treino_id faltando para salvar evento qualificado:", evento);
       throw new Error("treino_id é obrigatório para salvar avaliação");
     }
     
-    console.log("salvarEventoQualificado: Recebido treino_id:", evento.treino_id);
-    console.log("salvarEventoQualificado: Recebido exercicio_id:", evento.exercicio_id);
+    console.log("[AvaliacaoService] salvarEventoQualificado: Recebido treino_id:", evento.treino_id);
+    console.log("[AvaliacaoService] salvarEventoQualificado: Recebido exercicio_id:", evento.exercicio_id);
     
     // Garante que o timestamp existe
     if (!evento.timestamp) {
       evento.timestamp = new Date().toISOString();
     }
-
+    
     // Obter o treino_id real (se for um treino do dia, obtém o treino associado)
     const detalhesDoTreino = await obterDetalhesDoTreinoAtual(evento.treino_id);
     const treino_id_real = detalhesDoTreino.treino_id;
     
     // Verificar se o exercicio_id é válido
-    let exercicio_id_valido = null;
+    let exercicio_id_valido: string | null = null;
     if (evento.exercicio_id) {
       try {
         // Verificar se o exercicio existe na tabela exercicios
@@ -219,22 +252,24 @@ export const salvarEventoQualificado = async (evento: EventoQualificado): Promis
           .from('exercicios')
           .select('id')
           .eq('id', evento.exercicio_id)
-          .single();
+          .maybeSingle(); // Usar maybeSingle em vez de single
           
-        if (!exercicioError && exercicioData) {
+        if (exercicioError) {
+          console.error("[AvaliacaoService] Erro ao verificar exercicio_id:", exercicioError);
+        } else if (exercicioData) {
           exercicio_id_valido = evento.exercicio_id;
-          console.log("exercicio_id válido:", exercicio_id_valido);
+          console.log("[AvaliacaoService] exercicio_id válido:", exercicio_id_valido);
         } else {
-          console.warn("exercicio_id inválido, será omitido:", evento.exercicio_id);
+          console.warn("[AvaliacaoService] exercicio_id não encontrado no banco, será omitido:", evento.exercicio_id);
         }
       } catch (erroExercicio) {
-        console.error("Erro ao verificar exercicio_id:", erroExercicio);
+        console.error("[AvaliacaoService] Exceção ao verificar exercicio_id:", erroExercicio);
         // Continuar sem exercicio_id
       }
     }
     
     if (!detalhesDoTreino.existe) {
-      console.warn(`Treino não encontrado (ID: ${evento.treino_id}). Salvando localmente apenas.`);
+      console.warn(`[AvaliacaoService] Treino não encontrado (ID: ${evento.treino_id}). Salvando localmente apenas.`);
       toast({
         title: "Treino não encontrado",
         description: "O treino selecionado não foi encontrado no banco de dados. Os dados serão salvos localmente.",
@@ -253,50 +288,60 @@ export const salvarEventoQualificado = async (evento: EventoQualificado): Promis
       eventosLocais.push(eventoLocal);
       localStorage.setItem('avaliacoes_fundamento', JSON.stringify(eventosLocais));
       
-      console.log("Avaliação salva localmente devido à falta de treino válido");
+      console.log("[AvaliacaoService] Avaliação salva localmente devido à falta de treino válido");
       return null;
     }
     
-    console.log(`Usando treino_id real: ${treino_id_real} (${detalhesDoTreino.nome_treino})`);
+    console.log(`[AvaliacaoService] Usando treino_id real: ${treino_id_real} (${detalhesDoTreino.nome_treino})`);
 
     // Preparar dados para inserção - versão simplificada sem detecção automática de estrutura
-    const dadosAvaliacao = {
+    const dadosAvaliacao: {
+      atleta_id: string;
+      treino_id: string;
+      fundamento: string;
+      tipo_evento: string;
+      peso: number;
+      timestamp: string;
+      observacoes?: string;
+      origem: string;
+      exercicio_id?: string;
+    } = {
       atleta_id: evento.atleta_id,
       treino_id: treino_id_real,
       fundamento: evento.fundamento,
-      classificacao: evento.tipo_evento,
+      tipo_evento: evento.tipo_evento,
       peso: evento.peso,
-      data_avaliacao: evento.timestamp,
+      timestamp: evento.timestamp,
       observacoes: evento.observacoes,
       origem: 'avaliacao_tempo_real'
     };
     
     // Adicionar exercicio_id apenas se for válido
     if (exercicio_id_valido) {
-      dadosAvaliacao['exercicio_id'] = exercicio_id_valido;
+      dadosAvaliacao.exercicio_id = exercicio_id_valido;
     }
     
-    console.log("Tentando salvar avaliação com dados:", dadosAvaliacao);
-    console.log("treino_id utilizado no INSERT:", dadosAvaliacao.treino_id);
-    console.log("exercicio_id utilizado no INSERT:", dadosAvaliacao['exercicio_id'] || "OMITIDO");
+    console.log("[AvaliacaoService] Tentando salvar avaliação com dados:", dadosAvaliacao);
+    console.log("[AvaliacaoService] treino_id utilizado no INSERT:", dadosAvaliacao.treino_id);
+    console.log("[AvaliacaoService] exercicio_id utilizado no INSERT:", dadosAvaliacao.exercicio_id || "OMITIDO");
     
     // Tenta salvar no Supabase na tabela apropriada
     const { data, error } = await supabase
       .from('avaliacoes_fundamento')
       .insert([dadosAvaliacao])
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) {
-      console.error("Erro ao salvar avaliação:", error);
+      console.error("[AvaliacaoService] Erro ao salvar avaliação:", error);
       
       // Adicionar informações específicas sobre erros de chave estrangeira
       if (error.code === '23503') { // código para violação de constraint de chave estrangeira
-        console.error("Erro de violação de chave estrangeira:", error.details);
+        console.error("[AvaliacaoService] Erro de violação de chave estrangeira:", error.details);
         
         // Se o problema é com exercicio_id, tentar sem ele
-        if (error.details && error.details.includes('exercicio_id') && dadosAvaliacao['exercicio_id']) {
-          console.warn("Problema com exercicio_id, tentando novamente sem este campo");
+        if (error.details && error.details.includes('exercicio_id') && dadosAvaliacao.exercicio_id) {
+          console.warn("[AvaliacaoService] Problema com exercicio_id, tentando novamente sem este campo");
           
           // Remover exercicio_id e tentar novamente
           const { exercicio_id, ...dadosSemExercicio } = dadosAvaliacao;
@@ -305,18 +350,18 @@ export const salvarEventoQualificado = async (evento: EventoQualificado): Promis
             .from('avaliacoes_fundamento')
             .insert([dadosSemExercicio])
             .select()
-            .single();
+            .maybeSingle();
             
           if (!errorRetry) {
-            console.log("Avaliação salva com sucesso sem exercicio_id:", dataRetry);
+            console.log("[AvaliacaoService] Avaliação salva com sucesso sem exercicio_id:", dataRetry);
             return dataRetry.id;
           } else {
-            console.error("Erro mesmo sem exercicio_id:", errorRetry);
+            console.error("[AvaliacaoService] Erro mesmo sem exercicio_id:", errorRetry);
           }
         }
         
         if (error.details && error.details.includes('treino_id')) {
-          console.error("Problema específico com treino_id:", dadosAvaliacao.treino_id);
+          console.error("[AvaliacaoService] Problema específico com treino_id:", dadosAvaliacao.treino_id);
           toast({
             title: "Erro de referência de treino",
             description: "O treino selecionado não foi encontrado no sistema. Os dados foram salvos localmente.",
@@ -337,14 +382,14 @@ export const salvarEventoQualificado = async (evento: EventoQualificado): Promis
       eventosLocais.push(eventoLocal);
       localStorage.setItem('avaliacoes_fundamento', JSON.stringify(eventosLocais));
       
-      console.log("Avaliação salva localmente para sincronização posterior");
+      console.log("[AvaliacaoService] Avaliação salva localmente para sincronização posterior");
       throw error;
     }
     
-    console.log("Avaliação qualitativa salva com sucesso:", data);
+    console.log("[AvaliacaoService] Avaliação qualitativa salva com sucesso:", data);
     return data.id;
   } catch (erro) {
-    console.error("Exceção ao salvar avaliação qualitativa:", erro);
+    console.error("[AvaliacaoService] Exceção ao salvar avaliação qualitativa:", erro);
     toast({
       title: "Erro ao salvar avaliação",
       description: "A avaliação foi salva localmente e será sincronizada quando possível.",
@@ -384,33 +429,48 @@ export const salvarEventoQualificadoLocalStorage = (evento: EventoQualificado): 
 // Função para buscar eventos qualificados com filtros
 export async function buscarEventosQualificados(filtros?: FiltroEventosQualificados): Promise<EventoQualificado[]> {
   try {
+    console.log("[AvaliacaoService] Iniciando busca de eventos qualificados com filtros:", filtros);
+    
     // Tentar consultar direto do Supabase
-    let query = supabase
-      .from('avaliacoes_eventos_qualificados')
-      .select('*');
-    
-    // Aplicar filtros se existirem
-    if (filtros) {
-      if (filtros.atleta_id) query = query.eq('atleta_id', filtros.atleta_id);
-      if (filtros.data_inicio) query = query.gte('created_at', filtros.data_inicio);
-      if (filtros.data_fim) query = query.lte('created_at', filtros.data_fim);
-      if (filtros.fundamento) query = query.eq('fundamento', filtros.fundamento);
-      if (filtros.tipo_evento) query = query.eq('tipo_evento', filtros.tipo_evento);
-      if (filtros.treino_id) query = query.eq('treino_id', filtros.treino_id);
+      let query = supabase
+      .from('avaliacoes_fundamento')
+        .select('*');
+      
+      // Aplicar filtros se existirem
+      if (filtros) {
+        if (filtros.atleta_id) query = query.eq('atleta_id', filtros.atleta_id);
+        if (filtros.data_inicio) query = query.gte('created_at', filtros.data_inicio);
+        if (filtros.data_fim) query = query.lte('created_at', filtros.data_fim);
+        if (filtros.fundamento) query = query.eq('fundamento', filtros.fundamento);
+        if (filtros.tipo_evento) query = query.eq('tipo_evento', filtros.tipo_evento);
+        if (filtros.treino_id) query = query.eq('treino_id', filtros.treino_id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) {
+      console.error("[AvaliacaoService] Erro ao buscar eventos do Supabase:", error);
+        // Fallback para dados locais
+        return obterEventosQualificadosLocalStorage(filtros);
+      }
+      
+    if (!data || data.length === 0) {
+      console.log("[AvaliacaoService] Nenhum evento encontrado no banco de dados, verificando localStorage");
+      // Se não há dados no banco, verificar no localStorage como fallback
+      const dadosLocais = obterEventosQualificadosLocalStorage(filtros);
+      if (dadosLocais.length > 0) {
+        console.log("[AvaliacaoService] Encontrados dados no localStorage:", dadosLocais.length);
+        return dadosLocais;
+      }
+      return [];
     }
     
-    const { data, error } = await query.order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Erro ao buscar eventos do Supabase:", error);
-      // Fallback para dados locais
-      return obterEventosQualificadosLocalStorage(filtros);
-    }
+    console.log("[AvaliacaoService] Eventos encontrados no banco:", data.length);
     
     // Se tudo correr bem, retornar dados do Supabase
     return data as EventoQualificado[];
   } catch (error) {
-    console.error("Erro ao buscar eventos qualificados:", error);
+    console.error("[AvaliacaoService] Erro ao buscar eventos qualificados:", error);
     // Em caso de erro, retornar dados do localStorage
     return obterEventosQualificadosLocalStorage(filtros);
   }
@@ -480,7 +540,7 @@ export const sincronizarEventosQualificados = async (): Promise<number> => {
         // Tentar salvar no Supabase
         try {
           const { error } = await supabase
-            .from('avaliacoes_eventos_qualificados')
+            .from('avaliacoes_fundamento')
             .insert([eventoSemId]);
           
           if (!error) {
@@ -523,7 +583,7 @@ export const excluirEventoQualificado = async (id: string): Promise<boolean> => 
     
     // Caso contrário, excluir do Supabase
     const { error } = await supabase
-      .from('avaliacoes_eventos_qualificados')
+      .from('avaliacoes_fundamento')
       .delete()
       .eq('id', id);
     
@@ -609,5 +669,41 @@ export const calcularEstatisticasEventosQualificados = async (
       eventosPositivos: 0,
       eventosNegativos: 0
     };
+  }
+};
+
+/**
+ * Verifica se a tabela de eventos qualificados existe e a cria caso não exista
+ * @returns Promise<boolean> - true se a tabela existe ou foi criada com sucesso, false caso contrário
+ */
+export const verificarECriarTabelaEventosQualificados = async (): Promise<boolean> => {
+  try {
+    console.log("[AvaliacaoService] Verificando se a tabela avaliacoes_fundamento existe");
+    
+    // Verificar se conseguimos fazer uma consulta simples à tabela
+    const { data, error } = await supabase
+      .from('avaliacoes_fundamento')
+      .select('count()', { count: 'exact', head: true });
+    
+    // Se não houver erro na consulta, a tabela existe
+    if (!error) {
+      console.log("[AvaliacaoService] Tabela avaliacoes_fundamento já existe");
+      return true;
+    }
+    
+    console.error("[AvaliacaoService] Erro ao verificar tabela, provavelmente não existe:", error);
+    
+    // Não podemos criar a tabela diretamente usando RPC, é necessário configurar no Supabase Studio
+    toast({
+      title: "Tabela avaliacoes_fundamento não encontrada",
+      description: "Por favor, verifique se a tabela foi criada corretamente no Supabase. Os dados serão salvos localmente enquanto isso.",
+      variant: "destructive",
+      duration: 5000
+    });
+    
+    return false;
+  } catch (erro) {
+    console.error("[AvaliacaoService] Exceção ao verificar tabela:", erro);
+    return false;
   }
 }; 

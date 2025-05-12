@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Card, 
@@ -23,7 +23,11 @@ import {
   AlertCircle,
   CalendarClock,
   Users,
-  Info
+  Info,
+  BarChart,
+  ChevronDown,
+  ListChecks,
+  Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -56,26 +60,41 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import ResumoPresencas from '@/components/presenca/ResumoPresencas';
+import { ResumoPresencaAtleta, buscarResumoPresencas, buscarHistoricoPresenca } from '@/services/presencaService';
+import { HistoricoPresenca } from '@/components/presenca/DetalhePresencaModal';
+import DetalhePresencaModal from '@/components/presenca/DetalhePresencaModal';
+import DocumentacaoLink from '@/components/presenca/DocumentacaoLink';
+import HistoricoButton from '@/components/presenca/HistoricoButton';
 
 const Presenca = () => {
   const { user, userRole, isLoading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<string>('resumo');
   const [selectedTreinoId, setSelectedTreinoId] = useState<string | null>(null);
   const [editingAtleta, setEditingAtleta] = useState<AtletaPresenca | null>(null);
   const [justificativa, setJustificativa] = useState<string>('');
   const [justificativaTipo, setJustificativaTipo] = useState<JustificativaTipo | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resumos, setResumos] = useState<ResumoPresencaAtleta[]>([]);
+  const [loadingResumos, setLoadingResumos] = useState(false);
   
-  // Verificar se o usuário é técnico
+  // Estado para o modal de histórico detalhado
+  const [historico, setHistorico] = useState<HistoricoPresenca[]>([]);
+  const [selectedAtletaParaHistorico, setSelectedAtletaParaHistorico] = useState<{id: string; nome: string; indice_esforco?: number} | null>(null);
+  const [historicoModalOpen, setHistoricoModalOpen] = useState(false);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
+  
+  // Verificar se o usuário é técnico ou monitor
   const isTecnico = userRole === 'tecnico';
   const isMonitor = userRole === 'monitor';
   
-  // Buscar treinos com presença
+  // Buscar treinos com presença (para a aba de listagem por treino)
   const { 
     data: treinos, 
-    isLoading,
+    isLoading: loadingTreinos,
     isError,
     error,
-    refetch
+    refetch: refetchTreinos
   } = useTreinosComPresenca();
   
   // Mutation para salvar presença
@@ -83,6 +102,52 @@ const Presenca = () => {
   
   // Encontrar o treino selecionado
   const selectedTreino = treinos?.find(t => t.id === selectedTreinoId);
+  
+  // Carregar dados de resumo
+  useEffect(() => {
+    const loadResumos = async () => {
+      setLoadingResumos(true);
+      try {
+        const data = await buscarResumoPresencas();
+        setResumos(data);
+      } catch (error) {
+        console.error('Erro ao carregar resumos:', error);
+        toast.error('Erro ao carregar resumos de presença');
+      } finally {
+        setLoadingResumos(false);
+      }
+    };
+    
+    loadResumos();
+  }, []);
+  
+  // Buscar histórico detalhado de presença para um atleta
+  const handleVerHistorico = async (atletaId: string): Promise<HistoricoPresenca[]> => {
+    return await buscarHistoricoPresenca(atletaId);
+  };
+  
+  // Ver histórico detalhado do atleta na visualização por treino
+  const handleVerHistoricoTreino = async (atleta: AtletaPresenca) => {
+    setLoadingHistorico(true);
+    setSelectedAtletaParaHistorico({
+      id: atleta.id,
+      nome: atleta.nome,
+      indice_esforco: atleta.indice_esforco
+    });
+    
+    try {
+      console.log('Buscando histórico para:', atleta.nome, 'ID:', atleta.id);
+      const data = await buscarHistoricoPresenca(atleta.id);
+      console.log('Histórico recebido:', data.length, 'registros');
+      setHistorico(data);
+      setHistoricoModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao carregar histórico de presença:', error);
+      toast.error('Não foi possível carregar o histórico de presença');
+    } finally {
+      setLoadingHistorico(false);
+    }
+  };
   
   // Ao selecionar um treino
   const handleTreinoSelect = (treinoId: string) => {
@@ -111,8 +176,14 @@ const Presenca = () => {
     };
     
     salvarPresenca(data, {
-      onSuccess: () => {
-        refetch();
+      onSuccess: async () => {
+        // Recarregar ambas listas de dados
+        refetchTreinos();
+        
+        // Recarregar resumos também
+        const newResumos = await buscarResumoPresencas();
+        setResumos(newResumos);
+        
         setDialogOpen(false);
         setEditingAtleta(null);
         
@@ -145,8 +216,14 @@ const Presenca = () => {
       };
       
       salvarPresenca(data, {
-        onSuccess: () => {
-          refetch();
+        onSuccess: async () => {
+          // Recarregar ambas listas de dados
+          refetchTreinos();
+          
+          // Recarregar resumos também
+          const newResumos = await buscarResumoPresencas();
+          setResumos(newResumos);
+          
           if (isMonitor) {
             toast.success('Alteração salva e enviada para aprovação do técnico');
           } else {
@@ -165,14 +242,6 @@ const Presenca = () => {
     if (indice >= 0) return "bg-yellow-300";
     if (indice >= -0.5) return "bg-orange-400";
     return "bg-red-500";
-  };
-  
-  // Verificar faltas consecutivas
-  const verificarFaltasConsecutivas = (atletas: AtletaPresenca[]) => {
-    // Implementação básica - idealmente isso seria calculado no servidor
-    return atletas.filter(a => !a.presente && 
-      (!a.justificativa_tipo || a.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA))
-      .map(a => a.nome);
   };
   
   // Converter índice em percentual
@@ -237,7 +306,7 @@ const Presenca = () => {
     <div className="container mx-auto p-4 md:p-6 max-w-7xl">
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <Users className="h-6 w-6" />
-        Gestão de Presenças
+        Gerenciar Presenças
       </h1>
       
       {isMonitor && (
@@ -250,386 +319,277 @@ const Presenca = () => {
         </Alert>
       )}
       
-      {/* Mensagem de estado dos dados */}
-      {!isLoading && treinos && treinos.length === 0 && (
-        <Alert className="mb-6 border-amber-500">
-          <AlertCircle className="h-4 w-4 text-amber-500" />
-          <AlertTitle>Sem dados de presenças</AlertTitle>
-          <AlertDescription>
-            <p>Não foram encontradas presenças registradas. Verificações recomendadas:</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Certifique-se de que existem treinos cadastrados na aba "Treino do Dia"</li>
-              <li>Verifique se as equipes e atletas estão corretamente associados aos treinos</li>
-              <li>Registre presenças em um treino existente na aba "Treino do Dia"</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+      <DocumentacaoLink />
       
-      <div className="grid md:grid-cols-12 gap-6">
-        {/* Lista de treinos */}
-        <div className="md:col-span-4 lg:col-span-3">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarClock className="h-5 w-5" />
-                Treinos Recentes
-              </CardTitle>
-              <CardDescription>
-                Selecione um treino para gerenciar presenças
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : treinos && treinos.length > 0 ? (
-                <div className="space-y-2">
-                  {treinos.map(treino => (
-                    <Button 
-                      key={treino.id}
-                      variant={selectedTreinoId === treino.id ? "default" : "outline"} 
-                      className={`w-full justify-start ${selectedTreinoId === treino.id ? '' : 'hover:bg-accent'}`}
-                      onClick={() => handleTreinoSelect(treino.id)}
-                    >
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{treino.nome}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {treino.dataFormatada}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {treino.atletas.length} atletas
-                        </span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center p-4 text-muted-foreground flex flex-col items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
-                  <p>Nenhum treino com presença encontrado</p>
-                  <p className="text-xs text-muted-foreground">
-                    Verifique se existem treinos registrados na aba "Treino do Dia"
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4 mb-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="resumo" className="flex items-center gap-1">
+            <BarChart className="h-4 w-4" /> 
+            Resumo por Atleta
+          </TabsTrigger>
+          <TabsTrigger value="treinos" className="flex items-center gap-1">
+            <ListChecks className="h-4 w-4" /> 
+            Listagem por Treino
+          </TabsTrigger>
+        </TabsList>
+      
+        <TabsContent value="resumo" className="space-y-4">
+          <ResumoPresencas 
+            resumos={resumos}
+            isLoading={loadingResumos}
+            onVerHistorico={handleVerHistorico}
+          />
+        </TabsContent>
         
-        {/* Lista de atletas do treino selecionado */}
-        <div className="md:col-span-8 lg:col-span-9">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {selectedTreino ? (
-                  <div className="flex flex-col">
-                    <span>{selectedTreino.nome}</span>
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {selectedTreino.dataFormatada}
-                    </span>
-                  </div>
-                ) : (
-                  "Selecione um treino"
-                )}
-              </CardTitle>
-              <CardDescription>
-                Gerencie a presença dos atletas neste treino
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedTreino ? (
-                <>
-                  {/* Alertas */}
-                  {selectedTreino.atletas.some(a => !a.presente && 
-                    (!a.justificativa_tipo || a.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA)) && (
-                    <Alert className="mb-4 border-amber-500">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Ausências sem justificativa</AlertTitle>
-                      <AlertDescription>
-                        Existem atletas ausentes sem justificativa neste treino.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {/* Indicador de monitor */}
-                  {isMonitor && (
-                    <Alert className="mb-4 border-blue-100">
-                      <Info className="h-4 w-4" />
-                      <AlertTitle>Modo de Aprovação</AlertTitle>
-                      <AlertDescription>
-                        Como monitor, suas alterações serão enviadas para aprovação.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {/* Tabela de atletas */}
-                  {selectedTreino.atletas.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[250px]">Atleta</TableHead>
-                        <TableHead>Presença</TableHead>
-                        <TableHead>Justificativa</TableHead>
-                        <TableHead>Índice de Esforço</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedTreino.atletas.map((atleta) => (
-                        <TableRow key={atleta.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8">
-                                {atleta.foto_url ? (
-                                  <AvatarImage src={atleta.foto_url} alt={atleta.nome} />
-                                ) : (
-                                  <AvatarFallback>{atleta.nome.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                )}
-                              </Avatar>
-                              <div>
-                                <div>{atleta.nome}</div>
-                                <div className="text-xs text-muted-foreground">{atleta.posicao}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={`flex items-center gap-1 ${atleta.presente ? 'text-green-600' : 'text-red-600'}`}
-                              onClick={() => togglePresenca(atleta)}
-                            >
-                              {atleta.presente ? (
-                                <>
-                                  <CheckCircle className="h-4 w-4" />
-                                  <span>Presente</span>
-                                </>
-                              ) : (
-                                <>
-                                  <XCircle className="h-4 w-4" />
-                                  <span>Ausente</span>
-                                </>
-                              )}
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            {!atleta.presente && (
-                              <>
-                                {atleta.justificativa_tipo ? (
-                                  <Badge variant="outline" className="font-normal">
-                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_PESSOAL && 'Motivo Pessoal'}
-                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_ACADEMICO && 'Motivo Acadêmico'}
-                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_LOGISTICO && 'Motivo Logístico'}
-                                    {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_SAUDE && 'Motivo de Saúde'}
-                                    {atleta.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA && 'Sem Justificativa'}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive" className="font-normal">Sem Justificativa</Badge>
-                                )}
-                                {atleta.justificativa && (
-                                  <p className="text-xs text-muted-foreground mt-1 truncate max-w-xs">
-                                    {atleta.justificativa}
-                                  </p>
-                                )}
-                              </>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {typeof atleta.indice_esforco === 'number' ? (
-                              <div className="flex items-center gap-2">
-                                <Progress 
-                                  value={getIndiceAsPercentage(atleta.indice_esforco)} 
-                                  className={`h-2 w-16 ${getEsforcoColor(atleta.indice_esforco)}`}
-                                />
-                                <span className="text-sm">
-                                  {(atleta.indice_esforco * 100).toFixed(0)}%
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Não calculado</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditAtleta(atleta)}
-                              disabled={isPending}
-                            >
-                              <Info className="h-4 w-4" />
-                              <span className="sr-only">Editar</span>
-                            </Button>
-                          </TableCell>
+        <TabsContent value="treinos" className="space-y-4">
+          {loadingTreinos ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5" />
+                  <Skeleton className="h-6 w-48" />
+                </CardTitle>
+                <CardDescription>
+                  <Skeleton className="h-4 w-64" />
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-[400px] w-full" />
+              </CardContent>
+            </Card>
+          ) : treinos && treinos.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {treinos.map(treino => (
+                  <Card 
+                    key={treino.id}
+                    className={`cursor-pointer hover:bg-accent transition-colors ${
+                      selectedTreinoId === treino.id ? 'border-primary bg-accent' : ''
+                    }`}
+                    onClick={() => handleTreinoSelect(treino.id)}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg">{treino.nome}</CardTitle>
+                        {selectedTreinoId === treino.id && (
+                          <Badge variant="default">Selecionado</Badge>
+                        )}
+                      </div>
+                      <CardDescription>{treino.dataFormatada}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm">
+                        <div className="flex items-center gap-1 mb-1">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span>
+                            {treino.atletas.filter(a => a.presente).length} presentes
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <XCircle className="h-4 w-4 text-red-500" />
+                          <span>
+                            {treino.atletas.filter(a => !a.presente).length} ausentes
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {selectedTreino && (
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarClock className="h-5 w-5" />
+                      {selectedTreino.nome}
+                    </CardTitle>
+                    <CardDescription>
+                      {selectedTreino.dataFormatada} - Lista de Presenças
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Atleta</TableHead>
+                          <TableHead>Posição</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Justificativa</TableHead>
+                          <TableHead className="text-right">Esforço</TableHead>
+                          <TableHead>Ações</TableHead>
+                          <TableHead className="w-8"></TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  ) : (
-                    <div className="text-center p-6 flex flex-col items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-amber-500" />
-                      <p className="text-muted-foreground">Nenhum atleta encontrado para este treino</p>
-                      <p className="text-xs text-muted-foreground">
-                        Verifique se o time está configurado corretamente.
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-center p-6 text-muted-foreground">
-                  Selecione um treino para ver a lista de atletas
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedTreino.atletas.map(atleta => (
+                          <TableRow key={atleta.id}>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Avatar className="h-8 w-8">
+                                  {atleta.foto_url ? <AvatarImage src={atleta.foto_url} /> : null}
+                                  <AvatarFallback>
+                                    {atleta.nome.substring(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{atleta.nome}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{atleta.posicao}</TableCell>
+                            <TableCell>
+                              {atleta.presente ? (
+                                <Badge className="bg-green-500 hover:bg-green-600">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Presente
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-red-500 hover:bg-red-600">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Ausente
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {!atleta.presente ? (
+                                atleta.justificativa ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm">
+                                      {atleta.justificativa}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_ACADEMICO && "Motivo Acadêmico"}
+                                      {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_SAUDE && "Motivo de Saúde"}
+                                      {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_LOGISTICO && "Motivo Logístico"}
+                                      {atleta.justificativa_tipo === JustificativaTipo.MOTIVO_PESSOAL && "Motivo Pessoal"}
+                                      {atleta.justificativa_tipo === JustificativaTipo.SEM_JUSTIFICATIVA && "Sem Justificativa"}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground italic">Sem justificativa</span>
+                                )
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {atleta.indice_esforco !== undefined && (
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="w-12 h-2 rounded-full overflow-hidden bg-gray-200">
+                                    <div 
+                                      className={`h-full ${getEsforcoColor(atleta.indice_esforco)}`}
+                                      style={{ width: `${getIndiceAsPercentage(atleta.indice_esforco)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs">
+                                    {Math.round(getIndiceAsPercentage(atleta.indice_esforco))}%
+                                  </span>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8"
+                                onClick={() => togglePresenca(atleta)}
+                                disabled={isPending}
+                              >
+                                {atleta.presente ? 'Marcar Ausente' : 'Marcar Presente'}
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <HistoricoButton 
+                                onClick={() => handleVerHistoricoTreino(atleta)}
+                                isLoading={loadingHistorico}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <CalendarClock className="h-12 w-12 mb-2 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-1">Nenhum treino registrado</h3>
+                <p className="text-muted-foreground">
+                  Não há treinos com registros de presença disponíveis.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
       
-      {/* Modal de edição */}
+      {/* Modal para edição de justificativa */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingAtleta ? `Editar presença - ${editingAtleta.nome}` : 'Editar presença'}
-            </DialogTitle>
+            <DialogTitle>Editar Justificativa</DialogTitle>
             <DialogDescription>
-              Atualize a presença e justificativa do atleta neste treino.
+              {editingAtleta?.nome} - {selectedTreino?.dataFormatada}
             </DialogDescription>
           </DialogHeader>
           
-          {editingAtleta && (
-            <div className="space-y-4 py-2">
-              {/* Status de Presença */}
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Status:</span>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant={editingAtleta.presente ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setEditingAtleta({...editingAtleta, presente: true})}
-                    className="gap-1"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Presente
-                  </Button>
-                  <Button 
-                    variant={!editingAtleta.presente ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setEditingAtleta({...editingAtleta, presente: false})}
-                    className="gap-1"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Ausente
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Tipo de Justificativa */}
-              {!editingAtleta.presente && (
-                <div className="space-y-2">
-                  <label className="font-medium">Tipo de Justificativa:</label>
-                  <Select 
-                    value={justificativaTipo || JustificativaTipo.SEM_JUSTIFICATIVA} 
-                    onValueChange={(value) => setJustificativaTipo(value as JustificativaTipo)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de justificativa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>Motivo Pessoal</SelectItem>
-                      <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>Motivo Acadêmico</SelectItem>
-                      <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>Motivo Logístico</SelectItem>
-                      <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>Motivo de Saúde</SelectItem>
-                      <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>Sem Justificativa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
-              {/* Justificativa */}
-              {!editingAtleta.presente && (
-                <div className="space-y-2">
-                  <label className="font-medium">Justificativa:</label>
-                  <Textarea 
-                    placeholder="Descreva a justificativa da ausência"
-                    value={justificativa}
-                    onChange={(e) => setJustificativa(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-              )}
-              
-              {/* Índice de Esforço */}
-              <div className="space-y-2 border-t pt-4">
-                <label className="font-medium">Índice de Esforço Atual:</label>
-                {typeof editingAtleta.indice_esforco === 'number' ? (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Progress 
-                        value={getIndiceAsPercentage(editingAtleta.indice_esforco)} 
-                        className={`h-2.5 ${getEsforcoColor(editingAtleta.indice_esforco)}`}
-                      />
-                      <span>
-                        {(editingAtleta.indice_esforco * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Este valor é calculado com base nas presenças e tipos de justificativa nos últimos treinos.
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Não há dados suficientes para calcular o índice de esforço.
-                  </p>
-                )}
-              </div>
-              
-              {/* Impacto da Alteração */}
-              {!editingAtleta.presente && (
-                <div className="bg-muted p-3 rounded-md">
-                  <h4 className="font-medium text-sm mb-1">Impacto desta alteração:</h4>
-                  <p className="text-xs text-muted-foreground">
-                    {justificativaTipo === JustificativaTipo.SEM_JUSTIFICATIVA && (
-                      "Esta ausência sem justificativa terá impacto negativo no índice de esforço."
-                    )}
-                    {justificativaTipo === JustificativaTipo.MOTIVO_LOGISTICO && (
-                      "Esta ausência por motivo logístico terá impacto parcial no índice de esforço."
-                    )}
-                    {(justificativaTipo === JustificativaTipo.MOTIVO_PESSOAL || 
-                      justificativaTipo === JustificativaTipo.MOTIVO_ACADEMICO || 
-                      justificativaTipo === JustificativaTipo.MOTIVO_SAUDE) && (
-                      "Esta ausência com justificativa válida não terá impacto no índice de esforço."
-                    )}
-                  </p>
-                </div>
-              )}
-              
-              {/* Aviso de aprovação para monitores */}
-              {isMonitor && (
-                <Alert className="mt-4 border-blue-100">
-                  <Info className="h-4 w-4" />
-                  <AlertTitle>Nota para monitores</AlertTitle>
-                  <AlertDescription>
-                    Suas alterações serão enviadas para aprovação do técnico.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          )}
+          <div className="space-y-4 py-2">
+            <Select
+              value={justificativaTipo || JustificativaTipo.SEM_JUSTIFICATIVA}
+              onValueChange={(value) => setJustificativaTipo(value as JustificativaTipo)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo de justificativa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={JustificativaTipo.SEM_JUSTIFICATIVA}>
+                  Falta sem Justificativa
+                </SelectItem>
+                <SelectItem value={JustificativaTipo.MOTIVO_PESSOAL}>
+                  Falta Justificada - Motivo Pessoal
+                </SelectItem>
+                <SelectItem value={JustificativaTipo.MOTIVO_LOGISTICO}>
+                  Falta Justificada - Motivo Logístico
+                </SelectItem>
+                <SelectItem value={JustificativaTipo.MOTIVO_ACADEMICO}>
+                  Falta Justificada - Motivo Acadêmico
+                </SelectItem>
+                <SelectItem value={JustificativaTipo.MOTIVO_SAUDE}>
+                  Falta Justificada - Motivo de Saúde
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Textarea
+              placeholder="Descreva detalhes da justificativa (opcional)"
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              rows={4}
+            />
+          </div>
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSaveChanges} disabled={isPending}>
-              {isPending ? "Salvando..." : "Salvar"}
+              {isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Modal para visualização detalhada do histórico */}
+      {selectedAtletaParaHistorico && (
+        <DetalhePresencaModal
+          isOpen={historicoModalOpen}
+          onClose={() => setHistoricoModalOpen(false)}
+          atleta={selectedAtletaParaHistorico}
+          historico={historico}
+        />
+      )}
     </div>
   );
 };

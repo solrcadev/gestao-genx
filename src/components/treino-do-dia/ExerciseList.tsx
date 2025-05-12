@@ -112,7 +112,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
         treinoDoDiaId={treinoDoDiaId}
         onFinish={handleCompleteExercise}
         onCancel={handleCancelExercise}
-        estimatedTime={activeExercise.tempo || activeExercise.exercicio?.tempo_estimado || 10}
+        estimatedTime={activeExercise.exercicio?.tempo_estimado || 10}
       />
     );
   }
@@ -147,7 +147,7 @@ const ExerciseList = ({ treinoDoDiaId }: ExerciseListProps) => {
                   
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Clock className="h-4 w-4 mr-1" />
-                    {exercicio.tempo || exercicio.exercicio?.tempo_estimado || "?"} min
+                    {exercicio.exercicio?.tempo_estimado || "?"} min
                     {exercicio.concluido && exercicio.tempo_real && (
                       <span className="ml-2 text-green-600">
                         • Tempo real: {Math.floor(exercicio.tempo_real / 60)}:{(exercicio.tempo_real % 60).toString().padStart(2, '0')}

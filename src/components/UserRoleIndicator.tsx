@@ -24,14 +24,16 @@ const UserRoleIndicator = () => {
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge
-            variant="outline"
-            className={`cursor-help ${colorClass}`}
-          >
-            {icon}
-            {userRole}
-          </Badge>
+        <TooltipTrigger>
+          <div>
+            <Badge
+              variant="outline"
+              className={`cursor-help ${colorClass}`}
+            >
+              {icon}
+              {userRole}
+            </Badge>
+          </div>
         </TooltipTrigger>
         <TooltipContent>
           <p>Papel de usuário definido no Supabase</p>

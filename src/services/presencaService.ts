@@ -1,7 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-import { pt } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale';
 import dayjs from 'dayjs';
+import { JustificativaTipo } from '@/hooks/attendance-hooks';
+import { HistoricoPresenca } from '@/components/presenca/DetalhePresencaModal';
 
 // Interface revisada para alinhar com a estrutura da tabela treinos_presencas
 export interface Presenca {
@@ -612,16 +614,17 @@ export async function excluirPresenca(presencaId: string) {
 /**
  * Formata uma data para exibição
  */
-export function formatarData(data: string | Date | null | undefined): string {
-  if (!data) return 'Data não disponível';
+export const formatarData = (dataString: string | Date | null | undefined): string => {
+  if (!dataString) return 'Data não disponível';
   
   try {
-    return format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: pt });
-  } catch (error) {
-    console.error('Erro ao formatar data:', error);
-    return 'Data inválida';
+    const data = new Date(dataString);
+    return format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  } catch (e) {
+    console.error('Erro ao formatar data:', e);
+    return dataString instanceof Date ? dataString.toString() : (dataString || 'Data inválida');
   }
-}
+};
 
 /**
  * Busca contagem de faltas por atleta no último mês
@@ -708,4 +711,194 @@ export async function verificarTreinoFinalizado(treinoDoDiaId: string) {
     console.error('Erro ao verificar se treino está finalizado:', error);
     return false;
   }
-} 
+}
+
+// Constantes para pesos das justificativas
+export const PESOS_JUSTIFICATIVA = {
+  presente: 1.0,
+  motivo_saude: 0.8,
+  motivo_academico: 0.7,
+  motivo_logistico: 0.5,
+  motivo_pessoal: 0.3,
+  sem_justificativa: 0.0
+};
+
+// Interface para resumo de presença de atleta
+export interface ResumoPresencaAtleta {
+  id: string;
+  nome: string;
+  time: string;
+  posicao: string;
+  foto_url?: string;
+  indice_esforco: number;
+  total_treinos: number;
+  total_presencas: number;
+  total_ausencias: number;
+  faltas_sem_justificativa: number;
+  faltas_justificadas: number;
+}
+
+// Função para buscar o resumo de presença de todos os atletas
+export const buscarResumoPresencas = async (
+  timeFilter?: string
+): Promise<ResumoPresencaAtleta[]> => {
+  try {
+    // Usar a view que criamos para obter os resumos
+    let query = supabase
+      .from('atleta_presenca_resumo')
+      .select('*');
+    
+    // Aplicar filtro de time se fornecido
+    if (timeFilter) {
+      query = query.eq('time', timeFilter);
+    }
+      
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Erro ao buscar resumo de presenças:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Exceção ao buscar resumo de presenças:', error);
+    return [];
+  }
+};
+
+// Função para buscar histórico detalhado de presenças de um atleta
+export const buscarHistoricoPresenca = async (
+  atletaId: string,
+  limit: number = 100
+): Promise<HistoricoPresenca[]> => {
+  try {
+    // Usar a view que criamos para obter histórico detalhado
+    const { data, error } = await supabase
+      .from('atleta_presenca_detalhada')
+      .select('*')
+      .eq('atleta_id', atletaId)
+      .order('data_treino', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error(`Erro ao buscar histórico de presenças para atleta ${atletaId}:`, error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error(`Exceção ao buscar histórico de presenças para atleta ${atletaId}:`, error);
+    return [];
+  }
+};
+
+// Função para atualizar presença de um atleta
+export const atualizarPresenca = async (
+  atletaId: string,
+  treinoId: string,
+  presente: boolean,
+  justificativa?: string,
+  justificativaTipo?: JustificativaTipo
+): Promise<boolean> => {
+  try {
+    // Primeiro verificar se já existe um registro
+    const { data: existingData, error: checkError } = await supabase
+      .from('treinos_presencas')
+      .select('id')
+      .eq('atleta_id', atletaId)
+      .eq('treino_do_dia_id', treinoId)
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error('Erro ao verificar registro de presença existente:', checkError);
+      return false;
+    }
+    
+    // Preparar o payload
+    const payload = {
+      atleta_id: atletaId,
+      treino_do_dia_id: treinoId,
+      presente,
+      justificativa: presente ? null : justificativa,
+      justificativa_tipo: presente ? null : (justificativaTipo || JustificativaTipo.SEM_JUSTIFICATIVA)
+    };
+    
+    if (existingData?.id) {
+      // Update existing record
+      const { error: updateError } = await supabase
+        .from('treinos_presencas')
+        .update(payload)
+        .eq('id', existingData.id);
+      
+      if (updateError) {
+        console.error('Erro ao atualizar registro de presença:', updateError);
+        return false;
+      }
+    } else {
+      // Insert new record
+      const { error: insertError } = await supabase
+        .from('treinos_presencas')
+        .insert([payload]);
+      
+      if (insertError) {
+        console.error('Erro ao inserir registro de presença:', insertError);
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exceção ao atualizar presença:', error);
+    return false;
+  }
+};
+
+// Função para buscar o índice de esforço de um atleta
+export const buscarIndiceEsforco = async (atletaId: string): Promise<number> => {
+  try {
+    const { data, error } = await supabase
+      .from('athletes')
+      .select('indice_esforco')
+      .eq('id', atletaId)
+      .single();
+    
+    if (error) {
+      console.error(`Erro ao buscar índice de esforço para atleta ${atletaId}:`, error);
+      return 0;
+    }
+    
+    return data?.indice_esforco || 0;
+  } catch (error) {
+    console.error(`Exceção ao buscar índice de esforço para atleta ${atletaId}:`, error);
+    return 0;
+  }
+};
+
+// Função para formatar a descrição da justificativa
+export const formatarJustificativa = (tipo?: JustificativaTipo): string => {
+  switch (tipo) {
+    case JustificativaTipo.MOTIVO_SAUDE:
+      return 'Motivo de Saúde';
+    case JustificativaTipo.MOTIVO_ACADEMICO:
+      return 'Motivo Acadêmico';
+    case JustificativaTipo.MOTIVO_LOGISTICO:
+      return 'Motivo Logístico';
+    case JustificativaTipo.MOTIVO_PESSOAL:
+      return 'Motivo Pessoal';
+    case JustificativaTipo.SEM_JUSTIFICATIVA:
+      return 'Sem Justificativa';
+    default:
+      return 'Não informado';
+  }
+};
+
+// Função para calcular a cor baseada no índice de esforço
+export const getIndiceEsforcoColor = (indice: number): string => {
+  if (indice >= 0.9) return 'bg-green-500';
+  if (indice >= 0.75) return 'bg-emerald-500';
+  if (indice >= 0.6) return 'bg-blue-500';
+  if (indice >= 0.4) return 'bg-yellow-500';
+  if (indice >= 0.2) return 'bg-orange-500';
+  return 'bg-red-500';
+}; 

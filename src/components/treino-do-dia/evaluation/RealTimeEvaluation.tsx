@@ -81,12 +81,24 @@ export default function RealTimeEvaluation({
   
   const { user, userRole } = useAuth();
 
+  // Log information at component mount for diagnostic purposes
+  useEffect(() => {
+    console.log("[RealTimeEvaluation] Props recebidas:", {
+      treinoDoDiaId,
+      exercise: exercise ? {
+        id: exercise.id,
+        nome: exercise.nome || (exercise.exercicio && exercise.exercicio.nome),
+        treino_id: exercise.treino_id
+      } : null
+    });
+  }, [treinoDoDiaId, exercise]);
+
   // Validate the treino_id and get the real treino information
   useEffect(() => {
     const validarTreino = async () => {
       try {
         if (!treinoDoDiaId) {
-          console.error("Nenhum treinoDoDiaId fornecido");
+          console.error("[RealTimeEvaluation] Nenhum treinoDoDiaId fornecido");
           toast({
             title: "Erro",
             description: "Nenhum treino foi identificado. Por favor, recarregue a página.",
@@ -95,16 +107,16 @@ export default function RealTimeEvaluation({
           return;
         }
         
-        console.log("Validando treinoDoDiaId:", treinoDoDiaId);
+        console.log("[RealTimeEvaluation] Validando treinoDoDiaId:", treinoDoDiaId);
         
         // First check if exercise has a treino_id
         if (exercise?.treino_id) {
-          console.log("Exercício possui treino_id:", exercise.treino_id);
+          console.log("[RealTimeEvaluation] Exercício possui treino_id:", exercise.treino_id);
           const detalhes = await obterDetalhesDoTreinoAtual(exercise.treino_id);
           setTreinoValido(detalhes);
           
           if (!detalhes.existe) {
-            console.error("treino_id do exercício é inválido:", exercise.treino_id);
+            console.error("[RealTimeEvaluation] treino_id do exercício é inválido:", exercise.treino_id);
             // Try with treinoDoDiaId as fallback
             const detalhesFallback = await obterDetalhesDoTreinoAtual(treinoDoDiaId);
             setTreinoValido(detalhesFallback);
@@ -119,7 +131,7 @@ export default function RealTimeEvaluation({
           }
         } else {
           // Use treinoDoDiaId
-          console.log("Usando treinoDoDiaId para validação:", treinoDoDiaId);
+          console.log("[RealTimeEvaluation] Usando treinoDoDiaId para validação:", treinoDoDiaId);
           const detalhes = await obterDetalhesDoTreinoAtual(treinoDoDiaId);
           setTreinoValido(detalhes);
           
@@ -132,7 +144,7 @@ export default function RealTimeEvaluation({
           }
         }
       } catch (error) {
-        console.error("Erro ao validar treino:", error);
+        console.error("[RealTimeEvaluation] Erro ao validar treino:", error);
       }
     };
     
@@ -142,38 +154,93 @@ export default function RealTimeEvaluation({
   // Validate if the exercicio_id exists before using it
   useEffect(() => {
     const validarExercicio = async () => {
-      if (!exercise || !exercise.id) {
-        console.log("Nenhum exercício para validar");
+      if (!exercise) {
+        console.log("[RealTimeEvaluation] Nenhum exercício fornecido");
         setExercicioValido(null);
         return;
       }
       
-      try {
-        console.log("Validando exercicio_id:", exercise.id);
+      // Handle case when exercise might be directly the exercicio object or contain it nested
+      const exerciseId = exercise.id || exercise.exercicio_id;
+      
+      if (!exerciseId) {
+        console.log("[RealTimeEvaluation] Exercício sem ID válido:", exercise);
+        setExercicioValido(null);
         
+        // If we have at least a name, we can still proceed without validation
+        const exerciseName = exercise.nome || (exercise.exercicio && exercise.exercicio.nome);
+        if (exerciseName) {
+          console.log("[RealTimeEvaluation] Exercício possui nome, continuando sem validação de ID:", exerciseName);
+          setExercicioValido(true);
+          return;
+        }
+        
+        toast({
+          title: "Aviso sobre o exercício",
+          description: "O exercício não contém um ID válido. A avaliação continuará sem vínculo formal ao exercício.",
+          duration: 4000
+        });
+        return;
+      }
+      
+      try {
+        console.log("[RealTimeEvaluation] Validando exercicio_id:", exerciseId);
+        
+        // Use maybeSingle() para evitar o erro PGRST116 (Not Acceptable) quando nenhuma linha é retornada
         const { data, error } = await supabase
           .from('exercicios')
-          .select('id')
-          .eq('id', exercise.id)
-          .single();
+          .select('id, nome')
+          .eq('id', exerciseId)
+          .maybeSingle();
           
         if (error) {
-          console.error("Erro ao validar exercício:", error);
+          console.error("[RealTimeEvaluation] Erro ao validar exercício:", error);
           setExercicioValido(false);
           
           toast({
             title: "Aviso sobre o exercício",
-            description: "O exercício não foi encontrado no banco de dados. A avaliação continuará sem vincular ao exercício.",
+            description: "Ocorreu um erro ao buscar o exercício. A avaliação continuará sem vincular ao exercício.",
             variant: "destructive",
             duration: 4000
           });
+        } else if (!data) {
+          console.warn("[RealTimeEvaluation] Exercício não encontrado no banco:", exerciseId);
+          setExercicioValido(false);
+          
+          // Verificar se o exercício tem nome para exibir mesmo sem validação
+          const exerciseName = exercise.nome || (exercise.exercicio && exercise.exercicio.nome);
+          
+          if (exerciseName) {
+            console.log("[RealTimeEvaluation] Exercício tem nome, continuando mesmo sem validação:", exerciseName);
+            setExercicioValido(true);
+            
+            toast({
+              title: "Aviso sobre o exercício",
+              description: "O exercício foi modificado ou removido do banco de dados, mas a avaliação continuará normalmente.",
+              duration: 4000
+            });
+          } else {
+            toast({
+              title: "Aviso sobre o exercício",
+              description: "O exercício não foi encontrado no banco de dados. A avaliação continuará sem vincular ao exercício.",
+              variant: "destructive",
+              duration: 4000
+            });
+          }
         } else {
-          console.log("Exercício validado com sucesso:", data);
+          console.log("[RealTimeEvaluation] Exercício validado com sucesso:", data);
           setExercicioValido(true);
         }
       } catch (error) {
-        console.error("Exceção ao validar exercício:", error);
+        console.error("[RealTimeEvaluation] Exceção ao validar exercício:", error);
         setExercicioValido(false);
+        
+        toast({
+          title: "Erro ao validar exercício",
+          description: "Ocorreu um erro inesperado ao validar o exercício. A avaliação continuará sem vincular ao exercício.",
+          variant: "destructive",
+          duration: 4000
+        });
       }
     };
     
@@ -184,26 +251,111 @@ export default function RealTimeEvaluation({
   useEffect(() => {
     const loadAtletas = async () => {
       try {
+        if (!treinoDoDiaId) {
+          console.warn("[RealTimeEvaluation] Tentando carregar atletas sem treinoDoDiaId");
+          setIsLoadingAtletas(false);
+          return;
+        }
+
+        console.log("[RealTimeEvaluation] Carregando atletas para treinoDoDiaId:", treinoDoDiaId);
         setIsLoadingAtletas(true);
-        const presencas = await fetchPresencasAtletas(treinoDoDiaId);
         
-        // Filter only present athletes
-        const atletasPresentes = presencas
-          .filter(p => p.presente)
-          .map(p => ({
-            id: p.atleta_id,
-            nome: p.atleta.nome,
-            posicao: p.atleta.posicao,
-            time: p.atleta.time,
-            foto_url: p.atleta.foto_url
-          }));
-        
-        setAtletasPresentes(atletasPresentes);
+        try {
+          const presencas = await fetchPresencasAtletas(treinoDoDiaId);
+          
+          // Filter only present athletes
+          const atletasPresentes = presencas
+            .filter(p => p.presente)
+            .map(p => ({
+              id: p.atleta_id,
+              nome: p.atleta.nome,
+              posicao: p.atleta.posicao,
+              time: p.atleta.time,
+              foto_url: p.atleta.foto_url
+            }));
+          
+          console.log("[RealTimeEvaluation] Atletas presentes carregados:", atletasPresentes.length);
+          setAtletasPresentes(atletasPresentes);
+          
+          if (atletasPresentes.length === 0) {
+            // Se não há atletas presentes, tentar buscar todos os atletas do time como fallback
+            console.log("[RealTimeEvaluation] Nenhum atleta presente encontrado, buscando todos os atletas do time");
+            
+            // Se já temos o treinoValido, podemos tentar buscar atletas por time
+            if (treinoValido?.treino_id) {
+              const { data: treino, error: treinoError } = await supabase
+                .from('treinos')
+                .select('time')
+                .eq('id', treinoValido.treino_id)
+                .maybeSingle();
+                
+              if (!treinoError && treino && treino.time) {
+                console.log("[RealTimeEvaluation] Buscando atletas do time:", treino.time);
+                
+                const { data: atletas, error: atletasError } = await supabase
+                  .from('athletes')
+                  .select('id, nome, posicao, time, foto_url')
+                  .eq('time', treino.time);
+                  
+                if (!atletasError && atletas && atletas.length > 0) {
+                  console.log("[RealTimeEvaluation] Atletas do time carregados como fallback:", atletas.length);
+                  setAtletasPresentes(atletas);
+                  
+                  toast({
+                    title: "Alerta de presenças",
+                    description: "Não foram encontrados registros de presença para este treino. Todos os atletas do time estão sendo exibidos.",
+                    duration: 5000
+                  });
+                }
+              }
+            } else {
+              // Fallback final: carregar todos os atletas
+              console.log("[RealTimeEvaluation] Buscando todos os atletas como último recurso");
+              
+              const { data: todosAtletas, error: todosAtletasError } = await supabase
+                .from('athletes')
+                .select('id, nome, posicao, time, foto_url')
+                .order('nome');
+                
+              if (!todosAtletasError && todosAtletas && todosAtletas.length > 0) {
+                console.log("[RealTimeEvaluation] Todos os atletas carregados como recurso final:", todosAtletas.length);
+                setAtletasPresentes(todosAtletas);
+                
+                toast({
+                  title: "Alerta de dados",
+                  description: "Não foram encontrados dados específicos para este treino. Todos os atletas estão sendo exibidos.",
+                  duration: 5000
+                });
+              }
+            }
+          }
+        } catch (presencasError) {
+          console.error("[RealTimeEvaluation] Erro ao buscar presenças:", presencasError);
+          
+          // Falha no carregamento das presenças, tentar carregar todos os atletas
+          console.log("[RealTimeEvaluation] Tentando carregar todos os atletas após erro");
+          
+          const { data: todosAtletas, error: todosAtletasError } = await supabase
+            .from('athletes')
+            .select('id, nome, posicao, time, foto_url')
+            .order('nome');
+            
+          if (!todosAtletasError && todosAtletas && todosAtletas.length > 0) {
+            console.log("[RealTimeEvaluation] Todos os atletas carregados após erro:", todosAtletas.length);
+            setAtletasPresentes(todosAtletas);
+            
+            toast({
+              title: "Problema ao carregar presenças",
+              description: "Não foi possível obter os dados de presença para este treino. Todos os atletas estão sendo exibidos.",
+              duration: 5000
+            });
+          }
+        }
       } catch (error) {
-        console.error("Error loading athletes:", error);
+        console.error("[RealTimeEvaluation] Erro geral ao carregar atletas:", error);
         toast({
           title: "Erro ao carregar atletas",
-          description: "Não foi possível carregar a lista de atletas presentes",
+          description: "Não foi possível carregar a lista de atletas. Tente recarregar a página.",
           variant: "destructive"
         });
       } finally {
@@ -212,7 +364,7 @@ export default function RealTimeEvaluation({
     };
 
     loadAtletas();
-  }, [treinoDoDiaId]);
+  }, [treinoDoDiaId, treinoValido]);
 
   // Handle athlete change - clear events when changing athlete to ensure isolation
   const handleAtletaChange = (atletaId: string) => {
@@ -262,11 +414,11 @@ export default function RealTimeEvaluation({
     }
 
     // Validação do treino_id
-    console.log("RealTimeEvaluation: Verificando treino_id antes do salvamento");
-    console.log("treinoDoDiaId:", treinoDoDiaId);
-    console.log("exercise:", exercise);
-    console.log("treinoValido:", treinoValido);
-    console.log("exercicioValido:", exercicioValido);
+    console.log("[RealTimeEvaluation] Verificando treino_id antes do salvamento");
+    console.log("[RealTimeEvaluation] treinoDoDiaId:", treinoDoDiaId);
+    console.log("[RealTimeEvaluation] exercise:", exercise);
+    console.log("[RealTimeEvaluation] treinoValido:", treinoValido);
+    console.log("[RealTimeEvaluation] exercicioValido:", exercicioValido);
     
     if (!treinoValido?.treino_id) {
       toast({
@@ -286,9 +438,9 @@ export default function RealTimeEvaluation({
       // Usar exercicio_id apenas se o exercício for válido
       const exercicio_id = exercicioValido === true ? exercise?.id : undefined;
       
-      console.log("RealTimeEvaluation: treino_id a ser enviado:", treino_id);
-      console.log("RealTimeEvaluation: exercicio_id a ser enviado:", exercicio_id);
-      console.log("RealTimeEvaluation: detalhes do exercício:", {
+      console.log("[RealTimeEvaluation] treino_id a ser enviado:", treino_id);
+      console.log("[RealTimeEvaluation] exercicio_id a ser enviado:", exercicio_id);
+      console.log("[RealTimeEvaluation] detalhes do exercício:", {
         id: exercise?.id,
         treino_id: exercise?.treino_id,
         treinoDoDiaId,
@@ -304,7 +456,7 @@ export default function RealTimeEvaluation({
         observacoes: observacaoAtual || undefined
       }));
 
-      console.log("RealTimeEvaluation: Eventos a serem salvos:", eventosComObservacoes);
+      console.log("[RealTimeEvaluation] Eventos a serem salvos:", eventosComObservacoes);
 
       // Save all qualitative events
       const salvosComSucesso = await Promise.all(
@@ -366,42 +518,94 @@ export default function RealTimeEvaluation({
 
   // Register qualitative evaluation event
   const registrarEventoQualitativo = (tipoEvento: string, peso: number) => {
-    if (!atletaAtivoId) {
-      toast({
-        title: "Selecione um atleta",
-        description: "Você precisa selecionar um atleta primeiro.",
-        variant: "destructive",
-      });
+    if (!atletaAtivoId || !fundamentoAtivo) {
+      console.error("[RealTimeEvaluation] Tentativa de registrar evento sem atleta ou fundamento selecionado");
       return;
     }
-
-    if (!fundamentoAtivo) {
+    
+    try {
+      // Obter config do tipo de evento
+      const configEvento = CONFIG_EVENTOS_QUALIFICADOS.find(c => c.fundamento === fundamentoAtivo)
+        ?.eventos.find(e => e.tipo === tipoEvento);
+      
+      if (!configEvento) {
+        console.error(`[RealTimeEvaluation] Configuração não encontrada para fundamento ${fundamentoAtivo} e tipo ${tipoEvento}`);
+        return;
+      }
+      
+      // Determinar treino_id para registro
+      let treino_id_para_registro = treinoValido?.treino_id;
+      
+      if (!treino_id_para_registro) {
+        // Fallback para treinoDoDiaId se não temos treino_id validado
+        console.warn("[RealTimeEvaluation] Usando treinoDoDiaId como fallback para registro:", treinoDoDiaId);
+        treino_id_para_registro = treinoDoDiaId;
+      }
+      
+      // Determinar exercicio_id para registro (se válido)
+      let exercicio_id_para_registro = undefined;
+      
+      if (exercicioValido === true) {
+        // Se o exercício foi validado, podemos usar seu ID
+        exercicio_id_para_registro = exercise.id || exercise.exercicio_id;
+        console.log("[RealTimeEvaluation] Usando exercicio_id validado:", exercicio_id_para_registro);
+      } else {
+        console.log("[RealTimeEvaluation] Omitindo exercicio_id por não ser válido");
+      }
+      
+      // Criar o evento de avaliação
+      const evento: EventoAvaliacao = {
+        atleta_id: atletaAtivoId,
+        treino_id: treino_id_para_registro,
+        fundamento: fundamentoAtivo,
+        tipo_evento: tipoEvento,
+        peso: peso,
+        timestamp: new Date().toISOString(),
+        observacoes: observacaoAtual
+      };
+      
+      // Adicionar exercicio_id apenas se foi validado
+      if (exercicio_id_para_registro) {
+        evento.exercicio_id = exercicio_id_para_registro;
+      }
+      
+      console.log("[RealTimeEvaluation] Registrando evento:", evento);
+      
+      // Adicionar evento à lista temporária
+      setEventosTemporariosAtletaAtivo(prev => [...prev, evento]);
+      
+      // Salvar imediatamente usando o service
+      salvarEventoQualificado(evento)
+        .then(id => {
+          if (id) {
+            console.log("[RealTimeEvaluation] Evento salvo com ID:", id);
+            
+            // Adicionar à lista de avaliações salvas para exibir feedback
+            const atletaNome = getAtletaById(atletaAtivoId)?.nome || atletaAtivoId;
+            setAvaliacoesSalvas(prev => [
+              { atletaId: atletaAtivoId, nome: atletaNome, timestamp: evento.timestamp },
+              ...prev
+            ].slice(0, 10)); // Manter apenas as 10 mais recentes
+          } else {
+            console.warn("[RealTimeEvaluation] Evento salvo apenas localmente");
+          }
+        })
+        .catch(error => {
+          console.error("[RealTimeEvaluation] Erro ao salvar evento:", error);
+          toast({
+            title: "Erro ao salvar avaliação",
+            description: "A avaliação foi registrada localmente, mas houve erro ao salvar no servidor",
+            variant: "destructive"
+          });
+        });
+    } catch (error) {
+      console.error("[RealTimeEvaluation] Erro ao processar evento:", error);
       toast({
-        title: "Selecione um fundamento",
-        description: "Você precisa selecionar um fundamento primeiro.",
-        variant: "destructive",
+        title: "Erro ao processar avaliação",
+        description: "Ocorreu um erro ao processar a avaliação",
+        variant: "destructive"
       });
-      return;
     }
-
-    const novoEvento: EventoAvaliacao = {
-      atleta_id: atletaAtivoId,
-      treino_id: treinoDoDiaId,
-      exercicio_id: exercise.id,
-      fundamento: fundamentoAtivo,
-      tipo_evento: tipoEvento,
-      peso: peso,
-      timestamp: new Date().toISOString()
-    };
-
-    // Add to state for display in interface
-    setEventosTemporariosAtletaAtivo(prev => [...prev, novoEvento]);
-
-    toast({
-      title: "Evento registrado",
-      description: `${tipoEvento} (${peso > 0 ? '+' : ''}${peso}) registrado.`,
-      duration: 1500,
-    });
   };
 
   // Get athlete by ID
@@ -426,12 +630,12 @@ export default function RealTimeEvaluation({
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
             <div>
               <h2 className="font-semibold">
                 {exercise?.exercicio?.nome || exercise?.nome || "Avaliação Qualitativa"}
-              </h2>
+        </h2>
               <p className="text-xs text-muted-foreground">
                 Treino: {treinoValido?.nome_treino || "Carregando treino..."} | {new Date().toLocaleDateString()}
               </p>
@@ -535,17 +739,17 @@ export default function RealTimeEvaluation({
           </label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {FUNDAMENTOS.map((fundamento) => (
-              <Button
-                key={fundamento}
+            <Button
+              key={fundamento}
                 variant={fundamentoAtivo === fundamento ? "default" : "outline"}
                 onClick={() => setFundamentoAtivo(fundamento)}
-                className="justify-start"
-              >
-                {fundamento}
-              </Button>
-            ))}
-          </div>
+              className="justify-start"
+            >
+              {fundamento}
+            </Button>
+          ))}
         </div>
+      </div>
       )}
 
       {/* Qualitative evaluation buttons - Only shown when both athlete and fundamento are selected */}
@@ -605,7 +809,7 @@ export default function RealTimeEvaluation({
                 </Badge>
               </div>
             ))}
-          </div>
+        </div>
         </div>
       )}
 
@@ -626,7 +830,7 @@ export default function RealTimeEvaluation({
       {/* Concluir button - Salva avaliações do atleta atual */}
       {atletaAtivoId && (
         <div className="sticky bottom-0 left-0 right-0 bg-background p-2 border-t">
-          <Button 
+        <Button 
             onClick={handleComplete} 
             disabled={isSubmitting || !fundamentoAtivo || eventosTemporariosAtletaAtivo.length === 0}
             className="bg-green-600 hover:bg-green-700 w-full"
@@ -635,8 +839,8 @@ export default function RealTimeEvaluation({
             {isSubmitting 
               ? "Salvando..." 
               : `Concluir Avaliação ${getAtletaById(atletaAtivoId)?.nome.split(' ')[0] || 'Atleta'}`}
-          </Button>
-        </div>
+        </Button>
+      </div>
       )}
 
       {/* Avaliações já salvas nesta sessão - Feedback visual */}
@@ -665,8 +869,8 @@ export default function RealTimeEvaluation({
               </div>
             ))}
           </div>
-        </div>
-      )}
+          </div>
+        )}
     </div>
   );
 }

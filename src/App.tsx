@@ -26,6 +26,7 @@ import Trainings from '@/pages/Trainings';
 import TrainingAssembly from '@/pages/TrainingAssembly';
 import TreinoDosDia from '@/pages/TreinoDosDia';
 import AttendanceManagement from '@/pages/AttendanceManagement';
+import Presenca from '@/pages/Presenca';
 import Performance from '@/pages/Performance';
 import EvaluationManagement from '@/pages/EvaluationManagement';
 import StudentPerformance from '@/pages/StudentPerformance';
@@ -226,7 +227,7 @@ function App() {
                 path="/presenca"
                 element={
                   <ProtectedRoute>
-                    <AttendanceManagement />
+                    <Presenca />
                   </ProtectedRoute>
                 }
               />
